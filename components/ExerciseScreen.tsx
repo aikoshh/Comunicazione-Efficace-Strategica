@@ -1,131 +1,166 @@
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import type { Exercise, AnalysisResult } from '../types';
+import { ExerciseType } from '../types';
+import { useSpeech } from '../hooks/useSpeech';
+import { analyzeResponse } from '../services/geminiService';
+import { COLORS } from '../constants';
+import { BackIcon, MicIcon, SendIcon, SpeakerIcon, SpeakerOffIcon } from './Icons';
+
+interface ExerciseScreenProps {
+  exercise: Exercise;
+  moduleTitle: string;
+  mode: ExerciseType;
+  apiKey: string; // Add apiKey to props
+  onComplete: (result: AnalysisResult) => void;
+  onBack: () => void;
+  onError: (message: string) => void;
+}
+
+const replacePunctuation = (text: string): string => {
+  let processedText = text
+    .replace(/\bpunto interrogativo\b/gi, '?')
+    .replace(/\bpunto esclamativo\b/gi, '!')
+    .replace(/\bvirgola\b/gi, ',')
+    .replace(/\bpunto\b/gi, '.');
+  
+  processedText = processedText.replace(/\s+([,.?!])/g, '$1');
+
+  return processedText;
+};
 
 
-import React from 'react';
+export default function ExerciseScreen({ exercise, moduleTitle, mode, apiKey, onComplete, onBack, onError }: ExerciseScreenProps) {
+  const [response, setResponse] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const { isListening, transcript, startListening, stopListening, speak, isSupported, isSpeaking, stopSpeaking } = useSpeech();
+  const prevIsListening = useRef(isListening);
 
-// FIX: Replaced JSX.Element with React.ReactElement
-export const MessageIcon = (props: React.SVGProps<SVGSVGElement>): React.ReactElement => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-    <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"></path>
-  </svg>
-);
+  const handleToggleScenarioAudio = () => {
+    if (isSpeaking) {
+      stopSpeaking();
+    } else {
+      speak(exercise.scenario);
+    }
+  };
+  
+  const submitAnalysis = useCallback(async (textToAnalyze: string) => {
+    if (!textToAnalyze.trim()) {
+        return;
+    }
+    setIsLoading(true);
+    try {
+      // Pass the apiKey to the analyzeResponse function
+      const result = await analyzeResponse(textToAnalyze, exercise.scenario, exercise.task, mode === ExerciseType.VERBAL, apiKey);
+      onComplete(result);
+    } catch (error) {
+      console.error(error);
+      onError(error instanceof Error ? error.message : "Si è verificato un errore sconosciuto.");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [exercise.scenario, exercise.task, mode, onComplete, onError, apiKey]);
 
-// FIX: Replaced JSX.Element with React.ReactElement
-export const UnsolicitedAdviceIcon = (props: React.SVGProps<SVGSVGElement>): React.ReactElement => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-        <circle cx="12" cy="12" r="10"></circle>
-        <path d="m15 9-6 6"></path>
-        <path d="m9 9 6 6"></path>
-    </svg>
-);
+  
+  useEffect(() => {
+    if (transcript) {
+        setResponse(transcript);
+    }
+  }, [transcript]);
 
-// FIX: Replaced JSX.Element with React.ReactElement
-export const SplitIcon = (props: React.SVGProps<SVGSVGElement>): React.ReactElement => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-        <line x1="12" y1="18" x2="12" y2="21"></line>
-        <path d="M12 3v11.5a2.5 2.5 0 0 1-5 0V3"></path>
-        <path d="M12 3v11.5a2.5 2.5 0 0 0 5 0V3"></path>
-    </svg>
-);
+  useEffect(() => {
+    if (mode === ExerciseType.VERBAL && prevIsListening.current && !isListening && transcript) {
+        const finalResponse = replacePunctuation(transcript);
+        setResponse(finalResponse);
+        submitAnalysis(finalResponse);
+    }
+    prevIsListening.current = isListening;
+  }, [isListening, transcript, mode, submitAnalysis]);
 
-// FIX: Replaced JSX.Element with React.ReactElement
-export const MicIcon = (props: React.SVGProps<SVGSVGElement>): React.ReactElement => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-        <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
-        <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" x2="12" y1="19" y2="22"></line>
-    </svg>
-);
+  const handleWrittenSubmit = () => {
+    if (!response.trim()) {
+      onError("La risposta non può essere vuota.");
+      return;
+    }
+    submitAnalysis(response);
+  };
 
-// FIX: Replaced JSX.Element with React.ReactElement
-export const SendIcon = (props: React.SVGProps<SVGSVGElement>): React.ReactElement => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-        <path d="m22 2-7 20-4-9-9-4Z"></path>
-        <path d="M22 2 11 13"></path>
-    </svg>
-);
+  const handleMicClick = () => {
+    if (isListening) {
+      stopListening();
+    } else {
+      startListening();
+    }
+  };
 
-// FIX: Replaced JSX.Element with React.ReactElement
-export const BackIcon = (props: React.SVGProps<SVGSVGElement>): React.ReactElement => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-        <path d="m15 18-6-6 6-6"></path>
-    </svg>
-);
+  return (
+    <div className="min-h-[80vh] flex flex-col animate-fade-in">
+        <header className="flex items-center space-x-4 mb-6">
+            <button onClick={onBack} className="p-2 rounded-full hover:bg-gray-200/50 transition-colors">
+                <BackIcon className="w-6 h-6 text-nero" />
+            </button>
+            <div>
+                <h3 className="text-gray-600 text-sm">{moduleTitle}</h3>
+                <h1 className="text-2xl font-bold text-nero">{exercise.title}</h1>
+            </div>
+        </header>
 
-// FIX: Replaced JSX.Element with React.ReactElement
-export const NextIcon = (props: React.SVGProps<SVGSVGElement>): React.ReactElement => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-        <path d="m9 18 6-6-6-6"></path>
-    </svg>
-);
+        <div className="bg-white/70 backdrop-blur-md p-6 rounded-2xl shadow-lg border border-gray-200/50 flex-grow flex flex-col">
+            <div className="space-y-4 mb-6">
+                <div className="flex items-center justify-between">
+                    <h2 className="font-semibold text-lg text-nero">Scenario:</h2>
+                    <button onClick={handleToggleScenarioAudio} className="p-2 rounded-full hover:bg-gray-200/50 transition-colors text-nero" aria-label={isSpeaking ? "Ferma audio" : "Ascolta scenario"}>
+                       {isSpeaking ? <SpeakerOffIcon className="w-6 h-6 text-blue-600" /> : <SpeakerIcon className="w-6 h-6" />}
+                    </button>
+                </div>
+                <p className="text-gray-700 leading-relaxed italic">"{exercise.scenario}"</p>
+                <h2 className="font-semibold text-lg text-nero">Il tuo compito:</h2>
+                <p className="text-gray-700 leading-relaxed">{exercise.task}</p>
+            </div>
 
-// FIX: Replaced JSX.Element with React.ReactElement
-export const RetryIcon = (props: React.SVGProps<SVGSVGElement>): React.ReactElement => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-        <path d="M21 12a9 9 0 1 1-6.219-8.56"></path>
-    </svg>
-);
+            <div className="flex-grow flex flex-col justify-end">
+                <textarea
+                    value={response}
+                    onChange={(e) => setResponse(e.target.value)}
+                    placeholder={
+                        mode === ExerciseType.VERBAL
+                            ? "Tocca il microfono per iniziare. La trascrizione apparirà qui."
+                            : "Scrivi qui la tua risposta..."
+                    }
+                    className="w-full h-32 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-azzurroPastello focus:border-azzurroPastello transition-shadow"
+                    disabled={isLoading || isListening}
+                />
+                {mode === ExerciseType.VERBAL && isListening && (
+                    <div className="flex items-center text-sm text-gray-500 mt-2">
+                        <span className="inline-block w-2 h-2 mr-2 bg-red-500 rounded-full animate-pulse"></span>
+                        Sto ascoltando...
+                    </div>
+                )}
+            </div>
+        </div>
 
-// FIX: Replaced JSX.Element with React.ReactElement
-export const WrittenIcon = (props: React.SVGProps<SVGSVGElement>): React.ReactElement => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-        <path d="M12 20h9"></path>
-        <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path>
-    </svg>
-);
-
-// FIX: Replaced JSX.Element with React.ReactElement
-export const VerbalIcon = (props: React.SVGProps<SVGSVGElement>): React.ReactElement => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-        <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
-        <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
-        <line x1="12" x2="12" y1="19" y2="22"></line>
-    </svg>
-);
-
-// FIX: Replaced JSX.Element with React.ReactElement
-export const CheckCircleIcon = (props: React.SVGProps<SVGSVGElement>): React.ReactElement => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-        <polyline points="22 4 12 14.01 9 11.01"></polyline>
-    </svg>
-);
-
-// FIX: Replaced JSX.Element with React.ReactElement
-export const XCircleIcon = (props: React.SVGProps<SVGSVGElement>): React.ReactElement => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-        <circle cx="12" cy="12" r="10"></circle>
-        <line x1="15" y1="9" x2="9" y2="15"></line>
-        <line x1="9" y1="9" x2="15" y2="15"></line>
-    </svg>
-);
-
-// FIX: Replaced JSX.Element with React.ReactElement
-export const WarningIcon = (props: React.SVGProps<SVGSVGElement>): React.ReactElement => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-        <path d="m21.73 18-8-14a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path>
-        <line x1="12" x2="12" y1="9" y2="13"></line>
-        <line x1="12" x2="12.01" y1="17" y2="17"></line>
-    </svg>
-);
-
-// FIX: Replaced JSX.Element with React.ReactElement
-export const HomeIcon = (props: React.SVGProps<SVGSVGElement>): React.ReactElement => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-        <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-        <polyline points="9 22 9 12 15 12 15 22"></polyline>
-    </svg>
-);
-
-export const SpeakerIcon = (props: React.SVGProps<SVGSVGElement>): React.ReactElement => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
-        <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
-    </svg>
-);
-
-export const SpeakerOffIcon = (props: React.SVGProps<SVGSVGElement>): React.ReactElement => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-        <path d="M11 5L6 9H2v6h4l5 4V5z"></path>
-        <line x1="23" y1="9" x2="17" y2="15"></line>
-        <line x1="17" y1="9" x2="23" y2="15"></line>
-    </svg>
-);
+        <div className="py-6 flex items-center justify-center">
+            {isLoading ? (
+                <div className="text-center">
+                    <div className="w-12 h-12 border-4 border-t-accentoVerde border-gray-200 rounded-full animate-spin mx-auto" style={{borderColor: COLORS.nero, borderTopColor: COLORS.accentoVerde}}></div>
+                    <p className="mt-2 text-gray-700">Analisi in corso...</p>
+                </div>
+            ) : (
+                mode === ExerciseType.WRITTEN ? (
+                    <button onClick={handleWrittenSubmit} className="px-8 py-3 bg-accentoVerde text-white font-bold rounded-full shadow-lg hover:bg-green-600 transition-colors flex items-center space-x-2" style={{backgroundColor: COLORS.accentoVerde}}>
+                        <SendIcon className="w-5 h-5" />
+                        <span>Invia Analisi</span>
+                    </button>
+                ) : (
+                    <div className="flex flex-col items-center space-y-2">
+                        <button onClick={handleMicClick} className={`w-20 h-20 rounded-full flex items-center justify-center transition-all duration-300 shadow-xl ${isListening ? 'bg-red-500 animate-pulse' : 'bg-accentoVerde'}`}  style={{backgroundColor: isListening ? '#ef4444' : COLORS.accentoVerde}}>
+                            <MicIcon className="w-10 h-10 text-white" />
+                        </button>
+                         <p className="text-sm text-gray-600">{isListening ? 'Parla ora... Tocca per fermare' : 'Tocca per parlare'}</p>
+                        {!isSupported && <p className="text-red-500 text-sm mt-2">Il riconoscimento vocale non è supportato da questo browser.</p>}
+                    </div>
+                )
+            )}
+        </div>
+    </div>
+  );
+}
