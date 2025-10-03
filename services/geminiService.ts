@@ -67,6 +67,11 @@ export async function analyzeResponse(
   isVerbal: boolean
 ): Promise<AnalysisResult> {
 
+  // Add a specific check for the API key to provide a better error message.
+  if (!process.env.API_KEY) {
+    throw new Error("Chiave API non trovata. Assicurati di averla impostata correttamente nei 'secrets' del tuo ambiente di sviluppo con il nome API_KEY.");
+  }
+
   // FIX: Initialize the GoogleGenAI client inside the function to prevent app crash on load.
   // This "lazy initialization" ensures the app always loads, and API key issues are handled gracefully later.
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
@@ -123,6 +128,10 @@ export async function analyzeResponse(
     console.error("Error calling Gemini API:", error);
     if (error instanceof Error && error.message.includes('SAFETY')) {
         throw new Error("La risposta è stata bloccata per motivi di sicurezza. Prova a riformulare.");
+    }
+    // Propagate the specific API key error message if it was thrown
+    if (error instanceof Error && error.message.includes("Chiave API non trovata")) {
+        throw error;
     }
     throw new Error("Non è stato possibile analizzare la risposta. Riprova più tardi.");
   }
