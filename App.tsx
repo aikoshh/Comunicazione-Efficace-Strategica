@@ -91,6 +91,14 @@ function App() {
     }
     setAnalysisResult(null);
   }, [selectedModule, selectedExercise, exerciseMode, handleStartExercise]);
+
+  const handleGoHome = useCallback(() => {
+    setCurrentScreen('home');
+    setSelectedModule(null);
+    setSelectedExercise(null);
+    setAnalysisResult(null);
+    setExerciseMode(null);
+  }, []);
   
   const handleError = (message: string) => {
       setError(message);
@@ -136,6 +144,7 @@ function App() {
               exercise={selectedExercise}
               onNext={handleNext}
               onRetry={handleRetry}
+              onGoHome={handleGoHome}
             />
           );
         }
