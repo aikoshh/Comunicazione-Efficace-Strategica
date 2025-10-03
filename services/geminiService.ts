@@ -7,7 +7,8 @@ const cesStepSchema = {
         covered: { type: Type.BOOLEAN, description: "Indica se l'utente ha coperto questa fase." },
         suggestion: { type: Type.STRING, description: "Se non coperta, fornisci una frase esatta che l'utente avrebbe potuto usare. Altrimenti, lascia vuoto." }
     },
-    required: ['covered']
+    required: ['covered']  try {
+
 };
 
 const analysisSchema = {
