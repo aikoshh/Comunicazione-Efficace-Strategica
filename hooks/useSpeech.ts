@@ -9,6 +9,7 @@ export function useSpeech() {
   const [transcript, setTranscript] = useState('');
   const [isSupported, setIsSupported] = useState(true);
   const [selectedVoice, setSelectedVoice] = useState<SpeechSynthesisVoice | null>(null);
+  const [isSpeaking, setIsSpeaking] = useState(false);
   // Fix: Use `any` for the ref type as the `SpeechRecognition` type is not available globally and the name is shadowed by the constant above.
   const recognitionRef = useRef<any | null>(null);
 
@@ -80,6 +81,13 @@ export function useSpeech() {
       }
     };
   }, []);
+
+  const stopSpeaking = useCallback(() => {
+    if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+        setIsSpeaking(false);
+    }
+  }, []);
   
   const speak = useCallback((text: string, onEnd?: () => void) => {
     if (!window.speechSynthesis) {
@@ -87,7 +95,8 @@ export function useSpeech() {
         if (onEnd) onEnd(); // Still call onEnd if TTS is not supported
         return;
     }
-    window.speechSynthesis.cancel(); // Cancel any previous speech
+    stopSpeaking(); // Cancel any previous speech and reset state
+    
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'it-IT';
     utterance.rate = 1; // Natural speed
@@ -97,19 +106,27 @@ export function useSpeech() {
         utterance.voice = selectedVoice;
     }
     
-    if (onEnd) {
-        utterance.onend = onEnd;
-    }
+    utterance.onstart = () => {
+        setIsSpeaking(true);
+    };
+    
+    utterance.onend = () => {
+        setIsSpeaking(false);
+        if (onEnd) onEnd();
+    };
+
+    utterance.onerror = () => {
+        setIsSpeaking(false); // Also reset on error
+    };
+
     window.speechSynthesis.speak(utterance);
-  }, [selectedVoice]);
+  }, [selectedVoice, stopSpeaking]);
 
   const startListening = useCallback(() => {
     if (!isSupported || isListening) return;
 
     // Immediately stop any ongoing speech synthesis when the user wants to start speaking.
-    if (window.speechSynthesis) {
-        window.speechSynthesis.cancel();
-    }
+    stopSpeaking();
 
     const recognition = new SpeechRecognition();
     recognition.lang = 'it-IT';
@@ -141,7 +158,7 @@ export function useSpeech() {
     };
 
     recognition.start();
-  }, [isSupported, isListening]);
+  }, [isSupported, isListening, stopSpeaking]);
 
   const stopListening = useCallback(() => {
     if (recognitionRef.current && isListening) {
@@ -150,5 +167,5 @@ export function useSpeech() {
     }
   }, [isListening]);
 
-  return { isListening, transcript, startListening, stopListening, speak, isSupported };
+  return { isListening, transcript, startListening, stopListening, speak, isSupported, isSpeaking, stopSpeaking };
 }
