@@ -121,7 +121,7 @@ export default function AnalysisReportScreen({ result, exercise, onNext, onRetry
                 <HeatmapStep label="Direzionamento" analysis={result.cesHeatmap.direzionamento} />
                 <HeatmapStep label="Chiusura" analysis={result.cesHeatmap.chiusura} />
             </div>
-        </Section>
+        </section>
         
         <Section title="Scala del Coinvolgimento Comunicativo">
             <div className="p-4 bg-azzurroPastello/30 rounded-lg flex items-center space-x-6">
