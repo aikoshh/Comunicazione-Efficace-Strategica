@@ -81,6 +81,13 @@ const Section: React.FC<{ title: string; children: React.ReactNode }> = ({ title
     </div>
 );
 
+const getScoreColorClass = (score: number) => {
+    if (score <= 3) return 'text-red-500';
+    if (score <= 5) return 'text-orange-500';
+    if (score <= 8) return 'text-green-500';
+    return 'text-blue-500';
+};
+
 
 // FIX: Replaced JSX.Element with React.ReactElement
 export default function AnalysisReportScreen({ result, exercise, onNext, onRetry, onGoHome }: AnalysisReportScreenProps): React.ReactElement {
@@ -117,14 +124,17 @@ export default function AnalysisReportScreen({ result, exercise, onNext, onRetry
         </Section>
         
         <Section title="Scala del Coinvolgimento Comunicativo">
-            <div className="p-4 bg-azzurroPastello/30 rounded-lg">
-                <div className="flex items-center justify-between">
-                    <h3 className="font-bold text-nero text-lg">{result.communicativeScaleAnalysis.phase}</h3>
-                    <div className="text-sm font-bold text-nero px-3 py-1 rounded-full" style={{backgroundColor: COLORS.azzurroPastello}}>
-                        Punteggio Coinvolgimento: {result.communicativeScaleAnalysis.scaleScore}/10
+            <div className="p-4 bg-azzurroPastello/30 rounded-lg flex items-center space-x-6">
+                <div className="flex-shrink-0 text-center">
+                    <div className={`text-6xl font-extrabold ${getScoreColorClass(result.communicativeScaleAnalysis.scaleScore)}`}>
+                        {result.communicativeScaleAnalysis.scaleScore}
                     </div>
+                    <div className="text-sm font-semibold text-nero">/ 10</div>
                 </div>
-                <p className="text-gray-700 mt-2">{result.communicativeScaleAnalysis.feedback}</p>
+                <div className="flex-grow">
+                    <h3 className="font-bold text-nero text-lg">{result.communicativeScaleAnalysis.phase}</h3>
+                    <p className="text-gray-700 mt-1">{result.communicativeScaleAnalysis.feedback}</p>
+                </div>
             </div>
         </Section>
 
