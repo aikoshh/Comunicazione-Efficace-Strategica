@@ -109,8 +109,13 @@ export default function ExerciseScreen({ exercise, moduleTitle, mode, apiKey, on
             <div className="space-y-4 mb-6">
                 <div className="flex items-center justify-between">
                     <h2 className="font-semibold text-lg text-nero">Scenario:</h2>
-                    <button onClick={handleToggleScenarioAudio} className="p-2 rounded-full hover:bg-gray-200/50 transition-colors text-nero" aria-label={isSpeaking ? "Ferma audio" : "Ascolta scenario"}>
-                       {isSpeaking ? <SpeakerOffIcon className="w-6 h-6 text-blue-600" /> : <SpeakerIcon className="w-6 h-6" />}
+                    <button 
+                        onClick={handleToggleScenarioAudio} 
+                        className="flex items-center space-x-2 px-3 py-2 text-sm font-semibold text-nero bg-gray-100 rounded-full hover:bg-gray-200 transition-colors" 
+                        aria-label={isSpeaking ? "Ferma audio" : "Ascolta scenario"}
+                    >
+                       {isSpeaking ? <SpeakerOffIcon className="w-5 h-5 text-blue-600" /> : <SpeakerIcon className="w-5 h-5" />}
+                       <span>Ascolta il testo</span>
                     </button>
                 </div>
                 <p className="text-gray-700 leading-relaxed italic">"{exercise.scenario}"</p>
