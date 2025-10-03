@@ -1,6 +1,8 @@
+import React from 'react';
 import type { Module } from './types';
 import { DifficultyLevel } from './types';
-import { MessageIcon, UnsolicitedAdviceIcon, SplitIcon } from './components/Icons';
+import { MessageIcon, SplitIcon } from './components/Icons';
+import { lucyAdviceImage } from './assets';
 
 export const COLORS = {
   nero: '#0B0B0C',
@@ -10,12 +12,21 @@ export const COLORS = {
   fondo: '#FAFAFA',
 };
 
+// FIX: Replaced JSX with React.createElement to be valid in a .ts file.
+// The passed className is ignored as "w-full h-full" is required for this specific image icon to fill its container.
+// FIX: Added style to props to match the Module['icon'] type.
+const LucyIcon = (props: {className?: string; style?: React.CSSProperties}): React.ReactElement => React.createElement('img', {
+    src: lucyAdviceImage,
+    alt: "Consiglio non richiesto",
+    className: "w-full h-full object-cover rounded-full",
+});
+
 export const MODULES: Module[] = [
   {
     id: 'unsolicited-advice',
     title: 'Consiglio non richiesto',
     description: 'Impara a gestire le richieste di aiuto senza dare consigli non richiesti (smutandamento).',
-    icon: UnsolicitedAdviceIcon,
+    icon: LucyIcon,
     exercises: [
       {
         id: 'ua-base-1',
