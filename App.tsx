@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { MODULES } from './constants';
-import type { Module, Exercise, AnalysisResult, ExerciseType } from './types';
+import type { Module, Exercise, AnalysisResult } from './types';
 import HomeScreen from './components/HomeScreen';
 import ModuleScreen from './components/ModuleScreen';
 import ExerciseScreen from './components/ExerciseScreen';
@@ -14,7 +14,6 @@ function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('home');
   const [selectedModule, setSelectedModule] = useState<Module | null>(null);
   const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
-  const [exerciseMode, setExerciseMode] = useState<ExerciseType | null>(null);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [apiKey, setApiKey] = useState<string | null>(null);
@@ -39,9 +38,8 @@ function App() {
     setCurrentScreen('module');
   }, []);
 
-  const handleStartExercise = useCallback((exercise: Exercise, mode: ExerciseType) => {
+  const handleStartExercise = useCallback((exercise: Exercise) => {
     setSelectedExercise(exercise);
-    setExerciseMode(mode);
     setCurrentScreen('exercise');
   }, []);
   
@@ -84,20 +82,19 @@ function App() {
   
   const handleNext = useCallback(() => {
     const nextExercise = findNextExercise();
-    if (nextExercise && exerciseMode) {
-      handleStartExercise(nextExercise, exerciseMode);
+    if (nextExercise) {
+      handleStartExercise(nextExercise);
     } else {
       setCurrentScreen('module');
     }
     setAnalysisResult(null);
-  }, [selectedModule, selectedExercise, exerciseMode, handleStartExercise]);
+  }, [selectedModule, selectedExercise, handleStartExercise]);
 
   const handleGoHome = useCallback(() => {
     setCurrentScreen('home');
     setSelectedModule(null);
     setSelectedExercise(null);
     setAnalysisResult(null);
-    setExerciseMode(null);
   }, []);
   
   const handleError = (message: string) => {
@@ -122,12 +119,11 @@ function App() {
         }
         return null;
       case 'exercise':
-        if (selectedExercise && selectedModule && exerciseMode && apiKey) {
+        if (selectedExercise && selectedModule && apiKey) {
           return (
             <ExerciseScreen
               exercise={selectedExercise}
               moduleTitle={selectedModule.title}
-              mode={exerciseMode}
               apiKey={apiKey} // Pass the key to the exercise screen
               onComplete={handleCompleteExercise}
               onBack={handleBack}
