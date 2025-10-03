@@ -1,13 +1,14 @@
 import React from 'react';
 import type { AnalysisResult, Exercise, CESStepAnalysis } from '../types';
 import { COLORS } from '../constants';
-import { NextIcon, RetryIcon, CheckCircleIcon, XCircleIcon } from './Icons';
+import { NextIcon, RetryIcon, CheckCircleIcon, XCircleIcon, HomeIcon } from './Icons';
 
 interface AnalysisReportScreenProps {
   result: AnalysisResult;
   exercise: Exercise;
   onNext: () => void;
   onRetry: () => void;
+  onGoHome: () => void;
 }
 
 const renderMarkdown = (text: string) => {
@@ -82,7 +83,7 @@ const Section: React.FC<{ title: string; children: React.ReactNode }> = ({ title
 
 
 // FIX: Replaced JSX.Element with React.ReactElement
-export default function AnalysisReportScreen({ result, exercise, onNext, onRetry }: AnalysisReportScreenProps): React.ReactElement {
+export default function AnalysisReportScreen({ result, exercise, onNext, onRetry, onGoHome }: AnalysisReportScreenProps): React.ReactElement {
   return (
     <div className="space-y-8 animate-fade-in">
         <header className="text-center">
@@ -135,14 +136,20 @@ export default function AnalysisReportScreen({ result, exercise, onNext, onRetry
             </div>
         </Section>
         
-        <footer className="py-6 flex items-center justify-center space-x-4">
-             <button onClick={onRetry} className="px-6 py-3 bg-white border border-gray-300 text-nero font-bold rounded-full shadow-sm hover:bg-gray-100 transition-colors flex items-center space-x-2">
-                <RetryIcon className="w-5 h-5" />
-                <span>Riprova</span>
-            </button>
-            <button onClick={onNext} className="px-8 py-3 bg-accentoVerde text-white font-bold rounded-full shadow-lg hover:bg-green-600 transition-colors flex items-center space-x-2" style={{backgroundColor: COLORS.accentoVerde}}>
-                <span>Prossimo Esercizio</span>
-                <NextIcon className="w-5 h-5" />
+        <footer className="py-6 flex flex-col items-center justify-center space-y-4">
+            <div className="flex items-center justify-center space-x-4">
+                 <button onClick={onRetry} className="px-6 py-3 bg-white border border-gray-300 text-nero font-bold rounded-full shadow-sm hover:bg-gray-100 transition-colors flex items-center space-x-2">
+                    <RetryIcon className="w-5 h-5" />
+                    <span>Riprova</span>
+                </button>
+                <button onClick={onNext} className="px-8 py-3 bg-accentoVerde text-white font-bold rounded-full shadow-lg hover:bg-green-600 transition-colors flex items-center space-x-2" style={{backgroundColor: COLORS.accentoVerde}}>
+                    <span>Prossimo Esercizio</span>
+                    <NextIcon className="w-5 h-5" />
+                </button>
+            </div>
+            <button onClick={onGoHome} className="px-6 py-2 bg-transparent text-gray-600 font-semibold rounded-full hover:bg-gray-200/50 transition-colors flex items-center space-x-2">
+                <HomeIcon className="w-5 h-5" />
+                <span>Torna al Menu Principale</span>
             </button>
         </footer>
     </div>
