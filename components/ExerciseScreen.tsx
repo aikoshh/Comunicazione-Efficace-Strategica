@@ -148,7 +148,7 @@ export default function ExerciseScreen({ exercise, moduleTitle, mode, apiKey, on
                 mode === ExerciseType.WRITTEN ? (
                     <button onClick={handleWrittenSubmit} className="px-8 py-3 bg-accentoVerde text-white font-bold rounded-full shadow-lg hover:bg-green-600 transition-colors flex items-center space-x-2" style={{backgroundColor: COLORS.accentoVerde}}>
                         <SendIcon className="w-5 h-5" />
-                        <span>Invia Analisi</span>
+                        <span>Invia Risposta</span>
                     </button>
                 ) : (
                     <div className="flex flex-col items-center space-y-2">
