@@ -1,13 +1,12 @@
 import React from 'react';
-// FIX: Import `ExerciseType` as a value to use its enum members, not just as a type.
 import type { Module, Exercise } from '../types';
 import { DifficultyLevel, ExerciseType } from '../types';
 import { COLORS } from '../constants';
-import { BackIcon, WrittenIcon, VerbalIcon } from './Icons';
+import { BackIcon, NextIcon } from './Icons';
 
 interface ModuleScreenProps {
   module: Module;
-  onStartExercise: (exercise: Exercise, mode: ExerciseType) => void;
+  onStartExercise: (exercise: Exercise) => void;
   onBack: () => void;
 }
 
@@ -24,7 +23,7 @@ const getDifficultyClass = (difficulty: DifficultyLevel) => {
   }
 };
 
-const ExerciseCard: React.FC<{ exercise: Exercise, onStart: (mode: ExerciseType) => void }> = ({ exercise, onStart }) => {
+const ExerciseCard: React.FC<{ exercise: Exercise, onStart: () => void }> = ({ exercise, onStart }) => {
     return (
         <div className="bg-white/70 backdrop-blur-md p-6 rounded-2xl shadow-lg border border-gray-200/50 space-y-4">
             <div className="flex justify-between items-start">
@@ -41,23 +40,14 @@ const ExerciseCard: React.FC<{ exercise: Exercise, onStart: (mode: ExerciseType)
                 <h4 className="font-semibold text-gray-700">Compito:</h4>
                 <p className="text-gray-600 mt-1">{exercise.task}</p>
             </div>
-            <div className="flex items-center justify-end space-x-4 pt-4">
-                <button 
-                    // FIX: Pass the enum member `ExerciseType.WRITTEN` instead of the string "written".
-                    onClick={() => onStart(ExerciseType.WRITTEN)}
-                    className="px-4 py-2 bg-white border border-gray-300 text-nero font-semibold rounded-full shadow-sm hover:bg-gray-100 transition-colors flex items-center space-x-2"
+            <div className="flex items-center justify-end pt-4">
+                 <button 
+                    onClick={onStart}
+                    className="px-6 py-2 bg-accentoVerde text-white font-bold rounded-full shadow-lg hover:bg-green-600 transition-colors flex items-center space-x-2"
+                    style={{backgroundColor: COLORS.accentoVerde}}
                 >
-                    <WrittenIcon className="w-5 h-5"/>
-                    <span>Scritto</span>
-                </button>
-                <button
-                    // FIX: Pass the enum member `ExerciseType.VERBAL` instead of the string "verbal".
-                    onClick={() => onStart(ExerciseType.VERBAL)}
-                    className="px-4 py-2 text-white font-semibold rounded-full shadow-lg hover:bg-gray-800 transition-colors flex items-center space-x-2"
-                    style={{ backgroundColor: COLORS.nero }}
-                >
-                    <VerbalIcon className="w-5 h-5"/>
-                    <span>Verbale</span>
+                    <span>Rispondi</span>
+                    <NextIcon className="w-5 h-5" />
                 </button>
             </div>
         </div>
@@ -84,7 +74,7 @@ export default function ModuleScreen({ module, onStartExercise, onBack }: Module
       </header>
       <div className="space-y-6">
         {module.exercises.map((exercise) => (
-          <ExerciseCard key={exercise.id} exercise={exercise} onStart={(mode) => onStartExercise(exercise, mode)} />
+          <ExerciseCard key={exercise.id} exercise={exercise} onStart={() => onStartExercise(exercise)} />
         ))}
       </div>
     </div>
