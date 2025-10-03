@@ -31,7 +31,7 @@ export function useSpeech() {
             return;
         }
 
-        // Prioritize known high-quality voices
+        // 1. Prioritize known high-quality voices
         const preferredVoices = [
             "Google italiano",
             "Alice",
@@ -46,14 +46,18 @@ export function useSpeech() {
             if (bestVoice) break;
         }
 
-        // Fallback to the first available Italian voice if no preferred ones are found
+        // 2. If no premium voice is found, search for common female names or keywords
         if (!bestVoice) {
-            bestVoice = italianVoices.find(v => v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('donna'));
+            const femaleKeywords = ['female', 'donna', 'alice', 'federica', 'paola', 'silvia', 'elisa'];
+            bestVoice = italianVoices.find(v => 
+                femaleKeywords.some(keyword => v.name.toLowerCase().includes(keyword))
+            );
         }
 
+        // 3. Fallback to the first available Italian voice if no specific female voice is found
         if (!bestVoice) {
             bestVoice = italianVoices[0];
-            console.warn("Could not find a preferred Italian voice, falling back to the default available one.");
+            console.warn("Could not find a preferred Italian female voice, falling back to the default available one.");
         }
 
         setSelectedVoice(bestVoice || null);
@@ -101,6 +105,11 @@ export function useSpeech() {
 
   const startListening = useCallback(() => {
     if (!isSupported || isListening) return;
+
+    // Immediately stop any ongoing speech synthesis when the user wants to start speaking.
+    if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+    }
 
     const recognition = new SpeechRecognition();
     recognition.lang = 'it-IT';
