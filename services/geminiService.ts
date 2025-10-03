@@ -7,8 +7,7 @@ const cesStepSchema = {
         covered: { type: Type.BOOLEAN, description: "Indica se l'utente ha coperto questa fase." },
         suggestion: { type: Type.STRING, description: "Se non coperta, fornisci una frase esatta che l'utente avrebbe potuto usare. Altrimenti, lascia vuoto." }
     },
-    required: ['covered']  try {
-
+    required: ['covered']
 };
 
 const analysisSchema = {
@@ -65,17 +64,15 @@ export async function analyzeResponse(
   userResponse: string,
   scenario: string,
   task: string,
-  isVerbal: boolean
+  isVerbal: boolean,
+  apiKey: string // The API key is now passed as a parameter
 ): Promise<AnalysisResult> {
 
-  // Add a specific check for the API key to provide a better error message.
-  if (!process.env.API_KEY) {
-    throw new Error("Chiave API non trovata. Assicurati di averla impostata correttamente nei 'secrets' del tuo ambiente di sviluppo con il nome API_KEY.");
+  if (!apiKey || apiKey.trim() === '') {
+    throw new Error("La chiave API fornita non è valida.");
   }
-
-  // FIX: Initialize the GoogleGenAI client inside the function to prevent app crash on load.
-  // This "lazy initialization" ensures the app always loads, and API key issues are handled gracefully later.
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  
+  const ai = new GoogleGenAI({ apiKey });
 
   const modality = isVerbal ? "verbale" : "scritta";
 
@@ -119,7 +116,6 @@ export async function analyzeResponse(
 
     const textResponse = result.text.trim();
     
-    // Sometimes the response might be wrapped in markdown backticks
     const cleanedJson = textResponse.replace(/^```json\n?/, '').replace(/\n?```$/, '');
 
     const analysis: AnalysisResult = JSON.parse(cleanedJson);
@@ -127,12 +123,11 @@ export async function analyzeResponse(
 
   } catch (error) {
     console.error("Error calling Gemini API:", error);
+    if (error instanceof Error && error.message.includes('API key not valid')) {
+        throw new Error("La chiave API inserita non è valida. Controllala e riprova.");
+    }
     if (error instanceof Error && error.message.includes('SAFETY')) {
         throw new Error("La risposta è stata bloccata per motivi di sicurezza. Prova a riformulare.");
-    }
-    // Propagate the specific API key error message if it was thrown
-    if (error instanceof Error && error.message.includes("Chiave API non trovata")) {
-        throw error;
     }
     throw new Error("Non è stato possibile analizzare la risposta. Riprova più tardi.");
   }
