@@ -9,8 +9,7 @@ import { BackIcon, MicIcon, SendIcon, SpeakerIcon, SpeakerOffIcon } from './Icon
 interface ExerciseScreenProps {
   exercise: Exercise;
   moduleTitle: string;
-  mode: ExerciseType;
-  apiKey: string; // Add apiKey to props
+  apiKey: string;
   onComplete: (result: AnalysisResult) => void;
   onBack: () => void;
   onError: (message: string) => void;
@@ -29,9 +28,10 @@ const replacePunctuation = (text: string): string => {
 };
 
 
-export default function ExerciseScreen({ exercise, moduleTitle, mode, apiKey, onComplete, onBack, onError }: ExerciseScreenProps) {
+export default function ExerciseScreen({ exercise, moduleTitle, apiKey, onComplete, onBack, onError }: ExerciseScreenProps) {
   const [response, setResponse] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [lastInputMethod, setLastInputMethod] = useState<ExerciseType>(ExerciseType.WRITTEN);
   const { isListening, transcript, startListening, stopListening, speak, isSupported, isSpeaking, stopSpeaking } = useSpeech();
   const prevIsListening = useRef(isListening);
 
@@ -50,8 +50,7 @@ export default function ExerciseScreen({ exercise, moduleTitle, mode, apiKey, on
     }
     setIsLoading(true);
     try {
-      // Pass the apiKey to the analyzeResponse function
-      const result = await analyzeResponse(textToAnalyze, exercise.scenario, exercise.task, mode === ExerciseType.VERBAL, apiKey);
+      const result = await analyzeResponse(textToAnalyze, exercise.scenario, exercise.task, lastInputMethod === ExerciseType.VERBAL, apiKey);
       onComplete(result);
     } catch (error) {
       console.error(error);
@@ -59,7 +58,7 @@ export default function ExerciseScreen({ exercise, moduleTitle, mode, apiKey, on
     } finally {
       setIsLoading(false);
     }
-  }, [exercise.scenario, exercise.task, mode, onComplete, onError, apiKey]);
+  }, [exercise.scenario, exercise.task, onComplete, onError, apiKey, lastInputMethod]);
 
   
   useEffect(() => {
@@ -68,11 +67,11 @@ export default function ExerciseScreen({ exercise, moduleTitle, mode, apiKey, on
     }
   }, [transcript]);
   
-  // This effect now only updates the response with the final punctuated transcript, without submitting.
   useEffect(() => {
     if (prevIsListening.current && !isListening && transcript) {
         const finalResponse = replacePunctuation(transcript);
         setResponse(finalResponse);
+        setLastInputMethod(ExerciseType.VERBAL);
     }
     prevIsListening.current = isListening;
   }, [isListening, transcript]);
@@ -91,6 +90,11 @@ export default function ExerciseScreen({ exercise, moduleTitle, mode, apiKey, on
     } else {
       startListening();
     }
+  };
+
+  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setResponse(e.target.value);
+    setLastInputMethod(ExerciseType.WRITTEN);
   };
 
   return (
@@ -126,19 +130,15 @@ export default function ExerciseScreen({ exercise, moduleTitle, mode, apiKey, on
             <div className="flex-grow flex flex-col justify-end">
                 <textarea
                     value={response}
-                    onChange={(e) => setResponse(e.target.value)}
-                    placeholder={
-                        mode === ExerciseType.VERBAL
-                            ? "Tocca il microfono per iniziare. La trascrizione apparirà qui."
-                            : "Scrivi qui la tua risposta..."
-                    }
+                    onChange={handleTextChange}
+                    placeholder="Scrivi qui la tua risposta o usa il microfono per dettarla..."
                     className="w-full h-32 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-azzurroPastello focus:border-azzurroPastello transition-shadow"
                     disabled={isLoading || isListening}
                 />
-                {mode === ExerciseType.VERBAL && isListening && (
+                {isListening && (
                     <div className="flex items-center text-sm text-gray-500 mt-2">
                         <span className="inline-block w-2 h-2 mr-2 bg-red-500 rounded-full animate-pulse"></span>
-                        Sto ascoltando...
+                        Sto ascoltando... Tocca di nuovo il microfono per fermare.
                     </div>
                 )}
             </div>
@@ -151,28 +151,28 @@ export default function ExerciseScreen({ exercise, moduleTitle, mode, apiKey, on
                     <p className="mt-2 text-gray-700">Analisi in corso...</p>
                 </div>
             ) : (
-                mode === ExerciseType.WRITTEN ? (
-                    <button onClick={handleSubmit} className="px-8 py-3 bg-accentoVerde text-white font-bold rounded-full shadow-lg hover:bg-green-600 transition-colors flex items-center space-x-2" style={{backgroundColor: COLORS.accentoVerde}}>
+                <div className="flex w-full items-center justify-between space-x-4">
+                    <div className="flex flex-col items-center">
+                         <button 
+                            onClick={handleMicClick} 
+                            className={`w-16 h-16 rounded-full flex items-center justify-center transition-all duration-300 shadow-lg ${isListening ? 'bg-red-500 animate-pulse' : 'bg-white border-2'}`}
+                            style={{borderColor: COLORS.accentoVerde, backgroundColor: isListening ? '#ef4444' : 'white'}}
+                            aria-label={isListening ? 'Ferma registrazione' : 'Inizia registrazione'}
+                        >
+                            <MicIcon className={`w-8 h-8 ${isListening ? 'text-white' : ''}`} style={{color: isListening ? 'white' : COLORS.accentoVerde}}/>
+                        </button>
+                         {!isSupported && <p className="text-red-500 text-xs mt-2 text-center">Riconoscimento vocale non supportato.</p>}
+                    </div>
+                    <button 
+                        onClick={handleSubmit} 
+                        disabled={!response.trim()}
+                        className="flex-grow px-8 py-4 bg-accentoVerde text-white font-bold rounded-full shadow-lg hover:bg-green-600 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center space-x-2" 
+                        style={{backgroundColor: response.trim() ? COLORS.accentoVerde : ''}}
+                    >
                         <SendIcon className="w-5 h-5" />
                         <span>Invia Risposta</span>
                     </button>
-                ) : (
-                    <div className="flex items-center justify-center space-x-6">
-                        <div className="flex flex-col items-center space-y-2">
-                            <button onClick={handleMicClick} className={`w-20 h-20 rounded-full flex items-center justify-center transition-all duration-300 shadow-xl ${isListening ? 'bg-red-500 animate-pulse' : 'bg-accentoVerde'}`}  style={{backgroundColor: isListening ? '#ef4444' : COLORS.accentoVerde}}>
-                                <MicIcon className="w-10 h-10 text-white" />
-                            </button>
-                            <p className="text-sm text-gray-600">{isListening ? 'Parla ora... Tocca per fermare' : 'Tocca per parlare'}</p>
-                            {!isSupported && <p className="text-red-500 text-sm mt-2">Il riconoscimento vocale non è supportato da questo browser.</p>}
-                        </div>
-                        {response.trim() && !isListening && (
-                            <button onClick={handleSubmit} className="px-8 py-3 bg-accentoVerde text-white font-bold rounded-full shadow-lg hover:bg-green-600 transition-colors flex items-center space-x-2 animate-fade-in" style={{backgroundColor: COLORS.accentoVerde}}>
-                                <SendIcon className="w-5 h-5" />
-                                <span>Invia Risposta</span>
-                            </button>
-                        )}
-                    </div>
-                )
+                </div>
             )}
         </div>
     </div>
