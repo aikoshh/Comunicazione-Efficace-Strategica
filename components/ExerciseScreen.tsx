@@ -10,29 +10,26 @@ interface ExerciseScreenProps {
   exercise: Exercise;
   moduleTitle: string;
   mode: ExerciseType;
+  apiKey: string; // Add apiKey to props
   onComplete: (result: AnalysisResult) => void;
   onBack: () => void;
   onError: (message: string) => void;
 }
 
 const replacePunctuation = (text: string): string => {
-  // Replace spoken punctuation with symbols. Case-insensitive.
-  // Using word boundaries (\\b) is safer to not replace parts of words.
   let processedText = text
     .replace(/\bpunto interrogativo\b/gi, '?')
     .replace(/\bpunto esclamativo\b/gi, '!')
     .replace(/\bvirgola\b/gi, ',')
     .replace(/\bpunto\b/gi, '.');
   
-  // Clean up extra spaces before the punctuation mark.
   processedText = processedText.replace(/\s+([,.?!])/g, '$1');
 
   return processedText;
 };
 
 
-// FIX: Replaced JSX.Element with React.ReactElement
-export default function ExerciseScreen({ exercise, moduleTitle, mode, onComplete, onBack, onError }: ExerciseScreenProps): React.ReactElement {
+export default function ExerciseScreen({ exercise, moduleTitle, mode, apiKey, onComplete, onBack, onError }: ExerciseScreenProps) {
   const [response, setResponse] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { isListening, transcript, startListening, stopListening, speak, isSupported } = useSpeech();
@@ -46,12 +43,12 @@ export default function ExerciseScreen({ exercise, moduleTitle, mode, onComplete
   
   const submitAnalysis = useCallback(async (textToAnalyze: string) => {
     if (!textToAnalyze.trim()) {
-        // Silently return if the transcript is empty to avoid errors on accidental mic taps.
         return;
     }
     setIsLoading(true);
     try {
-      const result = await analyzeResponse(textToAnalyze, exercise.scenario, exercise.task, mode === ExerciseType.VERBAL);
+      // Pass the apiKey to the analyzeResponse function
+      const result = await analyzeResponse(textToAnalyze, exercise.scenario, exercise.task, mode === ExerciseType.VERBAL, apiKey);
       onComplete(result);
     } catch (error) {
       console.error(error);
@@ -59,17 +56,15 @@ export default function ExerciseScreen({ exercise, moduleTitle, mode, onComplete
     } finally {
       setIsLoading(false);
     }
-  }, [exercise.scenario, exercise.task, mode, onComplete, onError]);
+  }, [exercise.scenario, exercise.task, mode, onComplete, onError, apiKey]);
 
   
-  // This effect provides live transcription
   useEffect(() => {
     if (transcript) {
         setResponse(transcript);
     }
   }, [transcript]);
 
-  // This effect processes the final transcript when listening stops and auto-submits for verbal mode
   useEffect(() => {
     if (mode === ExerciseType.VERBAL && prevIsListening.current && !isListening && transcript) {
         const finalResponse = replacePunctuation(transcript);
