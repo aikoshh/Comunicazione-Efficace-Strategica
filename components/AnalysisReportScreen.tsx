@@ -118,12 +118,21 @@ export default function AnalysisReportScreen({ result, exercise, onNext, onRetry
         
         <Section title="Scala del Coinvolgimento Comunicativo">
             <div className="p-4 bg-azzurroPastello/30 rounded-lg">
-                <h3 className="font-bold text-nero text-lg">{result.communicativeScaleAnalysis.phase}</h3>
+                <div className="flex items-center justify-between">
+                    <h3 className="font-bold text-nero text-lg">{result.communicativeScaleAnalysis.phase}</h3>
+                    <div className="text-sm font-bold text-nero px-3 py-1 rounded-full" style={{backgroundColor: COLORS.azzurroPastello}}>
+                        Punteggio Coinvolgimento: {result.communicativeScaleAnalysis.scaleScore}/10
+                    </div>
+                </div>
                 <p className="text-gray-700 mt-2">{result.communicativeScaleAnalysis.feedback}</p>
             </div>
         </Section>
 
         <Section title="La Risposta Ideale">
+            <div className="mb-6 p-4 bg-gray-100 rounded-lg border border-gray-200">
+                <h4 className="font-semibold text-gray-700 mb-1">Riepilogo Scenario:</h4>
+                <p className="text-gray-600 italic">"{exercise.scenario}"</p>
+            </div>
             <div className="space-y-4">
                 <div>
                     <h3 className="font-semibold text-lg text-nero mb-2">Versione Breve</h3>
@@ -134,7 +143,7 @@ export default function AnalysisReportScreen({ result, exercise, onNext, onRetry
                     <div className="p-4 bg-gray-50 rounded-lg border border-gray-200 italic text-gray-800" dangerouslySetInnerHTML={renderMarkdown(result.idealResponse.long)} />
                 </div>
             </div>
-        </Section>
+        </section>
         
         <footer className="py-6 flex flex-col items-center justify-center space-y-4">
             <div className="flex items-center justify-center space-x-4">
