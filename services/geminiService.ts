@@ -1,9 +1,6 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import type { AnalysisResult, IdealResponse } from '../types';
 
-// FIX: Initialize the GoogleGenAI client according to guidelines.
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
 const cesStepSchema = {
     type: Type.OBJECT,
     properties: {
@@ -70,6 +67,10 @@ export async function analyzeResponse(
   isVerbal: boolean
 ): Promise<AnalysisResult> {
 
+  // FIX: Initialize the GoogleGenAI client inside the function to prevent app crash on load.
+  // This "lazy initialization" ensures the app always loads, and API key issues are handled gracefully later.
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+
   const modality = isVerbal ? "verbale" : "scritta";
 
   const systemInstruction = `Sei un coach esperto di Comunicazione Efficace Strategica (CES) e della "Scala del Coinvolgimento Comunicativo". Il tuo compito è analizzare la risposta di un utente a uno scenario di training. Sii costruttivo, incoraggiante e focalizzato sui principi teorici. Non usare mai markdown nella tua risposta, solo JSON.
@@ -100,7 +101,6 @@ export async function analyzeResponse(
   Analizza la risposta e fornisci il tuo feedback nel formato JSON richiesto.`;
 
   try {
-    // FIX: Use the correct model name 'gemini-2.5-flash' and API structure.
     const result = await ai.models.generateContent({
         model: 'gemini-2.5-flash',
         contents: userPrompt,
