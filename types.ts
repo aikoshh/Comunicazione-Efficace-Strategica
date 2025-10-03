@@ -23,9 +23,9 @@ export interface Module {
   id: string;
   title: string;
   description: string;
-  // FIX: Allow style prop for icon components to support coloring SVG icons.
-  icon: React.FC<{ className?: string; style?: React.CSSProperties }>;
+  icon: React.FC<React.SVGProps<SVGSVGElement>>;
   exercises: Exercise[];
+  cardImage?: string; // Immagine opzionale per la card del modulo
 }
 
 // Struttura per la Heatmap CES
