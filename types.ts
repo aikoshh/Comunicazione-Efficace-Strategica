@@ -45,6 +45,7 @@ export interface CESHeatmap {
 export interface CommunicativeScaleAnalysis {
   phase: string; // Es. "Consiglio non richiesto"
   feedback: string;
+  scaleScore: number; // Punteggio da 1 a 10
 }
 
 // Struttura per la risposta ideale
