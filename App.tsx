@@ -1,10 +1,11 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { MODULES } from './constants';
 import type { Module, Exercise, AnalysisResult, ExerciseType } from './types';
 import HomeScreen from './components/HomeScreen';
 import ModuleScreen from './components/ModuleScreen';
 import ExerciseScreen from './components/ExerciseScreen';
 import AnalysisReportScreen from './components/AnalysisReportScreen';
+import ApiKeyErrorScreen from './components/ApiKeyErrorScreen'; // Import the new screen
 import { COLORS } from './constants';
 
 type Screen = 'home' | 'module' | 'exercise' | 'report';
@@ -16,6 +17,16 @@ function App() {
   const [exerciseMode, setExerciseMode] = useState<ExerciseType | null>(null);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isApiKeyMissing, setIsApiKeyMissing] = useState(false);
+
+  // Check for API key on initial load
+  useEffect(() => {
+    // A simple check to see if the env variable is missing or empty
+    if (!process.env.API_KEY || process.env.API_KEY.trim() === '') {
+      setIsApiKeyMissing(true);
+    }
+  }, []);
+
 
   const handleSelectModule = useCallback((module: Module) => {
     setSelectedModule(module);
@@ -130,6 +141,11 @@ function App() {
         return <HomeScreen modules={MODULES} onSelectModule={handleSelectModule} />;
     }
   };
+  
+  // If API key is missing, render the dedicated error screen instead of the app
+  if (isApiKeyMissing) {
+      return <ApiKeyErrorScreen />;
+  }
 
   return (
     <div className="min-h-screen font-sans text-gray-800" style={{ backgroundColor: COLORS.fondo }}>
