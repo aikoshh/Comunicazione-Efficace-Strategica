@@ -42,9 +42,10 @@ const analysisSchema = {
         description: "Analisi basata sulla 'Scala del Coinvolgimento Comunicativo'.",
         properties: {
             phase: { type: Type.STRING, description: "Identifica in quale delle 5 fasi della scala si colloca la risposta (es. 'Consiglio non richiesto', 'Espressione personale')." },
-            feedback: { type: Type.STRING, description: "Fornisci un feedback specifico relativo a quella fase, spiegando perché la risposta rientra in quella categoria e quali sono le implicazioni." }
+            feedback: { type: Type.STRING, description: "Fornisci un feedback specifico relativo a quella fase, spiegando perché la risposta rientra in quella categoria e quali sono le implicazioni." },
+            scaleScore: { type: Type.NUMBER, description: "Un punteggio da 1 a 10 che indica l'intensità del coinvolgimento comunicativo, dove 1 è 'Espressione Personale' e 10 è 'Creazione di aspettative reciproche'." }
         },
-        required: ['phase', 'feedback']
+        required: ['phase', 'feedback', 'scaleScore']
     },
     idealResponse: {
         type: Type.OBJECT,
@@ -88,7 +89,7 @@ export async function analyzeResponse(
   3. Consiglio richiesto: La risposta segue una richiesta esplicita di consiglio.
   4. Tentativo di convincimento: L'utente cerca di persuadere l'altro.
   5. Creazione di aspettative reciproche: La conversazione stabilisce un supporto futuro.
-  Fornisci un feedback specifico per la fase identificata.
+  Fornisci un feedback specifico per la fase identificata e un punteggio di intensità da 1 a 10 (1=basso, 10=alto).
   
   Infine, fornisci due versioni di una risposta ideale (100/100): una breve e concisa, e una più lunga e articolata. In entrambe le versioni, metti in grassetto usando la sintassi markdown (es. **parola chiave**) le parole chiave che hai utilizzato nelle domande proposte e che si ricollegano al contenuto dello scenario iniziale.
 
