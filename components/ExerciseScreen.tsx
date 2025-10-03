@@ -45,6 +45,7 @@ export default function ExerciseScreen({ exercise, moduleTitle, mode, apiKey, on
   
   const submitAnalysis = useCallback(async (textToAnalyze: string) => {
     if (!textToAnalyze.trim()) {
+        onError("La risposta non può essere vuota.");
         return;
     }
     setIsLoading(true);
@@ -66,17 +67,17 @@ export default function ExerciseScreen({ exercise, moduleTitle, mode, apiKey, on
         setResponse(transcript);
     }
   }, [transcript]);
-
+  
+  // This effect now only updates the response with the final punctuated transcript, without submitting.
   useEffect(() => {
-    if (mode === ExerciseType.VERBAL && prevIsListening.current && !isListening && transcript) {
+    if (prevIsListening.current && !isListening && transcript) {
         const finalResponse = replacePunctuation(transcript);
         setResponse(finalResponse);
-        submitAnalysis(finalResponse);
     }
     prevIsListening.current = isListening;
-  }, [isListening, transcript, mode, submitAnalysis]);
+  }, [isListening, transcript]);
 
-  const handleWrittenSubmit = () => {
+  const handleSubmit = () => {
     if (!response.trim()) {
       onError("La risposta non può essere vuota.");
       return;
@@ -146,17 +147,25 @@ export default function ExerciseScreen({ exercise, moduleTitle, mode, apiKey, on
                 </div>
             ) : (
                 mode === ExerciseType.WRITTEN ? (
-                    <button onClick={handleWrittenSubmit} className="px-8 py-3 bg-accentoVerde text-white font-bold rounded-full shadow-lg hover:bg-green-600 transition-colors flex items-center space-x-2" style={{backgroundColor: COLORS.accentoVerde}}>
+                    <button onClick={handleSubmit} className="px-8 py-3 bg-accentoVerde text-white font-bold rounded-full shadow-lg hover:bg-green-600 transition-colors flex items-center space-x-2" style={{backgroundColor: COLORS.accentoVerde}}>
                         <SendIcon className="w-5 h-5" />
                         <span>Invia Risposta</span>
                     </button>
                 ) : (
-                    <div className="flex flex-col items-center space-y-2">
-                        <button onClick={handleMicClick} className={`w-20 h-20 rounded-full flex items-center justify-center transition-all duration-300 shadow-xl ${isListening ? 'bg-red-500 animate-pulse' : 'bg-accentoVerde'}`}  style={{backgroundColor: isListening ? '#ef4444' : COLORS.accentoVerde}}>
-                            <MicIcon className="w-10 h-10 text-white" />
-                        </button>
-                         <p className="text-sm text-gray-600">{isListening ? 'Parla ora... Tocca per fermare' : 'Tocca per parlare'}</p>
-                        {!isSupported && <p className="text-red-500 text-sm mt-2">Il riconoscimento vocale non è supportato da questo browser.</p>}
+                    <div className="flex items-center justify-center space-x-6">
+                        <div className="flex flex-col items-center space-y-2">
+                            <button onClick={handleMicClick} className={`w-20 h-20 rounded-full flex items-center justify-center transition-all duration-300 shadow-xl ${isListening ? 'bg-red-500 animate-pulse' : 'bg-accentoVerde'}`}  style={{backgroundColor: isListening ? '#ef4444' : COLORS.accentoVerde}}>
+                                <MicIcon className="w-10 h-10 text-white" />
+                            </button>
+                            <p className="text-sm text-gray-600">{isListening ? 'Parla ora... Tocca per fermare' : 'Tocca per parlare'}</p>
+                            {!isSupported && <p className="text-red-500 text-sm mt-2">Il riconoscimento vocale non è supportato da questo browser.</p>}
+                        </div>
+                        {response.trim() && !isListening && (
+                            <button onClick={handleSubmit} className="px-8 py-3 bg-accentoVerde text-white font-bold rounded-full shadow-lg hover:bg-green-600 transition-colors flex items-center space-x-2 animate-fade-in" style={{backgroundColor: COLORS.accentoVerde}}>
+                                <SendIcon className="w-5 h-5" />
+                                <span>Invia Risposta</span>
+                            </button>
+                        )}
                     </div>
                 )
             )}
