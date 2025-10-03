@@ -46,7 +46,7 @@ const ExerciseCard: React.FC<{ exercise: Exercise, onStart: () => void }> = ({ e
                     className="px-6 py-2 bg-accentoVerde text-white font-bold rounded-full shadow-lg hover:bg-green-600 transition-colors flex items-center space-x-2"
                     style={{backgroundColor: COLORS.accentoVerde}}
                 >
-                    <span>Rispondi</span>
+                    <span>Prova</span>
                     <NextIcon className="w-5 h-5" />
                 </button>
             </div>
