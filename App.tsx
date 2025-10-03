@@ -5,7 +5,7 @@ import HomeScreen from './components/HomeScreen';
 import ModuleScreen from './components/ModuleScreen';
 import ExerciseScreen from './components/ExerciseScreen';
 import AnalysisReportScreen from './components/AnalysisReportScreen';
-import ApiKeyErrorScreen from './components/ApiKeyErrorScreen'; // Import the new screen
+import ApiKeyModal from './components/ApiKeyModal'; // Import the new modal
 import { COLORS } from './constants';
 
 type Screen = 'home' | 'module' | 'exercise' | 'report';
@@ -17,16 +17,22 @@ function App() {
   const [exerciseMode, setExerciseMode] = useState<ExerciseType | null>(null);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [isApiKeyMissing, setIsApiKeyMissing] = useState(false);
+  const [apiKey, setApiKey] = useState<string | null>(null);
 
-  // Check for API key on initial load
+  // On initial load, try to get the API key from localStorage
   useEffect(() => {
-    // A simple check to see if the env variable is missing or empty
-    if (!process.env.API_KEY || process.env.API_KEY.trim() === '') {
-      setIsApiKeyMissing(true);
+    const storedApiKey = localStorage.getItem('gemini-api-key');
+    if (storedApiKey) {
+      setApiKey(storedApiKey);
     }
   }, []);
 
+  const handleSaveApiKey = (key: string) => {
+    if (key.trim()) {
+      setApiKey(key);
+      localStorage.setItem('gemini-api-key', key);
+    }
+  };
 
   const handleSelectModule = useCallback((module: Module) => {
     setSelectedModule(module);
@@ -47,7 +53,6 @@ function App() {
   const handleBack = useCallback(() => {
     switch (currentScreen) {
       case 'report':
-        // From report, go back to the module screen to choose another exercise
         setCurrentScreen('module');
         setAnalysisResult(null);
         break;
@@ -80,10 +85,8 @@ function App() {
   const handleNext = useCallback(() => {
     const nextExercise = findNextExercise();
     if (nextExercise && exerciseMode) {
-      // Start next exercise in the same mode
       handleStartExercise(nextExercise, exerciseMode);
     } else {
-      // If no next exercise, go back to module screen
       setCurrentScreen('module');
     }
     setAnalysisResult(null);
@@ -111,12 +114,13 @@ function App() {
         }
         return null;
       case 'exercise':
-        if (selectedExercise && selectedModule && exerciseMode) {
+        if (selectedExercise && selectedModule && exerciseMode && apiKey) {
           return (
             <ExerciseScreen
               exercise={selectedExercise}
               moduleTitle={selectedModule.title}
               mode={exerciseMode}
+              apiKey={apiKey} // Pass the key to the exercise screen
               onComplete={handleCompleteExercise}
               onBack={handleBack}
               onError={handleError}
@@ -142,14 +146,10 @@ function App() {
     }
   };
   
-  // If API key is missing, render the dedicated error screen instead of the app
-  if (isApiKeyMissing) {
-      return <ApiKeyErrorScreen />;
-  }
-
   return (
     <div className="min-h-screen font-sans text-gray-800" style={{ backgroundColor: COLORS.fondo }}>
-      <main className="container mx-auto px-4 py-8 md:py-12">
+      {!apiKey && <ApiKeyModal onSave={handleSaveApiKey} />}
+      <main className={`container mx-auto px-4 py-8 md:py-12 ${!apiKey ? 'blur-sm pointer-events-none' : ''}`}>
         {renderScreen()}
         {error && (
             <div className="fixed bottom-5 right-5 z-50 bg-red-500 text-white py-2 px-4 rounded-lg shadow-lg animate-fade-in">
