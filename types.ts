@@ -23,7 +23,8 @@ export interface Module {
   id: string;
   title: string;
   description: string;
-  icon: React.FC<React.SVGProps<SVGSVGElement>>;
+  // FIX: Allow style prop for icon components to support coloring SVG icons.
+  icon: React.FC<{ className?: string; style?: React.CSSProperties }>;
   exercises: Exercise[];
 }
 
