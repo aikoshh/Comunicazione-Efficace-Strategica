@@ -2,10 +2,22 @@ import { GoogleGenAI, Type } from "@google/genai";
 import type { AnalysisResult, ImprovementArea } from '../types';
 
 const getAI = () => {
-  // Crea una nuova istanza ogni volta per garantire che venga utilizzata la configurazione 
-  // più recente dell'ambiente, inclusa la API_KEY, che potrebbe essere caricata 
-  // in modo asincrono o con un leggero ritardo. Questo approccio è più robusto.
-  return new GoogleGenAI({ apiKey: process.env.API_KEY });
+  let apiKey;
+  try {
+    // Accede in modo sicuro alla chiave API. Lancia un ReferenceError se 'process' non è definito.
+    apiKey = process.env.API_KEY;
+  } catch (e) {
+    // 'process' non è definito in questo ambiente.
+    return null;
+  }
+
+  // Controlla se la chiave API è una stringa non vuota.
+  if (!apiKey) {
+    return null;
+  }
+  
+  // Restituisce una nuova istanza del client AI.
+  return new GoogleGenAI({ apiKey });
 };
 
 const getMockAnalysis = (): Promise<AnalysisResult> => {
@@ -94,14 +106,15 @@ export const analyzeResponse = async (
   task: string,
   isVerbal: boolean,
 ): Promise<AnalysisResult> => {
-  // If the API key is not available, return a mock response to allow the app to function in demo mode.
-  if (typeof process === 'undefined' || !process.env || !process.env.API_KEY) {
+  const ai = getAI();
+
+  // Se getAI() restituisce null, la chiave API non è configurata.
+  // Utilizza l'analisi mock per la modalità demo.
+  if (!ai) {
     return getMockAnalysis();
   }
 
   try {
-    const ai = getAI();
-
     const verbalContext = isVerbal 
         ? "La risposta dell'utente è stata fornita verbalmente. Considera fattori come la concisione e la chiarezza adatti alla comunicazione parlata. Ignora eventuali errori di trascrizione o di battitura."
         : "La risposta dell'utente è stata scritta. Analizzala per chiarezza, tono e struttura come faresti con un testo scritto.";
