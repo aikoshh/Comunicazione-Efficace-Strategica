@@ -1,119 +1,90 @@
-import React from 'react';
-import type { Module } from './types';
-import { DifficultyLevel } from './types';
-import { MessageIcon, SplitIcon } from './components/Icons';
-import { lucyAdviceImage } from './assets';
+import { Module, DifficultyLevel } from './types';
+import { FeedbackIcon, ConflictIcon, QuestionIcon, CustomIcon } from './components/Icons';
+import { cardImage1, cardImage2, cardImage3, cardImage4 } from './assets';
 
 export const COLORS = {
-  nero: '#0B0B0C',
-  verdePastello: '#B8EFC6',
-  azzurroPastello: '#A8D8FF',
-  accentoVerde: '#31C48D',
-  fondo: '#FAFAFA',
+  nero: '#111827', // A dark, near-black color for text
+  fondo: '#f8f9fa', // A very light grey for backgrounds
+  accentoVerde: '#31C48D', // A vibrant green for primary actions
 };
-
-// FIX: Replaced JSX with React.createElement to be valid in a .ts file.
-// The passed className is ignored as "w-full h-full" is required for this specific image icon to fill its container.
-// FIX: Added style to props to match the Module['icon'] type.
-const LucyIcon = (props: {className?: string; style?: React.CSSProperties}): React.ReactElement => React.createElement('img', {
-    src: lucyAdviceImage,
-    alt: "Consiglio non richiesto",
-    className: "w-full h-full object-cover rounded-full",
-});
 
 export const MODULES: Module[] = [
   {
-    id: 'unsolicited-advice',
-    title: 'Consiglio non richiesto',
-    description: 'Impara a gestire le richieste di aiuto senza dare consigli non richiesti (smutandamento).',
-    icon: LucyIcon,
+    id: 'm1',
+    title: 'Dare Feedback Efficace',
+    description: 'Impara a fornire feedback costruttivi che motivano il cambiamento senza demotivare.',
+    icon: FeedbackIcon,
+    cardImage: cardImage1,
     exercises: [
       {
-        id: 'ua-base-1',
-        title: 'Riconoscere i confini',
-        scenario: 'Un tuo collega, visibilmente frustrato, si lamenta del suo capo per come ha gestito l\'ultimo progetto, dicendo: "Non ne posso più, il mio capo non capisce niente! Ha rovinato tutto il lavoro."',
-        task: 'Rispondi al collega senza offrire soluzioni o consigli diretti. Il tuo obiettivo è solo ascoltare e validare.',
-        difficulty: DifficultyLevel.BASE
+        id: 'e1',
+        title: 'Feedback a un Collaboratore con Prestazioni Scadenti',
+        scenario: 'Devi dare un feedback a Marco, un membro del tuo team, che recentemente ha mancato diverse scadenze e il cui lavoro è stato di qualità inferiore al solito. Vuoi affrontare il problema in modo costruttivo senza demotivarlo.',
+        task: 'Prepara e fornisci un feedback a Marco, concentrandoti sui fatti, sull\'impatto del suo comportamento e sui passi futuri per migliorare.',
+        difficulty: DifficultyLevel.BASE,
       },
       {
-        id: 'ua-base-2',
-        title: 'Ascolto Attivo',
-        scenario: 'Un tuo collega, visibilmente frustrato, si lamenta del suo capo per come ha gestito l\'ultimo progetto, dicendo: "Non ne posso più, il mio capo non capisce niente! Ha rovinato tutto il lavoro."',
-        task: 'Ascolta lo scenario, poi registra una risposta formulando una domanda di consenso e un ricalco emotivo.',
-        difficulty: DifficultyLevel.BASE
-      },
-      {
-        id: 'ua-inter-1',
-        title: 'Proporre opzioni',
-        scenario: 'Il tuo collega continua: "Davvero, non so come fare. Vorrei dirgliene quattro ma ho paura di perdere il posto."',
-        task: 'Rispondi proponendo due possibili opzioni (senza usare imperativi come "devi fare") e chiudi lasciandogli la piena libertà di scelta.',
-        difficulty: DifficultyLevel.INTERMEDIO
-      },
-       {
-        id: 'ua-avanzato-1',
-        title: 'Gestire il rifiuto',
-        scenario: 'Dopo che hai offerto un paio di opzioni, il tuo collega risponde: "Sì, belle idee, ma nessuna di queste funzionerà mai con lui. È un caso perso."',
-        task: 'Lui rifiuta il tuo tentativo di aiuto. Riformula la situazione per mantenere una relazione positiva, senza metterti sulla difensiva.',
-        difficulty: DifficultyLevel.AVANZATO
+        id: 'e2',
+        title: 'Feedback a un Manager',
+        scenario: 'Il tuo manager, Luca, tende a micro-gestire il tuo lavoro, controllando ogni piccolo dettaglio e causando ritardi. Questo sta minando la tua autonomia e la tua fiducia. Vuoi dargli un feedback per migliorare la vostra collaborazione.',
+        task: 'Esponi la situazione a Luca in modo rispettoso, spiegando l\'impatto del suo comportamento sul tuo lavoro e suggerendo un approccio diverso.',
+        difficulty: DifficultyLevel.INTERMEDIO,
       },
     ],
   },
   {
-    id: 'dichotomous-questions',
-    title: 'Domande Dicotomiche',
-    description: 'Guida la conversazione e chiarisci il pensiero altrui con domande a scelta binaria.',
-    icon: SplitIcon,
+    id: 'm2',
+    title: 'Gestire Conversazioni Difficili',
+    description: 'Sviluppa le competenze per navigare conversazioni complesse e conflittuali con calma e professionalità.',
+    icon: ConflictIcon,
+    cardImage: cardImage2,
     exercises: [
       {
-        id: 'dq-base-1',
-        title: 'Da Aperta a Chiusa',
-        scenario: 'Un amico ti dice: "Sono così stressato per il lavoro, non so da dove cominciare."',
-        task: 'Trasforma la sua affermazione in una domanda dicotomica che lo aiuti a fare chiarezza. Invece di chiedere "Cosa ti stressa?", offri una scelta.',
-        difficulty: DifficultyLevel.BASE,
-      },
-      {
-        id: 'dq-inter-1',
-        title: 'Guidare la Riflessione',
-        scenario: 'Un membro del tuo team dice: "Questo progetto è un disastro, non rispetteremo mai la scadenza."',
-        task: 'Usa una domanda dicotomica per spostare il focus dal problema alla soluzione, cercando di capire se si sente più bloccato dalla quantità di lavoro o dalla difficoltà dei compiti.',
+        id: 'e3',
+        title: 'Disaccordo con un Collega su un Progetto',
+        scenario: 'Tu e il tuo collega, Giulia, avete visioni completamente diverse su come procedere con un progetto importante. La tensione sta crescendo e dovete trovare una soluzione per non bloccare il lavoro del team.',
+        task: 'Avvia una conversazione con Giulia per discutere delle vostre divergenze. Cerca di capire il suo punto di vista e di trovare un compromesso o una soluzione condivisa.',
         difficulty: DifficultyLevel.INTERMEDIO,
       },
       {
-        id: 'dq-avanzato-1',
-        title: 'Sequenza Strategica',
-        scenario: 'Un cliente si lamenta: "Non sono soddisfatto del servizio. Non è quello che mi aspettavo."',
-        task: 'Scrivi una serie di due domande dicotomiche per scomporre il suo feedback generico. La prima deve distinguere tra un problema di prodotto e uno di comunicazione; la seconda deve approfondire la direzione scelta.',
+        id: 'e4',
+        title: 'Comunicare una Decisione Impopolare al Team',
+        scenario: 'Come team leader, devi comunicare alla tua squadra che, a causa di un taglio di budget, il progetto a cui tenevano molto è stato cancellato. C\'è il rischio di un forte malcontento.',
+        task: 'Comunica la notizia al team in modo chiaro, empatico e trasparente, gestendo le loro reazioni e rispondendo alle loro domande.',
         difficulty: DifficultyLevel.AVANZATO,
       },
     ],
   },
   {
-    id: 'conflict-management',
-    title: 'Gestione del conflitto',
-    description: 'Trasforma i conflitti in opportunità di crescita e collaborazione.',
-    icon: MessageIcon,
+    id: 'm3',
+    title: 'Padroneggiare l\'Arte delle Domande',
+    description: 'Scopri come usare le domande per guidare le conversazioni, stimolare il pensiero critico e scoprire informazioni cruciali.',
+    icon: QuestionIcon,
+    cardImage: cardImage3,
     exercises: [
-      {
-        id: 'cm-base-1',
-        title: 'Riconoscere i trigger',
-        scenario: 'Durante una riunione, un collega ti interrompe dicendo: "Questo approccio è completamente sbagliato, come sempre non hai considerato le implicazioni a lungo termine!"',
-        task: 'Riscrivi la sua frase eliminando le parole trigger (giudizi, accuse, generalizzazioni) e trasformandola in un\'osservazione neutra basata sui fatti.',
-        difficulty: DifficultyLevel.BASE
-      },
-      {
-        id: 'cm-inter-1',
-        title: 'Direzionamento strategico',
-        scenario: 'Un collega ti accusa: "Il tuo team è di nuovo in ritardo e sta bloccando il mio lavoro. Siete sempre inaffidabili!"',
-        task: 'Ascolta lo scenario e registra una risposta che utilizzi una domanda strategica per spostare la conversazione da un\'accusa a una ricerca di soluzione.',
-        difficulty: DifficultyLevel.INTERMEDIO
-      },
        {
-        id: 'cm-avanzato-1',
-        title: 'Chiusura elegante',
-        scenario: 'Dopo una discussione accesa, la tensione è ancora alta. Avete trovato un accordo di massima, ma c\'è del risentimento nell\'aria.',
-        task: 'Scrivi una frase di chiusura che non solo confermi l\'accordo, ma che fissi anche i prossimi passi in modo realistico e ripari la relazione.',
-        difficulty: DifficultyLevel.AVANZATO
+        id: 'e5',
+        title: 'Capire le Esigenze di un Cliente',
+        scenario: 'Sei in una riunione iniziale con un potenziale cliente che ha difficoltà a esprimere chiaramente ciò di cui ha bisogno. Le sue richieste sono vaghe e contraddittorie.',
+        task: 'Utilizza una serie di domande aperte e di approfondimento per aiutare il cliente a definire meglio i suoi obiettivi e le sue necessità.',
+        difficulty: DifficultyLevel.BASE,
+      },
+      {
+        id: 'e6',
+        title: 'Sessione di Coaching con un Membro del Team',
+        scenario: 'Stai facendo da mentore a un collega più giovane, Sara, che si sente bloccata nella sua crescita professionale. Invece di darle soluzioni dirette, vuoi aiutarla a trovare le sue risposte.',
+        task: 'Conduci una conversazione di coaching con Sara usando domande potenti per aiutarla a riflettere sulla sua situazione, identificare gli ostacoli e creare un piano d\'azione.',
+        difficulty: DifficultyLevel.AVANZATO,
       },
     ],
   },
+  {
+    id: 'custom',
+    title: 'Allenamento Personalizzato',
+    description: 'Crea il tuo scenario di allenamento su misura per affrontare le sfide di comunicazione che ti stanno più a cuore.',
+    icon: CustomIcon,
+    cardImage: cardImage4,
+    exercises: [], // No pre-defined exercises for custom module
+    isCustom: true,
+  }
 ];

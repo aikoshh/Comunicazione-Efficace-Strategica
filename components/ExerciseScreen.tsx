@@ -1,180 +1,166 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import type { Exercise, AnalysisResult } from '../types';
-import { ExerciseType } from '../types';
+import React, { useState, useEffect } from 'react';
+import { Exercise, ExerciseType, AnalysisResult } from '../types';
 import { useSpeech } from '../hooks/useSpeech';
 import { analyzeResponse } from '../services/geminiService';
+import { Loader } from './Loader';
 import { COLORS } from '../constants';
-import { BackIcon, MicIcon, SendIcon, SpeakerIcon, SpeakerOffIcon } from './Icons';
+import { BackIcon, MicIcon, SendIcon, WrittenIcon, VerbalIcon, SpeakerIcon, SpeakerOffIcon } from './Icons';
 
 interface ExerciseScreenProps {
   exercise: Exercise;
-  moduleTitle: string;
-  apiKey: string;
   onComplete: (result: AnalysisResult) => void;
   onBack: () => void;
-  onError: (message: string) => void;
+  onApiKeyError: (error: string) => void;
 }
 
-const replacePunctuation = (text: string): string => {
-  let processedText = text
-    .replace(/\bpunto interrogativo\b/gi, '?')
-    .replace(/\bpunto esclamativo\b/gi, '!')
-    .replace(/\bvirgola\b/gi, ',')
-    .replace(/\bpunto\b/gi, '.');
-  
-  processedText = processedText.replace(/\s+([,.?!])/g, '$1');
-
-  return processedText;
-};
-
-
-export default function ExerciseScreen({ exercise, moduleTitle, apiKey, onComplete, onBack, onError }: ExerciseScreenProps) {
-  const [response, setResponse] = useState('');
+export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({ exercise, onComplete, onBack, onApiKeyError }) => {
+  const [exerciseType, setExerciseType] = useState<ExerciseType>(ExerciseType.WRITTEN);
+  const [userResponse, setUserResponse] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [lastInputMethod, setLastInputMethod] = useState<ExerciseType>(ExerciseType.WRITTEN);
-  const { isListening, transcript, startListening, stopListening, speak, isSupported, isSpeaking, stopSpeaking } = useSpeech();
-  const prevIsListening = useRef(isListening);
+  const [error, setError] = useState<string | null>(null);
+  const { isListening, transcript, startListening, stopListening, isSupported, speak, isSpeaking, stopSpeaking } = useSpeech();
 
-  const handleToggleScenarioAudio = () => {
+  useEffect(() => {
+    if (transcript) {
+      setUserResponse(transcript);
+    }
+  }, [transcript]);
+
+  const handleScenarioPlayback = () => {
     if (isSpeaking) {
-      stopSpeaking();
+        stopSpeaking();
     } else {
-      speak(exercise.scenario);
+        speak(`${exercise.title}. Scenario: ${exercise.scenario}. Compito: ${exercise.task}`);
     }
   };
-  
-  const submitAnalysis = useCallback(async (textToAnalyze: string) => {
-    if (!textToAnalyze.trim()) {
-        onError("La risposta non può essere vuota.");
-        return;
+
+  const handleSubmit = async () => {
+    if (!userResponse.trim()) {
+      setError("La risposta non può essere vuota.");
+      return;
     }
     setIsLoading(true);
+    setError(null);
     try {
-      const result = await analyzeResponse(textToAnalyze, exercise.scenario, exercise.task, lastInputMethod === ExerciseType.VERBAL, apiKey);
+      const result = await analyzeResponse(userResponse, exercise.scenario, exercise.task, exerciseType === ExerciseType.VERBAL);
       onComplete(result);
-    } catch (error) {
-      console.error(error);
-      onError(error instanceof Error ? error.message : "Si è verificato un errore sconosciuto.");
+    } catch (e: any) {
+      console.error(e);
+      if (e.message.includes('API_KEY')) {
+        onApiKeyError(e.message);
+      } else {
+        setError(e.message || "Si è verificato un errore sconosciuto.");
+      }
     } finally {
       setIsLoading(false);
     }
-  }, [exercise.scenario, exercise.task, onComplete, onError, apiKey, lastInputMethod]);
-
-  
-  useEffect(() => {
-    if (transcript) {
-        setResponse(transcript);
-    }
-  }, [transcript]);
-  
-  useEffect(() => {
-    if (prevIsListening.current && !isListening && transcript) {
-        const finalResponse = replacePunctuation(transcript);
-        setResponse(finalResponse);
-        setLastInputMethod(ExerciseType.VERBAL);
-    }
-    prevIsListening.current = isListening;
-  }, [isListening, transcript]);
-
-  const handleSubmit = () => {
-    if (!response.trim()) {
-      onError("La risposta non può essere vuota.");
-      return;
-    }
-    submitAnalysis(response);
   };
 
-  const handleMicClick = () => {
-    if (isListening) {
-      stopListening();
-    } else {
-      startListening();
-    }
-  };
-
-  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setResponse(e.target.value);
-    setLastInputMethod(ExerciseType.WRITTEN);
-  };
-
-  return (
-    <div className="min-h-[80vh] flex flex-col animate-fade-in">
-        <header className="flex items-center space-x-4 mb-6">
-            <button onClick={onBack} className="p-2 rounded-full hover:bg-gray-200/50 transition-colors">
-                <BackIcon className="w-6 h-6 text-nero" />
-            </button>
-            <div>
-                <h3 className="text-gray-600 text-sm">{moduleTitle}</h3>
-                <h1 className="text-2xl font-bold text-nero">{exercise.title}</h1>
-            </div>
-        </header>
-
-        <div className="bg-white/70 backdrop-blur-md p-6 rounded-2xl shadow-lg border border-gray-200/50 flex-grow flex flex-col">
-            <div className="space-y-4 mb-6">
-                <div className="flex items-center justify-between">
-                    <h2 className="font-semibold text-lg text-nero">Scenario:</h2>
-                    <button 
-                        onClick={handleToggleScenarioAudio} 
-                        className="flex items-center space-x-2 px-3 py-2 text-sm font-semibold text-nero bg-gray-100 rounded-full hover:bg-gray-200 transition-colors" 
-                        aria-label={isSpeaking ? "Ferma audio" : "Ascolta scenario"}
-                    >
-                       {isSpeaking ? <SpeakerOffIcon className="w-5 h-5 text-blue-600" /> : <SpeakerIcon className="w-5 h-5" />}
-                       <span>Ascolta il testo</span>
-                    </button>
-                </div>
-                <p className="text-gray-700 leading-relaxed italic">"{exercise.scenario}"</p>
-                <h2 className="font-semibold text-lg text-nero">Il tuo compito:</h2>
-                <p className="text-gray-700 leading-relaxed">{exercise.task}</p>
-            </div>
-
-            <div className="flex-grow flex flex-col justify-end">
-                <textarea
-                    value={response}
-                    onChange={handleTextChange}
-                    placeholder="Scrivi qui la tua risposta o usa il microfono per dettarla..."
-                    className="w-full h-32 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-azzurroPastello focus:border-azzurroPastello transition-shadow"
-                    disabled={isLoading || isListening}
-                />
-                {isListening && (
-                    <div className="flex items-center text-sm text-gray-500 mt-2">
-                        <span className="inline-block w-2 h-2 mr-2 bg-red-500 rounded-full animate-pulse"></span>
-                        Sto ascoltando... Tocca di nuovo il microfono per fermare.
-                    </div>
-                )}
-            </div>
+  const renderInputArea = () => {
+    if (exerciseType === ExerciseType.WRITTEN) {
+      return (
+        <div style={styles.inputWrapper}>
+          <textarea
+            style={styles.textarea}
+            value={userResponse}
+            onChange={(e) => setUserResponse(e.target.value)}
+            placeholder="Scrivi qui la tua risposta..."
+            rows={5}
+            disabled={isLoading}
+          />
+          <button onClick={handleSubmit} style={styles.sendButton} disabled={isLoading || !userResponse.trim()}>
+            <SendIcon color="white" />
+          </button>
         </div>
+      );
+    }
 
-        <div className="py-6 flex items-center justify-center">
-            {isLoading ? (
-                <div className="text-center">
-                    <div className="w-12 h-12 border-4 border-t-accentoVerde border-gray-200 rounded-full animate-spin mx-auto" style={{borderColor: COLORS.nero, borderTopColor: COLORS.accentoVerde}}></div>
-                    <p className="mt-2 text-gray-700">Analisi in corso...</p>
-                </div>
-            ) : (
-                <div className="flex w-full items-center justify-between space-x-4">
-                    <div className="flex flex-col items-center">
-                         <button 
-                            onClick={handleMicClick} 
-                            className={`w-16 h-16 rounded-full flex items-center justify-center transition-all duration-300 shadow-lg ${isListening ? 'bg-red-500 animate-pulse' : 'bg-white border-2'}`}
-                            style={{borderColor: COLORS.accentoVerde, backgroundColor: isListening ? '#ef4444' : 'white'}}
-                            aria-label={isListening ? 'Ferma registrazione' : 'Inizia registrazione'}
-                        >
-                            <MicIcon className={`w-8 h-8 ${isListening ? 'text-white' : ''}`} style={{color: isListening ? 'white' : COLORS.accentoVerde}}/>
-                        </button>
-                         {!isSupported && <p className="text-red-500 text-xs mt-2 text-center">Riconoscimento vocale non supportato.</p>}
-                    </div>
-                    <button 
-                        onClick={handleSubmit} 
-                        disabled={!response.trim()}
-                        className="flex-grow px-8 py-4 bg-accentoVerde text-white font-bold rounded-full shadow-lg hover:bg-green-600 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center space-x-2" 
-                        style={{backgroundColor: response.trim() ? COLORS.accentoVerde : ''}}
-                    >
-                        <SendIcon className="w-5 h-5" />
-                        <span>Invia Risposta</span>
-                    </button>
-                </div>
+    if (exerciseType === ExerciseType.VERBAL) {
+      if (!isSupported) {
+          return <p style={styles.errorText}>Il riconoscimento vocale non è supportato da questo browser.</p>
+      }
+      return (
+        <div style={styles.verbalContainer}>
+            <p style={styles.transcript}>{isListening ? 'Sto ascoltando...' : (userResponse || 'Tocca il microfono per registrare la tua risposta.')}</p>
+            <button
+                onClick={isListening ? stopListening : startListening}
+                style={{ ...styles.micButton, ...(isListening ? styles.micButtonListening : {}) }}
+                disabled={isLoading}
+            >
+                <MicIcon color="white" width={32} height={32} />
+            </button>
+            {userResponse && !isListening && (
+                <button onClick={handleSubmit} style={styles.verbalSubmitButton} disabled={isLoading}>
+                    Invia per Analisi
+                </button>
             )}
         </div>
+      );
+    }
+  };
+
+  if (isLoading) {
+    return <Loader />;
+  }
+
+  return (
+    <div style={styles.container}>
+      <button onClick={onBack} style={styles.backButton}>
+        <BackIcon /> Torna agli esercizi
+      </button>
+      <div style={styles.scenarioCard}>
+        <div style={styles.scenarioHeader}>
+            <h1 style={styles.title}>{exercise.title}</h1>
+            <button onClick={handleScenarioPlayback} style={styles.speakerButton}>
+                {isSpeaking ? <SpeakerOffIcon /> : <SpeakerIcon />}
+            </button>
+        </div>
+        <p style={styles.scenarioText}><strong>Scenario:</strong> {exercise.scenario}</p>
+        <p style={styles.taskText}><strong>Compito:</strong> {exercise.task}</p>
+      </div>
+
+      <div style={styles.toggleContainer}>
+          <button
+              style={{ ...styles.toggleButton, ...(exerciseType === ExerciseType.WRITTEN ? styles.toggleButtonActive : {}) }}
+              onClick={() => setExerciseType(ExerciseType.WRITTEN)}
+          >
+              <WrittenIcon /> Risposta Scritta
+          </button>
+          <button
+              style={{ ...styles.toggleButton, ...(exerciseType === ExerciseType.VERBAL ? styles.toggleButtonActive : {}) }}
+              onClick={() => setExerciseType(ExerciseType.VERBAL)}
+          >
+              <VerbalIcon /> Risposta Vocale
+          </button>
+      </div>
+
+      {error && <p style={styles.errorText}>{error}</p>}
+      
+      {renderInputArea()}
+
     </div>
   );
-}
+};
+
+const styles: { [key: string]: React.CSSProperties } = {
+  container: { maxWidth: '800px', margin: '0 auto', padding: '40px 20px', display: 'flex', flexDirection: 'column', gap: '24px' },
+  backButton: { display: 'flex', alignItems: 'center', gap: '8px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px', color: '#555', alignSelf: 'flex-start' },
+  scenarioCard: { backgroundColor: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', border: '1px solid #eee' },
+  scenarioHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px'},
+  title: { fontSize: '24px', color: COLORS.nero, margin: 0 },
+  speakerButton: { background: 'none', border: 'none', cursor: 'pointer', padding: '8px' },
+  scenarioText: { fontSize: '16px', color: '#333', lineHeight: '1.6', marginBottom: '12px' },
+  taskText: { fontSize: '16px', color: COLORS.nero, lineHeight: '1.6', fontWeight: '500' },
+  toggleContainer: { display: 'flex', gap: '12px', justifyContent: 'center', backgroundColor: '#f0f0f0', padding: '6px', borderRadius: '12px' },
+  toggleButton: { flex: 1, padding: '10px 16px', fontSize: '16px', border: 'none', background: 'transparent', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'background-color 0.2s', color: '#555' },
+  toggleButtonActive: { backgroundColor: 'white', color: COLORS.nero, fontWeight: '600', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' },
+  inputWrapper: { position: 'relative', display: 'flex', alignItems: 'center' },
+  textarea: { width: '100%', padding: '12px 16px', fontSize: '16px', borderRadius: '8px', border: '1px solid #ccc', resize: 'vertical', fontFamily: 'inherit', paddingRight: '60px' },
+  sendButton: { position: 'absolute', right: '8px', height: '40px', width: '40px', borderRadius: '50%', border: 'none', backgroundColor: COLORS.accentoVerde, color: 'white', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center' },
+  verbalContainer: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', padding: '20px', backgroundColor: '#f9f9f9', borderRadius: '12px' },
+  transcript: { fontSize: '18px', color: '#333', minHeight: '50px', textAlign: 'center' },
+  micButton: { width: '72px', height: '72px', borderRadius: '50%', backgroundColor: COLORS.accentoVerde, border: 'none', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', transition: 'background-color 0.2s' },
+  micButtonListening: { backgroundColor: '#E5484D' },
+  verbalSubmitButton: { padding: '12px 24px', fontSize: '16px', borderRadius: '8px', border: 'none', backgroundColor: COLORS.nero, color: 'white', cursor: 'pointer' },
+  errorText: { color: '#E5484D', textAlign: 'center', fontWeight: '500' },
+};

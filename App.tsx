@@ -1,169 +1,109 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState } from 'react';
+import { HomeScreen } from './components/HomeScreen';
+import { ModuleScreen } from './components/ModuleScreen';
+import { ExerciseScreen } from './components/ExerciseScreen';
+import { AnalysisReportScreen } from './components/AnalysisReportScreen';
+import { ApiKeyErrorScreen } from './components/ApiKeyErrorScreen';
+import CustomSetupScreen from './components/CustomSetupScreen';
+import type { Module, Exercise, AnalysisResult, DifficultyLevel } from './types';
 import { MODULES } from './constants';
-import type { Module, Exercise, AnalysisResult } from './types';
-import HomeScreen from './components/HomeScreen';
-import ModuleScreen from './components/ModuleScreen';
-import ExerciseScreen from './components/ExerciseScreen';
-import AnalysisReportScreen from './components/AnalysisReportScreen';
-import ApiKeyModal from './components/ApiKeyModal'; // Import the new modal
-import { COLORS } from './constants';
 
-type Screen = 'home' | 'module' | 'exercise' | 'report';
+type AppState =
+  | { screen: 'home' }
+  | { screen: 'module'; module: Module }
+  | { screen: 'custom_setup'; module: Module }
+  | { screen: 'exercise'; exercise: Exercise }
+  | { screen: 'report'; result: AnalysisResult; exercise: Exercise }
+  | { screen: 'api_key_error'; error: string };
 
-function App() {
-  const [currentScreen, setCurrentScreen] = useState<Screen>('home');
-  const [selectedModule, setSelectedModule] = useState<Module | null>(null);
-  const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
-  const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [apiKey, setApiKey] = useState<string | null>(null);
+const App: React.FC = () => {
+  const [appState, setAppState] = useState<AppState>({ screen: 'home' });
 
-  // On initial load, try to get the API key from localStorage
-  useEffect(() => {
-    const storedApiKey = localStorage.getItem('gemini-api-key');
-    if (storedApiKey) {
-      setApiKey(storedApiKey);
-    }
-  }, []);
-
-  const handleSaveApiKey = (key: string) => {
-    if (key.trim()) {
-      setApiKey(key);
-      localStorage.setItem('gemini-api-key', key);
-    }
-  };
-
-  const handleSelectModule = useCallback((module: Module) => {
-    setSelectedModule(module);
-    setCurrentScreen('module');
-  }, []);
-
-  const handleStartExercise = useCallback((exercise: Exercise) => {
-    setSelectedExercise(exercise);
-    setCurrentScreen('exercise');
-  }, []);
-  
-  const handleCompleteExercise = useCallback((result: AnalysisResult) => {
-    setAnalysisResult(result);
-    setCurrentScreen('report');
-  }, []);
-  
-  const handleBack = useCallback(() => {
-    switch (currentScreen) {
-      case 'report':
-        setCurrentScreen('module');
-        setAnalysisResult(null);
-        break;
-      case 'exercise':
-        setCurrentScreen('module');
-        break;
-      case 'module':
-        setCurrentScreen('home');
-        setSelectedModule(null);
-        break;
-      default:
-        setCurrentScreen('home');
-    }
-  }, [currentScreen]);
-
-  const handleRetry = useCallback(() => {
-    setAnalysisResult(null);
-    setCurrentScreen('exercise');
-  }, []);
-  
-  const findNextExercise = (): Exercise | null => {
-    if (!selectedModule || !selectedExercise) return null;
-    const currentExerciseIndex = selectedModule.exercises.findIndex(ex => ex.id === selectedExercise.id);
-    if (currentExerciseIndex !== -1 && currentExerciseIndex < selectedModule.exercises.length - 1) {
-      return selectedModule.exercises[currentExerciseIndex + 1];
-    }
-    return null;
-  };
-  
-  const handleNext = useCallback(() => {
-    const nextExercise = findNextExercise();
-    if (nextExercise) {
-      handleStartExercise(nextExercise);
+  const handleSelectModule = (module: Module) => {
+    if (module.isCustom) {
+      setAppState({ screen: 'custom_setup', module });
     } else {
-      setCurrentScreen('module');
-    }
-    setAnalysisResult(null);
-  }, [selectedModule, selectedExercise, handleStartExercise]);
-
-  const handleGoHome = useCallback(() => {
-    setCurrentScreen('home');
-    setSelectedModule(null);
-    setSelectedExercise(null);
-    setAnalysisResult(null);
-  }, []);
-  
-  const handleError = (message: string) => {
-      setError(message);
-      setTimeout(() => setError(null), 5000); // Auto-dismiss after 5s
-  };
-
-  const renderScreen = () => {
-    switch (currentScreen) {
-      case 'module':
-        if (selectedModule) {
-          return (
-            <ModuleScreen
-              module={selectedModule}
-              onStartExercise={handleStartExercise}
-              onBack={() => {
-                setCurrentScreen('home');
-                setSelectedModule(null);
-              }}
-            />
-          );
-        }
-        return null;
-      case 'exercise':
-        if (selectedExercise && selectedModule && apiKey) {
-          return (
-            <ExerciseScreen
-              exercise={selectedExercise}
-              moduleTitle={selectedModule.title}
-              apiKey={apiKey} // Pass the key to the exercise screen
-              onComplete={handleCompleteExercise}
-              onBack={handleBack}
-              onError={handleError}
-            />
-          );
-        }
-        return null;
-      case 'report':
-        if (analysisResult && selectedExercise) {
-          return (
-            <AnalysisReportScreen
-              result={analysisResult}
-              exercise={selectedExercise}
-              onNext={handleNext}
-              onRetry={handleRetry}
-              onGoHome={handleGoHome}
-            />
-          );
-        }
-        return null;
-      case 'home':
-      default:
-        return <HomeScreen modules={MODULES} onSelectModule={handleSelectModule} />;
+      setAppState({ screen: 'module', module });
     }
   };
+
+  const handleSelectExercise = (exercise: Exercise) => {
+    setAppState({ screen: 'exercise', exercise });
+  };
+
+  const handleStartCustomExercise = (scenario: string, task: string) => {
+    const customExercise: Exercise = {
+        id: 'custom-' + Date.now(),
+        title: 'Esercizio Personalizzato',
+        scenario: scenario,
+        task: task,
+        difficulty: 'Base' as DifficultyLevel, // Custom exercises don't have a fixed difficulty
+    };
+    setAppState({ screen: 'exercise', exercise: customExercise });
+  };
   
-  return (
-    <div className="min-h-screen font-sans text-gray-800" style={{ backgroundColor: COLORS.fondo }}>
-      {!apiKey && <ApiKeyModal onSave={handleSaveApiKey} />}
-      <main className={`container mx-auto px-4 py-8 md:py-12 ${!apiKey ? 'blur-sm pointer-events-none' : ''}`}>
-        {renderScreen()}
-        {error && (
-            <div className="fixed bottom-5 right-5 z-50 bg-red-500 text-white py-2 px-4 rounded-lg shadow-lg animate-fade-in">
-                {error}
-            </div>
-        )}
-      </main>
-    </div>
-  );
-}
+  const handleCompleteExercise = (result: AnalysisResult) => {
+    if (appState.screen === 'exercise') {
+      setAppState({ screen: 'report', result, exercise: appState.exercise });
+    }
+  };
+
+  const handleRetryExercise = () => {
+      if (appState.screen === 'report') {
+          setAppState({ screen: 'exercise', exercise: appState.exercise });
+      }
+  };
+
+  const handleNextExercise = () => {
+    // For simplicity, this just goes back to the home screen.
+    // A more complex app might go to the next exercise in the module.
+    setAppState({ screen: 'home' });
+  };
+  
+  const handleBack = () => {
+    if (appState.screen === 'module' || appState.screen === 'custom_setup') {
+      setAppState({ screen: 'home' });
+    }
+    if (appState.screen === 'exercise') {
+        const isCustom = appState.exercise.id.startsWith('custom-');
+        if (isCustom) {
+            const customModule = MODULES.find(m => m.isCustom);
+            if (customModule) {
+                setAppState({ screen: 'custom_setup', module: customModule });
+            } else {
+                setAppState({ screen: 'home' }); // Fallback
+            }
+        } else {
+            const moduleForExercise = MODULES.find(m => m.exercises.some(e => e.id === appState.exercise.id));
+            if (moduleForExercise) {
+                setAppState({ screen: 'module', module: moduleForExercise });
+            } else {
+                setAppState({ screen: 'home' }); // Fallback
+            }
+        }
+    }
+  };
+
+  const handleApiKeyError = (error: string) => {
+      setAppState({ screen: 'api_key_error', error });
+  };
+
+  switch (appState.screen) {
+    case 'home':
+      return <HomeScreen onSelectModule={handleSelectModule} />;
+    case 'module':
+      return <ModuleScreen module={appState.module} onSelectExercise={handleSelectExercise} onBack={handleBack} />;
+    case 'custom_setup':
+      return <CustomSetupScreen module={appState.module} onStart={handleStartCustomExercise} onBack={handleBack} />;
+    case 'exercise':
+        return <ExerciseScreen exercise={appState.exercise} onComplete={handleCompleteExercise} onBack={handleBack} onApiKeyError={handleApiKeyError} />;
+    case 'report':
+        return <AnalysisReportScreen result={appState.result} exercise={appState.exercise} onRetry={handleRetryExercise} onNext={handleNextExercise} />;
+    case 'api_key_error':
+        return <ApiKeyErrorScreen error={appState.error} />;
+    default:
+        return <HomeScreen onSelectModule={handleSelectModule} />;
+  }
+};
 
 export default App;

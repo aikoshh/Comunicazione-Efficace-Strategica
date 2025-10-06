@@ -1,176 +1,304 @@
-import React from 'react';
-import type { AnalysisResult, Exercise, CESStepAnalysis } from '../types';
+import React, { useState } from 'react';
+import { AnalysisResult, Exercise } from '../types';
 import { COLORS } from '../constants';
-import { NextIcon, RetryIcon, CheckCircleIcon, XCircleIcon, HomeIcon } from './Icons';
+import { CheckCircleIcon, XCircleIcon, RetryIcon, HomeIcon } from './Icons';
 
 interface AnalysisReportScreenProps {
   result: AnalysisResult;
   exercise: Exercise;
-  onNext: () => void;
   onRetry: () => void;
-  onGoHome: () => void;
+  onNext: () => void;
 }
-
-const renderMarkdown = (text: string) => {
-    const html = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br />');
-    return { __html: html };
-};
 
 const ScoreCircle: React.FC<{ score: number }> = ({ score }) => {
-    const color = score >= 70 ? COLORS.accentoVerde : score >= 40 ? '#FBBF24' : '#F87171';
-    const circumference = 2 * Math.PI * 45;
-    const strokeDashoffset = circumference - (score / 100) * circumference;
+  const circumference = 2 * Math.PI * 52; // 2 * pi * radius
+  const offset = circumference - (score / 100) * circumference;
+  
+  let strokeColor = COLORS.accentoVerde;
+  if (score < 70) strokeColor = '#F4A731'; // Yellow
+  if (score < 40) strokeColor = '#E5484D'; // Red
 
-    return (
-        <div className="relative w-32 h-32">
-            <svg className="w-full h-full" viewBox="0 0 100 100">
-                <circle
-                    className="text-gray-200"
-                    strokeWidth="10"
-                    stroke="currentColor"
-                    fill="transparent"
-                    r="45"
-                    cx="50"
-                    cy="50"
-                />
-                <circle
-                    strokeWidth="10"
-                    strokeDasharray={circumference}
-                    strokeDashoffset={strokeDashoffset}
-                    strokeLinecap="round"
-                    stroke="currentColor"
-                    style={{ color }}
-                    fill="transparent"
-                    r="45"
-                    cx="50"
-                    cy="50"
-                    className="transform -rotate-90 origin-center transition-all duration-1000 ease-out"
-                />
-            </svg>
-            <span className="absolute inset-0 flex items-center justify-center text-3xl font-bold" style={{ color: COLORS.nero }}>
-                {score}
-            </span>
-        </div>
-    );
-};
-
-const HeatmapStep: React.FC<{ label: string, analysis: CESStepAnalysis }> = ({ label, analysis }) => {
-    return (
-        <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-            <div className="flex items-center justify-between">
-                <span className="font-semibold text-nero">{label}</span>
-                {analysis.covered ? (
-                    <CheckCircleIcon className="w-6 h-6 text-green-500" />
-                ) : (
-                    <XCircleIcon className="w-6 h-6 text-red-500" />
-                )}
-            </div>
-            {!analysis.covered && analysis.suggestion && (
-                <p className="text-sm text-gray-600 mt-2 pt-2 border-t border-gray-200">
-                    <span className="font-semibold">Suggerimento:</span> "{analysis.suggestion}"
-                </p>
-            )}
-        </div>
-    );
-};
-
-const Section: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
-    <div className="bg-white/70 backdrop-blur-md p-6 rounded-2xl shadow-lg border border-gray-200/50">
-        <h2 className="text-xl font-bold text-nero mb-4 pb-2 border-b-2 border-azzurroPastello">{title}</h2>
-        {children}
-    </div>
-);
-
-const getScoreColorClass = (score: number) => {
-    if (score <= 3) return 'text-red-500';
-    if (score <= 5) return 'text-orange-500';
-    if (score <= 8) return 'text-green-500';
-    return 'text-blue-500';
-};
-
-
-// FIX: Replaced JSX.Element with React.ReactElement
-export default function AnalysisReportScreen({ result, exercise, onNext, onRetry, onGoHome }: AnalysisReportScreenProps): React.ReactElement {
   return (
-    <div className="space-y-8 animate-fade-in">
-        <header className="text-center">
-            <h1 className="text-3xl font-bold text-nero">Il tuo report per: {exercise.title}</h1>
-            <p className="text-gray-600 mt-2">Ecco un'analisi dettagliata della tua performance.</p>
-        </header>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
-            <div className="md:col-span-1 flex flex-col items-center bg-white/70 backdrop-blur-md p-6 rounded-2xl shadow-lg border border-gray-200/50">
-                <h2 className="text-xl font-bold text-nero mb-4">Punteggio Globale</h2>
-                <ScoreCircle score={result.score} />
-                <div className={`mt-4 font-semibold text-lg ${result.isPositive ? 'text-green-600' : 'text-red-600'}`}>
-                    {result.isPositive ? "Ottima risposta!" : "Puoi migliorare!"}
-                </div>
-            </div>
-            <div className="md:col-span-2">
-                 <Section title="Feedback Generale">
-                    <p className="text-gray-700 leading-relaxed">{result.feedback}</p>
-                 </Section>
-            </div>
-        </div>
-
-        <Section title="Heatmap CES (Comunicazione Efficace Strategica)">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <HeatmapStep label="Ingaggio" analysis={result.cesHeatmap.ingaggio} />
-                <HeatmapStep label="Ricalco" analysis={result.cesHeatmap.ricalco} />
-                <HeatmapStep label="Riformulazione" analysis={result.cesHeatmap.riformulazione} />
-                <HeatmapStep label="Direzionamento" analysis={result.cesHeatmap.direzionamento} />
-                <HeatmapStep label="Chiusura" analysis={result.cesHeatmap.chiusura} />
-            </div>
-        </section>
-        
-        <Section title="Scala del Coinvolgimento Comunicativo">
-            <div className="p-4 bg-azzurroPastello/30 rounded-lg flex items-center space-x-6">
-                <div className="flex-shrink-0 text-center">
-                    <div className={`text-6xl font-extrabold ${getScoreColorClass(result.communicativeScaleAnalysis.scaleScore)}`}>
-                        {result.communicativeScaleAnalysis.scaleScore}
-                    </div>
-                    <div className="text-sm font-semibold text-nero">/ 10</div>
-                </div>
-                <div className="flex-grow">
-                    <h3 className="font-bold text-nero text-lg">{result.communicativeScaleAnalysis.phase}</h3>
-                    <p className="text-gray-700 mt-1">{result.communicativeScaleAnalysis.feedback}</p>
-                </div>
-            </div>
-        </Section>
-
-        <Section title="La Risposta Ideale">
-            <div className="mb-6 p-4 bg-gray-100 rounded-lg border border-gray-200">
-                <h4 className="font-semibold text-gray-700 mb-1">Riepilogo Scenario:</h4>
-                <p className="text-gray-600 italic">"{exercise.scenario}"</p>
-            </div>
-            <div className="space-y-4">
-                <div>
-                    <h3 className="font-semibold text-lg text-nero mb-2">Versione Breve</h3>
-                    <div className="p-4 bg-gray-50 rounded-lg border border-gray-200 italic text-gray-800" dangerouslySetInnerHTML={renderMarkdown(result.idealResponse.short)} />
-                </div>
-                 <div>
-                    <h3 className="font-semibold text-lg text-nero mb-2">Versione Lunga</h3>
-                    <div className="p-4 bg-gray-50 rounded-lg border border-gray-200 italic text-gray-800" dangerouslySetInnerHTML={renderMarkdown(result.idealResponse.long)} />
-                </div>
-            </div>
-        </section>
-        
-        <footer className="py-6 flex flex-col items-center justify-center space-y-4">
-            <div className="flex items-center justify-center space-x-4">
-                 <button onClick={onRetry} className="px-6 py-3 bg-white border border-gray-300 text-nero font-bold rounded-full shadow-sm hover:bg-gray-100 transition-colors flex items-center space-x-2">
-                    <RetryIcon className="w-5 h-5" />
-                    <span>Riprova</span>
-                </button>
-                <button onClick={onNext} className="px-8 py-3 bg-accentoVerde text-white font-bold rounded-full shadow-lg hover:bg-green-600 transition-colors flex items-center space-x-2" style={{backgroundColor: COLORS.accentoVerde}}>
-                    <span>Prossimo Esercizio</span>
-                    <NextIcon className="w-5 h-5" />
-                </button>
-            </div>
-            <button onClick={onGoHome} className="px-6 py-2 bg-transparent text-gray-600 font-semibold rounded-full hover:bg-gray-200/50 transition-colors flex items-center space-x-2">
-                <HomeIcon className="w-5 h-5" />
-                <span>Torna al Menu Principale</span>
-            </button>
-        </footer>
+    <div style={styles.scoreContainer}>
+      <svg width="120" height="120" viewBox="0 0 120 120" style={{ transform: 'rotate(-90deg)' }}>
+        <circle cx="60" cy="60" r="52" fill="none" stroke="#e6e6e6" strokeWidth="8" />
+        <circle
+          cx="60"
+          cy="60"
+          r="52"
+          fill="none"
+          stroke={strokeColor}
+          strokeWidth="8"
+          strokeDasharray={circumference}
+          strokeDashoffset={offset}
+          strokeLinecap="round"
+          style={{ transition: 'stroke-dashoffset 0.5s ease-in-out' }}
+        />
+      </svg>
+      <div style={styles.scoreText}>{score}<span style={{fontSize: '20px'}}>%</span></div>
     </div>
   );
-}
+};
+
+const ResponseText: React.FC<{ text: string }> = ({ text }) => {
+    // This regex splits the string by the bold markers (**...**) and keeps the delimiters
+    const parts = text.split(/(\*\*.*?\*\*)/g).filter(part => part.length > 0);
+    return (
+        <p style={styles.suggestedResponseText}>
+            "
+            {parts.map((part, i) => {
+                if (part.startsWith('**') && part.endsWith('**')) {
+                    // If the part is a keyword, wrap it in <strong>
+                    return <strong key={i}>{part.slice(2, -2)}</strong>;
+                }
+                // Otherwise, return the text part as is
+                return part;
+            })}
+            "
+        </p>
+    );
+};
+
+export const AnalysisReportScreen: React.FC<AnalysisReportScreenProps> = ({ result, exercise, onRetry, onNext }) => {
+  const [activeTab, setActiveTab] = useState<'short' | 'long'>('short');
+
+  return (
+    <div style={styles.container}>
+      <div style={styles.card}>
+        <h1 style={styles.title}>Risultato dell'Analisi</h1>
+
+        <div style={styles.exerciseRecap}>
+            <h2 style={styles.recapTitle}>{exercise.title}</h2>
+            <p style={styles.recapText}><strong>Scenario:</strong> {exercise.scenario}</p>
+            <p style={styles.recapText}><strong>Compito:</strong> {exercise.task}</p>
+        </div>
+        
+        <ScoreCircle score={result.score} />
+        
+        <div style={styles.feedbackGrid}>
+            <div style={styles.feedbackCard}>
+                <h2 style={styles.sectionTitle}><CheckCircleIcon style={{color: COLORS.accentoVerde}}/> Punti di Forza</h2>
+                <ul style={styles.list}>
+                    {result.strengths.map((item, index) => <li key={index} style={styles.listItem}>{item}</li>)}
+                </ul>
+            </div>
+
+            <div style={styles.feedbackCard}>
+                <h2 style={styles.sectionTitle}><XCircleIcon style={{color: '#E5484D'}}/> Aree di Miglioramento</h2>
+                <ul style={styles.list}>
+                  {result.areasForImprovement.map((item, index) => (
+                    <li key={index} style={styles.listItem}>
+                      <span>{item.suggestion}</span>
+                      <span style={styles.exampleText}>
+                        <strong>Esempio:</strong> <em>"{item.example}"</em>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+            </div>
+        </div>
+        
+        <div style={styles.suggestedResponseContainer}>
+          <h2 style={styles.sectionTitle}>Risposta Suggerita</h2>
+          <div style={styles.tabs}>
+            <button 
+                style={{...styles.tabButton, ...(activeTab === 'short' ? styles.tabButtonActive : {})}}
+                onClick={() => setActiveTab('short')}>
+                Versione Breve
+            </button>
+            <button 
+                style={{...styles.tabButton, ...(activeTab === 'long' ? styles.tabButtonActive : {})}}
+                onClick={() => setActiveTab('long')}>
+                Versione Lunga
+            </button>
+          </div>
+          <div style={styles.tabContent}>
+            {activeTab === 'short' 
+                ? <ResponseText text={result.suggestedResponse.short} />
+                : <ResponseText text={result.suggestedResponse.long} />
+            }
+          </div>
+        </div>
+
+        <div style={styles.buttonContainer}>
+          <button onClick={onRetry} style={styles.retryButton}>
+            <RetryIcon /> Riprova Esercizio
+          </button>
+          <button onClick={onNext} style={styles.nextButton}>
+            Menu iniziale <HomeIcon />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const styles: { [key: string]: React.CSSProperties } = {
+    container: {
+        backgroundColor: COLORS.fondo,
+        minHeight: '100vh',
+        padding: '40px 20px',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'flex-start',
+    },
+    card: {
+        backgroundColor: 'white',
+        borderRadius: '16px',
+        boxShadow: '0 8px 24px rgba(0,0,0,0.1)',
+        padding: '32px',
+        maxWidth: '800px',
+        width: '100%',
+    },
+    title: {
+        fontSize: '28px',
+        color: COLORS.nero,
+        marginBottom: '24px',
+        textAlign: 'center',
+    },
+    exerciseRecap: {
+        backgroundColor: '#f8f9fa',
+        border: '1px solid #e9ecef',
+        borderRadius: '12px',
+        padding: '16px 20px',
+        marginBottom: '24px',
+        textAlign: 'left',
+    },
+    recapTitle: {
+        fontSize: '18px',
+        fontWeight: '600',
+        color: COLORS.nero,
+        margin: '0 0 12px 0',
+    },
+    recapText: {
+        fontSize: '15px',
+        color: '#495057',
+        lineHeight: 1.6,
+        margin: '0 0 8px 0',
+    },
+    scoreContainer: {
+        position: 'relative',
+        width: '120px',
+        height: '120px',
+        margin: '0 auto 24px',
+    },
+    scoreText: {
+        position: 'absolute',
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
+        fontSize: '32px',
+        fontWeight: 'bold',
+        color: COLORS.nero,
+    },
+    feedbackGrid: {
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+        gap: '24px',
+        marginBottom: '32px',
+    },
+    feedbackCard: {
+        backgroundColor: '#f8f9fa',
+        padding: '20px',
+        borderRadius: '12px',
+    },
+    sectionTitle: {
+        fontSize: '20px',
+        color: COLORS.nero,
+        marginBottom: '16px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+    },
+    list: {
+        listStyle: 'none',
+        paddingLeft: 0,
+        margin: 0,
+    },
+    listItem: {
+        fontSize: '16px',
+        color: '#333',
+        lineHeight: 1.6,
+        marginBottom: '18px',
+    },
+    exampleText: {
+      display: 'block',
+      marginTop: '8px',
+      padding: '8px 12px',
+      backgroundColor: '#e9ecef',
+      borderRadius: '6px',
+      color: '#495057',
+      fontSize: '15px',
+    },
+    suggestedResponseContainer: {
+        textAlign: 'left',
+        borderTop: '1px solid #eee',
+        paddingTop: '24px',
+    },
+    tabs: {
+        display: 'flex',
+        gap: '8px',
+        marginBottom: '16px',
+    },
+    tabButton: {
+        padding: '8px 16px',
+        fontSize: '14px',
+        fontWeight: '500',
+        border: '1px solid #ddd',
+        backgroundColor: '#f1f1f1',
+        color: '#555',
+        borderRadius: '8px',
+        cursor: 'pointer',
+        transition: 'all 0.2s',
+    },
+    tabButtonActive: {
+        backgroundColor: COLORS.nero,
+        color: 'white',
+        borderColor: COLORS.nero,
+    },
+    tabContent: {
+        backgroundColor: '#f8f9fa',
+        padding: '20px',
+        borderRadius: '12px',
+        minHeight: '100px',
+    },
+    suggestedResponseText: {
+        fontSize: '16px',
+        fontStyle: 'italic',
+        color: '#333',
+        lineHeight: 1.7,
+        margin: 0,
+    },
+    buttonContainer: {
+        display: 'flex',
+        justifyContent: 'center',
+        gap: '16px',
+        marginTop: '32px',
+        borderTop: '1px solid #eee',
+        paddingTop: '24px',
+    },
+    retryButton: {
+        padding: '12px 24px',
+        fontSize: '16px',
+        border: `1px solid ${COLORS.nero}`,
+        backgroundColor: 'white',
+        color: COLORS.nero,
+        borderRadius: '8px',
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+    },
+    nextButton: {
+        padding: '12px 24px',
+        fontSize: '16px',
+        border: 'none',
+        backgroundColor: COLORS.accentoVerde,
+        color: 'white',
+        borderRadius: '8px',
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+    },
+};

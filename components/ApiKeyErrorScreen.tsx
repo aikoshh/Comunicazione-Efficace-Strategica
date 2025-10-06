@@ -1,1 +1,57 @@
+import React from 'react';
+import { WarningIcon } from './Icons';
+import { COLORS } from '../constants';
 
+interface ApiKeyErrorScreenProps {
+  error: string;
+}
+
+export const ApiKeyErrorScreen: React.FC<ApiKeyErrorScreenProps> = ({ error }) => {
+  return (
+    <div style={styles.container}>
+      <WarningIcon width={48} height={48} color={COLORS.nero} />
+      <h1 style={styles.title}>Errore di Configurazione</h1>
+      <p style={styles.message}>
+        L'applicazione non è configurata correttamente. Impossibile comunicare con i servizi di analisi.
+      </p>
+      <p style={styles.errorMessage}>Dettaglio: {error}</p>
+      <p style={styles.message}>
+        Assicurati che la chiave API sia stata impostata correttamente nell'ambiente di esecuzione come variabile d'ambiente `API_KEY`.
+      </p>
+    </div>
+  );
+};
+
+const styles: { [key: string]: React.CSSProperties } = {
+    container: {
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '100vh',
+        padding: '20px',
+        textAlign: 'center',
+        backgroundColor: COLORS.fondo,
+        color: COLORS.nero,
+    },
+    title: {
+        fontSize: '24px',
+        margin: '20px 0 10px',
+    },
+    message: {
+        fontSize: '16px',
+        maxWidth: '500px',
+        lineHeight: '1.5',
+        marginBottom: '10px',
+    },
+    errorMessage: {
+        fontSize: '14px',
+        fontFamily: 'monospace',
+        backgroundColor: '#f0f0f0',
+        padding: '10px',
+        borderRadius: '4px',
+        maxWidth: '500px',
+        wordBreak: 'break-all',
+        margin: '10px 0',
+    },
+};

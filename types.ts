@@ -7,8 +7,8 @@ export enum DifficultyLevel {
 }
 
 export enum ExerciseType {
-  WRITTEN = 'written',
-  VERBAL = 'verbal',
+  WRITTEN = 'WRITTEN',
+  VERBAL = 'VERBAL',
 }
 
 export interface Exercise {
@@ -19,48 +19,29 @@ export interface Exercise {
   difficulty: DifficultyLevel;
 }
 
+export type IconComponent = React.FC<React.SVGProps<SVGSVGElement>>;
+
 export interface Module {
   id: string;
   title: string;
   description: string;
-  icon: React.FC<React.SVGProps<SVGSVGElement>>;
+  icon: IconComponent;
   exercises: Exercise[];
-  cardImage?: string; // Immagine opzionale per la card del modulo
+  isCustom?: boolean;
+  cardImage?: string;
 }
 
-// Struttura per la Heatmap CES
-export interface CESStepAnalysis {
-  covered: boolean;
-  suggestion?: string; // Suggerimento concreto se non coperto
+export interface ImprovementArea {
+  suggestion: string;
+  example: string;
 }
 
-export interface CESHeatmap {
-  ingaggio: CESStepAnalysis;
-  ricalco: CESStepAnalysis;
-  riformulazione: CESStepAnalysis;
-  direzionamento: CESStepAnalysis;
-  chiusura: CESStepAnalysis;
-}
-
-// Struttura per l'analisi della Scala del Coinvolgimento
-export interface CommunicativeScaleAnalysis {
-  phase: string; // Es. "Consiglio non richiesto"
-  feedback: string;
-  scaleScore: number; // Punteggio da 1 a 10
-}
-
-// Struttura per la risposta ideale
-export interface IdealResponse {
-  short: string;
-  long: string;
-}
-
-// Struttura completa del risultato dell'analisi
 export interface AnalysisResult {
   score: number;
-  feedback: string;
-  isPositive: boolean;
-  cesHeatmap: CESHeatmap;
-  communicativeScaleAnalysis: CommunicativeScaleAnalysis;
-  idealResponse: IdealResponse;
+  strengths: string[];
+  areasForImprovement: ImprovementArea[];
+  suggestedResponse: {
+    short: string;
+    long: string;
+  };
 }

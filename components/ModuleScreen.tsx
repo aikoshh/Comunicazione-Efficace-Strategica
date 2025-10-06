@@ -1,82 +1,126 @@
 import React from 'react';
-import type { Module, Exercise } from '../types';
-import { DifficultyLevel, ExerciseType } from '../types';
+import { Module, Exercise, DifficultyLevel } from '../types';
 import { COLORS } from '../constants';
-import { BackIcon, NextIcon } from './Icons';
+import { BackIcon } from './Icons';
 
 interface ModuleScreenProps {
   module: Module;
-  onStartExercise: (exercise: Exercise) => void;
+  onSelectExercise: (exercise: Exercise) => void;
   onBack: () => void;
 }
 
-const getDifficultyClass = (difficulty: DifficultyLevel) => {
-  switch (difficulty) {
-    case DifficultyLevel.BASE:
-      return 'bg-green-100 text-green-800';
-    case DifficultyLevel.INTERMEDIO:
-      return 'bg-yellow-100 text-yellow-800';
-    case DifficultyLevel.AVANZATO:
-      return 'bg-red-100 text-red-800';
-    default:
-      return 'bg-gray-100 text-gray-800';
-  }
+const difficultyColors: { [key in DifficultyLevel]: string } = {
+  [DifficultyLevel.BASE]: '#31C48D',
+  [DifficultyLevel.INTERMEDIO]: '#F4A731',
+  [DifficultyLevel.AVANZATO]: '#E5484D',
 };
 
-const ExerciseCard: React.FC<{ exercise: Exercise, onStart: () => void }> = ({ exercise, onStart }) => {
-    return (
-        <div className="bg-white/70 backdrop-blur-md p-6 rounded-2xl shadow-lg border border-gray-200/50 space-y-4">
-            <div className="flex justify-between items-start">
-                <h3 className="text-xl font-bold text-nero">{exercise.title}</h3>
-                <span className={`px-3 py-1 text-sm font-semibold rounded-full ${getDifficultyClass(exercise.difficulty)}`}>
+export const ModuleScreen: React.FC<ModuleScreenProps> = ({ module, onSelectExercise, onBack }) => {
+  return (
+    <div style={styles.container}>
+      <header style={styles.header}>
+        <button onClick={onBack} style={styles.backButton}>
+          <BackIcon />
+          Tutti i moduli
+        </button>
+        <div style={styles.titleContainer}>
+            <module.icon width={40} height={40} color={COLORS.nero} />
+            <h1 style={styles.title}>{module.title}</h1>
+        </div>
+        <p style={styles.description}>{module.description}</p>
+      </header>
+      <main style={styles.exerciseList}>
+        {module.exercises.map((exercise, index) => (
+          <div key={exercise.id} style={styles.exerciseCard} onClick={() => onSelectExercise(exercise)}>
+            <div style={styles.exerciseHeader}>
+                <span style={styles.exerciseNumber}>Esercizio {index + 1}</span>
+                <span style={{...styles.difficultyBadge, backgroundColor: difficultyColors[exercise.difficulty]}}>
                     {exercise.difficulty}
                 </span>
             </div>
-            <div>
-                <h4 className="font-semibold text-gray-700">Scenario:</h4>
-                <p className="text-gray-600 italic mt-1">"{exercise.scenario}"</p>
-            </div>
-            <div>
-                <h4 className="font-semibold text-gray-700">Compito:</h4>
-                <p className="text-gray-600 mt-1">{exercise.task}</p>
-            </div>
-            <div className="flex items-center justify-end pt-4">
-                 <button 
-                    onClick={onStart}
-                    className="px-6 py-2 bg-accentoVerde text-white font-bold rounded-full shadow-lg hover:bg-green-600 transition-colors flex items-center space-x-2"
-                    style={{backgroundColor: COLORS.accentoVerde}}
-                >
-                    <span>Prova</span>
-                    <NextIcon className="w-5 h-5" />
-                </button>
-            </div>
-        </div>
-    );
-};
-
-// FIX: Replaced JSX.Element with React.ReactElement
-export default function ModuleScreen({ module, onStartExercise, onBack }: ModuleScreenProps): React.ReactElement {
-  return (
-    <div className="space-y-8 animate-fade-in">
-      <header className="flex items-center space-x-4">
-        <button onClick={onBack} className="p-2 rounded-full hover:bg-gray-200/50 transition-colors">
-          <BackIcon className="w-6 h-6 text-nero" />
-        </button>
-        <div className="flex items-center space-x-4">
-            <div className="flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center" style={{backgroundColor: COLORS.azzurroPastello}}>
-                <module.icon className="w-6 h-6" style={{color: COLORS.nero}}/>
-            </div>
-            <div>
-                <h1 className="text-3xl font-bold text-nero">{module.title}</h1>
-                <p className="text-gray-600">{module.description}</p>
-            </div>
-        </div>
-      </header>
-      <div className="space-y-6">
-        {module.exercises.map((exercise) => (
-          <ExerciseCard key={exercise.id} exercise={exercise} onStart={() => onStartExercise(exercise)} />
+            <h2 style={styles.exerciseTitle}>{exercise.title}</h2>
+          </div>
         ))}
-      </div>
+      </main>
     </div>
   );
-}
+};
+
+const styles: { [key: string]: React.CSSProperties } = {
+  container: {
+    maxWidth: '800px',
+    margin: '0 auto',
+    padding: '40px 20px',
+    backgroundColor: COLORS.fondo,
+    minHeight: '100vh',
+  },
+  header: {
+    marginBottom: '40px',
+    textAlign: 'center',
+  },
+  backButton: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    fontSize: '16px',
+    color: '#555',
+    position: 'absolute',
+    top: '20px',
+    left: '20px',
+  },
+  titleContainer: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '16px',
+    marginBottom: '16px',
+  },
+  title: {
+    fontSize: '32px',
+    color: COLORS.nero,
+  },
+  description: {
+    fontSize: '18px',
+    color: '#666',
+  },
+  exerciseList: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '16px',
+  },
+  exerciseCard: {
+    backgroundColor: 'white',
+    borderRadius: '12px',
+    padding: '20px',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+    cursor: 'pointer',
+    transition: 'transform 0.2s, box-shadow 0.2s',
+    border: '1px solid #eee',
+  },
+  exerciseHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '12px',
+  },
+  exerciseNumber: {
+    fontSize: '14px',
+    color: '#777',
+    fontWeight: '500',
+  },
+  difficultyBadge: {
+    color: 'white',
+    padding: '4px 10px',
+    borderRadius: '12px',
+    fontSize: '12px',
+    fontWeight: 'bold',
+    textTransform: 'uppercase',
+  },
+  exerciseTitle: {
+    fontSize: '20px',
+    color: COLORS.nero,
+  },
+};
