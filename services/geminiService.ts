@@ -160,7 +160,7 @@ export const analyzeResponse = async (
 
   } catch (error: any) {
     console.error("Errore durante l'analisi della risposta con Gemini:", error);
-    if (error.message.includes('API key') || error.message.includes('API_KEY')) {
+    if (error.message && error.message.toLowerCase().includes('api key')) {
          throw new Error("API_KEY non valida o mancante. Controlla la configurazione del tuo ambiente.");
     }
     throw new Error(error.message || "Impossibile ottenere l'analisi dal servizio. Riprova più tardi.");
