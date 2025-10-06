@@ -110,9 +110,17 @@ export const analyzeResponse = async (
       },
     });
     
-    const jsonText = response.text.trim();
-    const sanitizedJsonText = jsonText.replace(/^```json\s*|```$/g, '').trim();
-    const result: AnalysisResult = JSON.parse(sanitizedJsonText);
+    const rawText = response.text;
+    let jsonStringToParse = rawText.trim();
+
+    // The model might wrap the JSON in ```json ... ``` or add introductory text.
+    // We need to robustly extract the JSON part.
+    const jsonBlockMatch = jsonStringToParse.match(/```json\s*([\s\S]+?)\s*```/);
+    if (jsonBlockMatch && jsonBlockMatch[1]) {
+        jsonStringToParse = jsonBlockMatch[1];
+    }
+
+    const result: AnalysisResult = JSON.parse(jsonStringToParse);
 
     // Validation
     const isValidImprovementArea = (item: any): item is ImprovementArea => {
