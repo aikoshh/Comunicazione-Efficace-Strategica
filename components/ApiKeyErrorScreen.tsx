@@ -1,13 +1,13 @@
 import React from 'react';
-import { WarningIcon, HomeIcon } from './Icons';
+import { WarningIcon, RetryIcon } from './Icons';
 import { COLORS } from '../constants';
 
 interface ApiKeyErrorScreenProps {
   error: string;
-  onBackToHome: () => void;
+  onRetry: () => void;
 }
 
-export const ApiKeyErrorScreen: React.FC<ApiKeyErrorScreenProps> = ({ error, onBackToHome }) => {
+export const ApiKeyErrorScreen: React.FC<ApiKeyErrorScreenProps> = ({ error, onRetry }) => {
   return (
     <div style={styles.container}>
       <WarningIcon width={48} height={48} color={COLORS.nero} />
@@ -19,8 +19,8 @@ export const ApiKeyErrorScreen: React.FC<ApiKeyErrorScreenProps> = ({ error, onB
       <p style={styles.message}>
         Assicurati che la chiave API sia stata impostata correttamente nell'ambiente di esecuzione come variabile d'ambiente `API_KEY`.
       </p>
-      <button onClick={onBackToHome} style={styles.backButton}>
-        <HomeIcon /> Torna al Menu
+      <button onClick={onRetry} style={styles.retryButton}>
+        <RetryIcon /> Riprova
       </button>
     </div>
   );
@@ -58,13 +58,13 @@ const styles: { [key: string]: React.CSSProperties } = {
         wordBreak: 'break-all',
         margin: '10px 0',
     },
-    backButton: {
-        marginTop: '24px',
+    retryButton: {
+        marginTop: '20px',
         padding: '12px 24px',
         fontSize: '16px',
-        fontWeight: '500',
+        fontWeight: 'bold',
         border: 'none',
-        backgroundColor: COLORS.salviaVerde,
+        backgroundColor: COLORS.accentoVerde,
         color: 'white',
         borderRadius: '8px',
         cursor: 'pointer',
