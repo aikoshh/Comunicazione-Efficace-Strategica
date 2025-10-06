@@ -88,6 +88,10 @@ const App: React.FC = () => {
       setAppState({ screen: 'api_key_error', error });
   };
 
+  const handleBackToHome = () => {
+    setAppState({ screen: 'home' });
+  };
+
   switch (appState.screen) {
     case 'home':
       return <HomeScreen onSelectModule={handleSelectModule} />;
@@ -100,7 +104,7 @@ const App: React.FC = () => {
     case 'report':
         return <AnalysisReportScreen result={appState.result} exercise={appState.exercise} onRetry={handleRetryExercise} onNext={handleNextExercise} />;
     case 'api_key_error':
-        return <ApiKeyErrorScreen error={appState.error} />;
+        return <ApiKeyErrorScreen error={appState.error} onBackToHome={handleBackToHome} />;
     default:
         return <HomeScreen onSelectModule={handleSelectModule} />;
   }
