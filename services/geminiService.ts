@@ -4,10 +4,10 @@ import type { AnalysisResult, ImprovementArea } from '../types';
 let ai: GoogleGenAI | null = null;
 
 const getAI = () => {
-  if (!process.env.API_KEY) {
-    throw new Error("La variabile d'ambiente API_KEY non è impostata. Per favore, imposta la variabile d'ambiente API_KEY.");
-  }
   if (!ai) {
+    // As per guidelines, assume API_KEY is provided by the execution environment.
+    // The explicit check was removed to prevent browser-side errors.
+    // The Gemini library will handle authentication errors if the key is invalid.
     ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   }
   return ai;
