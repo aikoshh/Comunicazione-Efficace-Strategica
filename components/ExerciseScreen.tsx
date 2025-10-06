@@ -4,21 +4,27 @@ import { useSpeech } from '../hooks/useSpeech';
 import { analyzeResponse } from '../services/geminiService';
 import { Loader } from './Loader';
 import { COLORS } from '../constants';
-import { BackIcon, MicIcon, SendIcon, WrittenIcon, VerbalIcon, SpeakerIcon, SpeakerOffIcon } from './Icons';
+import { BackIcon, MicIcon, SendIcon, WrittenIcon, VerbalIcon, SpeakerIcon, SpeakerOffIcon, InfoIcon } from './Icons';
 
 interface ExerciseScreenProps {
   exercise: Exercise;
   onComplete: (result: AnalysisResult) => void;
   onBack: () => void;
-  onApiKeyError: (error: string) => void;
 }
 
-export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({ exercise, onComplete, onBack, onApiKeyError }) => {
+export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({ exercise, onComplete, onBack }) => {
   const [exerciseType, setExerciseType] = useState<ExerciseType>(ExerciseType.WRITTEN);
   const [userResponse, setUserResponse] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isDemoMode, setIsDemoMode] = useState(false);
   const { isListening, transcript, startListening, stopListening, isSupported, speak, isSpeaking, stopSpeaking } = useSpeech();
+
+  useEffect(() => {
+    if (!process.env.API_KEY) {
+        setIsDemoMode(true);
+    }
+  }, []);
 
   useEffect(() => {
     if (transcript) {
@@ -46,11 +52,7 @@ export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({ exercise, onComp
       onComplete(result);
     } catch (e: any) {
       console.error(e);
-      if (e.message.includes('API_KEY')) {
-        onApiKeyError(e.message);
-      } else {
-        setError(e.message || "Si è verificato un errore sconosciuto.");
-      }
+      setError(e.message || "Si è verificato un errore sconosciuto.");
     } finally {
       setIsLoading(false);
     }
@@ -109,6 +111,12 @@ export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({ exercise, onComp
         <BackIcon /> Torna agli esercizi
       </button>
       <div style={styles.scenarioCard}>
+        {isDemoMode && (
+            <div style={styles.demoBanner}>
+                <InfoIcon style={{ flexShrink: 0 }}/>
+                <span><b>Modalità Demo:</b> L'analisi fornirà un risultato di esempio.</span>
+            </div>
+        )}
         <div style={styles.scenarioHeader}>
             <h1 style={styles.title}>{exercise.title}</h1>
             <button onClick={handleScenarioPlayback} style={styles.speakerButton}>
@@ -146,6 +154,17 @@ const styles: { [key: string]: React.CSSProperties } = {
   container: { maxWidth: '800px', margin: '0 auto', padding: '40px 20px', display: 'flex', flexDirection: 'column', gap: '24px' },
   backButton: { display: 'flex', alignItems: 'center', gap: '8px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px', color: '#555', alignSelf: 'flex-start' },
   scenarioCard: { backgroundColor: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', border: '1px solid #eee' },
+  demoBanner: {
+    backgroundColor: '#eef2ff',
+    color: '#4338ca',
+    padding: '12px 16px',
+    borderRadius: '8px',
+    marginBottom: '16px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+    fontSize: '14px',
+  },
   scenarioHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px'},
   title: { fontSize: '24px', color: COLORS.nero, margin: 0 },
   speakerButton: { background: 'none', border: 'none', cursor: 'pointer', padding: '8px' },
