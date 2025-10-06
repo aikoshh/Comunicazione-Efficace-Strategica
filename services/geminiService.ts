@@ -94,7 +94,7 @@ export const analyzeResponse = async (
 
       **Contesto di analisi:** ${verbalContext}
 
-      Analizza la risposta dell'utente secondo le direttive fornite nella tua istruzione di sistema e genera il feedback strutturato in formato JSON.
+      Analizza la risposta dell'utente secondo le direttive fornite nella tua istruzione di sistema.
     `;
     
     const response = await ai.models.generateContent({
