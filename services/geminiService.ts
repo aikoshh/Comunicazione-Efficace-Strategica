@@ -1,50 +1,35 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import type { AnalysisResult, ImprovementArea } from '../types';
 
-const getAI = () => {
-  // La chiave API viene ora recuperata dal local storage del browser.
-  // Questo è il metodo corretto per un'app eseguita interamente sul client.
-  const apiKey = localStorage.getItem('CES_COACH_API_KEY');
-
-  // Se non viene trovata alcuna chiave, si restituisce null per attivare la modalità demo.
-  if (!apiKey) {
-    return null;
-  }
-  
-  // Restituisce una nuova istanza del client AI con la chiave memorizzata.
-  return new GoogleGenAI({ apiKey });
+const DEMO_ANALYSIS_RESULT: AnalysisResult = {
+  score: 85,
+  strengths: [
+    "Ottimo uso di un tono calmo e collaborativo, che apre la porta al dialogo.",
+    "Hai descritto l'impatto del comportamento del collega sul tuo lavoro in modo chiaro e non accusatorio.",
+    "La proposta di una soluzione concreta dimostra un approccio proattivo e orientato al risultato.",
+  ],
+  areasForImprovement: [
+    {
+      suggestion: "Potresti iniziare con una frase che riconosca l'intenzione positiva del collega per ridurre ulteriormente le sue difese.",
+      example: "Invece di iniziare subito con il problema, potresti dire: \"Apprezzo molto la passione che metti nei tuoi progetti e volevo parlarti di come possiamo collaborare ancora meglio...\""
+    },
+    {
+      suggestion: "Sii ancora più specifico sulla soluzione che proponi, definendo un 'come' e un 'quando'.",
+      example: "Invece di un generico 'troviamo una soluzione', potresti dire: \"Che ne dici se facciamo un rapido check di 10 minuti ogni mattina per allinearci sulle priorità? In questo modo, dovremmo evitare sovrapposizioni.\""
+    }
+  ],
+  suggestedResponse: {
+    short: "Una risposta suggerita potrebbe essere: \"Ciao Giulia, grazie per il tuo impegno sul progetto. Ho notato che abbiamo **due approcci diversi** e vorrei trovare un modo per **integrare il meglio di entrambi**. Possiamo parlarne un attimo?\"",
+    long: "Una versione più completa: \"Ciao Giulia, so che entrambi teniamo molto al successo di questo progetto e apprezzo l'energia che ci stai mettendo. Mi sono reso conto che abbiamo visioni diverse su come procedere e questo sta creando un po' di attrito. Vorrei capire meglio il tuo punto di vista e trovare una soluzione che **unisca le nostre idee** per ottenere il miglior risultato possibile. Avresti tempo per discuterne con calma questo pomeriggio?\""
+  },
+  isDemo: true,
 };
 
-const getMockAnalysis = (): Promise<AnalysisResult> => {
-  console.warn("API_KEY non trovata nel localStorage. Utilizzo di una risposta mockata per la demo.");
-  const mockAnalysis: AnalysisResult = {
-    score: 85,
-    strengths: [
-      "Ottimo uso di un tono empatico e collaborativo.",
-      "La proposta di soluzione è chiara e orientata al futuro.",
-      "Hai descritto l'impatto del comportamento in modo oggettivo, senza accusare."
-    ],
-    areasForImprovement: [
-      {
-        suggestion: "Potresti essere ancora più specifico nell'esprimere le tue sensazioni usando una 'frase-io'.",
-        example: "Invece di dire 'questo modo di fare causa ritardi', potresti provare con 'Quando vedo che i dettagli vengono controllati più volte, mi sento frustrato perché rallenta il mio lavoro.'"
-      },
-      {
-        suggestion: "Concludi la conversazione con un accordo chiaro sui prossimi passi.",
-        example: "Potresti finire dicendo: 'Siamo d'accordo nel provare questo nuovo approccio per le prossime due settimane e poi fare un check-in per vedere come sta andando?'"
-      }
-    ],
-    suggestedResponse: {
-      short: "Ho notato che hai **grande attenzione ai dettagli**, il che è prezioso. A volte, però, questo rallenta il nostro flusso di lavoro. Potremmo provare a definire dei **punti di controllo specifici** invece di una revisione costante?",
-      long: "Apprezzo molto la tua dedizione alla qualità e la tua attenzione ai dettagli. Ho notato che tendi a revisionare il mio lavoro molto da vicino. Se da un lato capisco il desiderio di non commettere errori, dall'altro questo approccio sta avendo un impatto sulla mia autonomia e a volte crea dei colli di bottiglia. Mi piacerebbe proporti una soluzione: potremmo stabilire 1-2 momenti di revisione chiari durante il progetto invece di controlli continui? Credo che questo potrebbe **darmi più fiducia** e **rendere il processo più efficiente** per entrambi. Cosa ne pensi?"
-    },
-    isMock: true,
-  };
-  return new Promise(resolve => {
-    setTimeout(() => {
-      resolve(mockAnalysis);
-    }, 1500); // Simulate network delay
-  });
+const getAI = () => {
+  // Crea una nuova istanza ogni volta per garantire che venga utilizzata la configurazione 
+  // più recente dell'ambiente, inclusa la API_KEY, che potrebbe essere caricata 
+  // in modo asincrono o con un leggero ritardo. Questo approccio è più robusto.
+  return new GoogleGenAI({ apiKey: process.env.API_KEY });
 };
 
 const analysisSchema = {
@@ -102,15 +87,15 @@ export const analyzeResponse = async (
   task: string,
   isVerbal: boolean,
 ): Promise<AnalysisResult> => {
-  const ai = getAI();
-
-  // Se getAI() restituisce null, la chiave API non è configurata.
-  // Utilizza l'analisi mock per la modalità demo.
-  if (!ai) {
-    return getMockAnalysis();
+  if (!process.env.API_KEY) {
+    console.log("API_KEY non trovata. Restituzione dell'analisi demo.");
+    await new Promise(resolve => setTimeout(resolve, 1500)); // Simula il caricamento
+    return DEMO_ANALYSIS_RESULT;
   }
-
+    
   try {
+    const ai = getAI();
+
     const verbalContext = isVerbal 
         ? "La risposta dell'utente è stata fornita verbalmente. Considera fattori come la concisione e la chiarezza adatti alla comunicazione parlata. Ignora eventuali errori di trascrizione o di battitura."
         : "La risposta dell'utente è stata scritta. Analizzala per chiarezza, tono e struttura come faresti con un testo scritto.";
@@ -187,4 +172,9 @@ export const analyzeResponse = async (
 
   } catch (error: any) {
     console.error("Errore durante l'analisi della risposta con Gemini:", error);
-    if (error.message.includes('API key') || error.message.
+    if (error.message.includes('API key') || error.message.includes('API_KEY')) {
+         throw new Error("API_KEY non valida o mancante. Controlla la configurazione del tuo ambiente.");
+    }
+    throw new Error("Impossibile ottenere l'analisi dal servizio. Riprova più tardi.");
+  }
+};
