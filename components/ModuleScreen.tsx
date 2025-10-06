@@ -1,7 +1,7 @@
 import React from 'react';
 import { Module, Exercise, DifficultyLevel } from '../types';
 import { COLORS } from '../constants';
-import { BackIcon } from './Icons';
+import { HomeIcon } from './Icons';
 
 interface ModuleScreenProps {
   module: Module;
@@ -20,8 +20,8 @@ export const ModuleScreen: React.FC<ModuleScreenProps> = ({ module, onSelectExer
     <div style={styles.container}>
       <header style={styles.header}>
         <button onClick={onBack} style={styles.backButton}>
-          <BackIcon />
-          Tutti i moduli
+          Torna al Menu
+          <HomeIcon />
         </button>
         <div style={styles.titleContainer}>
             <module.icon width={40} height={40} color={COLORS.nero} />
@@ -42,6 +42,12 @@ export const ModuleScreen: React.FC<ModuleScreenProps> = ({ module, onSelectExer
           </div>
         ))}
       </main>
+      <div style={styles.footer}>
+        <button onClick={onBack} style={styles.footerButton}>
+          Torna al Menu
+          <HomeIcon />
+        </button>
+      </div>
     </div>
   );
 };
@@ -57,19 +63,24 @@ const styles: { [key: string]: React.CSSProperties } = {
   header: {
     marginBottom: '40px',
     textAlign: 'center',
+    paddingTop: '60px', // Add padding to avoid overlap with the absolute positioned button
   },
   backButton: {
     display: 'flex',
     alignItems: 'center',
     gap: '8px',
-    background: 'none',
+    background: COLORS.salviaVerde,
+    color: 'white',
     border: 'none',
+    borderRadius: '8px',
+    padding: '10px 20px',
     cursor: 'pointer',
     fontSize: '16px',
-    color: '#555',
+    fontWeight: '500',
     position: 'absolute',
     top: '20px',
     left: '20px',
+    transition: 'background-color 0.2s ease',
   },
   titleContainer: {
     display: 'flex',
@@ -122,5 +133,24 @@ const styles: { [key: string]: React.CSSProperties } = {
   exerciseTitle: {
     fontSize: '20px',
     color: COLORS.nero,
+  },
+  footer: {
+      marginTop: '40px',
+      display: 'flex',
+      justifyContent: 'center',
+  },
+  footerButton: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '8px',
+      background: COLORS.salviaVerde,
+      border: 'none',
+      borderRadius: '8px',
+      padding: '10px 20px',
+      cursor: 'pointer',
+      fontSize: '16px',
+      color: 'white',
+      fontWeight: '500',
+      transition: 'background-color 0.2s ease',
   },
 };

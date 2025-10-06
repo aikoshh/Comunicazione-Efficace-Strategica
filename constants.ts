@@ -6,6 +6,7 @@ export const COLORS = {
   nero: '#111827', // A dark, near-black color for text
   fondo: '#f8f9fa', // A very light grey for backgrounds
   accentoVerde: '#31C48D', // A vibrant green for primary actions
+  salviaVerde: '#B2C8AD', // A sage green for navigation buttons
 };
 
 export const MODULES: Module[] = [
@@ -30,6 +31,13 @@ export const MODULES: Module[] = [
         task: 'Esponi la situazione a Luca in modo rispettoso, spiegando l\'impatto del suo comportamento sul tuo lavoro e suggerendo un approccio diverso.',
         difficulty: DifficultyLevel.INTERMEDIO,
       },
+      {
+        id: 'e7',
+        title: 'Feedback a uno Stakeholder Senior',
+        scenario: 'Devi comunicare un feedback critico a un direttore di un altro dipartimento riguardo a un ritardo da parte sua che sta bloccando un progetto strategico. La conversazione è delicata a causa della gerarchia e delle possibili implicazioni politiche.',
+        task: 'Comunica il feedback in modo diplomatico ma chiaro, focalizzandoti sull\'impatto oggettivo sul progetto e proponendo soluzioni collaborative per sbloccare la situazione.',
+        difficulty: DifficultyLevel.AVANZATO,
+      }
     ],
   },
   {
@@ -39,6 +47,13 @@ export const MODULES: Module[] = [
     icon: ConflictIcon,
     cardImage: cardImage2,
     exercises: [
+      {
+        id: 'e8',
+        title: 'Chiedere a un Collega di Abbassare il Tono',
+        scenario: 'Un collega nel tuo ufficio open space parla spesso a voce molto alta al telefono, disturbando la tua concentrazione. Non sembra accorgersene e la cosa inizia a irritare anche altri.',
+        task: 'Avvicinati al collega in modo gentile e privato e chiedigli se può abbassare il tono di voce, senza farlo sentire attaccato o in imbarazzo.',
+        difficulty: DifficultyLevel.BASE,
+      },
       {
         id: 'e3',
         title: 'Disaccordo con un Collega su un Progetto',
@@ -68,6 +83,13 @@ export const MODULES: Module[] = [
         scenario: 'Sei in una riunione iniziale con un potenziale cliente che ha difficoltà a esprimere chiaramente ciò di cui ha bisogno. Le sue richieste sono vaghe e contraddittorie.',
         task: 'Utilizza una serie di domande aperte e di approfondimento per aiutare il cliente a definire meglio i suoi obiettivi e le sue necessità.',
         difficulty: DifficultyLevel.BASE,
+      },
+      {
+        id: 'e9',
+        title: 'Esplorare un Calo di Motivazione',
+        scenario: 'Hai notato che un membro del tuo team, solitamente proattivo, è diventato silenzioso e poco partecipe. Vuoi capire cosa sta succedendo senza essere invadente.',
+        task: 'Avvia una conversazione 1-to-1. Usa domande aperte e di ascolto attivo per esplorare le possibili cause del suo cambiamento di atteggiamento e offrire supporto.',
+        difficulty: DifficultyLevel.INTERMEDIO,
       },
       {
         id: 'e6',

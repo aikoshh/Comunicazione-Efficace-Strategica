@@ -292,13 +292,15 @@ const styles: { [key: string]: React.CSSProperties } = {
     nextButton: {
         padding: '12px 24px',
         fontSize: '16px',
+        fontWeight: '500',
         border: 'none',
-        backgroundColor: COLORS.accentoVerde,
+        backgroundColor: COLORS.salviaVerde,
         color: 'white',
         borderRadius: '8px',
         cursor: 'pointer',
         display: 'flex',
         alignItems: 'center',
         gap: '8px',
+        transition: 'background-color 0.2s ease',
     },
 };
