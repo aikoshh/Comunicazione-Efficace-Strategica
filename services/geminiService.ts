@@ -2,26 +2,21 @@ import { GoogleGenAI, Type } from "@google/genai";
 import type { AnalysisResult, ImprovementArea } from '../types';
 
 const getAI = () => {
-  let apiKey;
-  try {
-    // Accede in modo sicuro alla chiave API. Lancia un ReferenceError se 'process' non è definito.
-    apiKey = process.env.API_KEY;
-  } catch (e) {
-    // 'process' non è definito in questo ambiente.
-    return null;
-  }
+  // La chiave API viene ora recuperata dal local storage del browser.
+  // Questo è il metodo corretto per un'app eseguita interamente sul client.
+  const apiKey = localStorage.getItem('CES_COACH_API_KEY');
 
-  // Controlla se la chiave API è una stringa non vuota.
+  // Se non viene trovata alcuna chiave, si restituisce null per attivare la modalità demo.
   if (!apiKey) {
     return null;
   }
   
-  // Restituisce una nuova istanza del client AI.
+  // Restituisce una nuova istanza del client AI con la chiave memorizzata.
   return new GoogleGenAI({ apiKey });
 };
 
 const getMockAnalysis = (): Promise<AnalysisResult> => {
-  console.warn("API_KEY non trovata. Utilizzo di una risposta mockata per la demo.");
+  console.warn("API_KEY non trovata nel localStorage. Utilizzo di una risposta mockata per la demo.");
   const mockAnalysis: AnalysisResult = {
     score: 85,
     strengths: [
@@ -192,9 +187,4 @@ export const analyzeResponse = async (
 
   } catch (error: any) {
     console.error("Errore durante l'analisi della risposta con Gemini:", error);
-    if (error.message.includes('API key') || error.message.includes('API_KEY')) {
-         throw new Error("API_KEY non valida o mancante. Se stai usando una chiave, assicurati che sia corretta e attiva.");
-    }
-    throw new Error("Impossibile ottenere l'analisi dal servizio. Riprova più tardi.");
-  }
-};
+    if (error.message.includes('API key') || error.message.
