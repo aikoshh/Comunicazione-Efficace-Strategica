@@ -27,7 +27,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onGuestAccess
         <h1 style={styles.title}>
             <strong>Comunicazione Efficace Strategica®</strong>
         </h1>
-        <p style={styles.subtitle}>Il tuo coach personale per la comunicazione.</p>
+        <p style={styles.subtitle}>
+            Inizia ora il tuo allenamento personalizzato per migliorare rapidamente e in modo concreto la tua comunicazione.
+        </p>
         
         <form onSubmit={handleLoginSubmit} style={styles.form}>
           <div style={styles.inputGroup}>
@@ -95,9 +97,11 @@ const styles: { [key: string]: React.CSSProperties } = {
         marginBottom: '8px',
     },
     subtitle: {
-        fontSize: '16px',
-        color: '#666',
-        marginBottom: '32px',
+        fontSize: '18px',
+        color: '#555',
+        maxWidth: '600px',
+        margin: '0 auto 32px',
+        lineHeight: 1.6,
     },
     form: {
         display: 'flex',
