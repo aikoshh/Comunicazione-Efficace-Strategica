@@ -42,7 +42,8 @@ const getMockAnalysis = (): Promise<AnalysisResult> => {
     suggestedResponse: {
       short: "Ho notato che hai **grande attenzione ai dettagli**, il che è prezioso. A volte, però, questo rallenta il nostro flusso di lavoro. Potremmo provare a definire dei **punti di controllo specifici** invece di una revisione costante?",
       long: "Apprezzo molto la tua dedizione alla qualità e la tua attenzione ai dettagli. Ho notato che tendi a revisionare il mio lavoro molto da vicino. Se da un lato capisco il desiderio di non commettere errori, dall'altro questo approccio sta avendo un impatto sulla mia autonomia e a volte crea dei colli di bottiglia. Mi piacerebbe proporti una soluzione: potremmo stabilire 1-2 momenti di revisione chiari durante il progetto invece di controlli continui? Credo che questo potrebbe **darmi più fiducia** e **rendere il processo più efficiente** per entrambi. Cosa ne pensi?"
-    }
+    },
+    isMock: true,
   };
   return new Promise(resolve => {
     setTimeout(() => {
