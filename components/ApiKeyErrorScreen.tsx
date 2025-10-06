@@ -1,12 +1,13 @@
 import React from 'react';
-import { WarningIcon } from './Icons';
+import { WarningIcon, HomeIcon } from './Icons';
 import { COLORS } from '../constants';
 
 interface ApiKeyErrorScreenProps {
   error: string;
+  onBackToHome: () => void;
 }
 
-export const ApiKeyErrorScreen: React.FC<ApiKeyErrorScreenProps> = ({ error }) => {
+export const ApiKeyErrorScreen: React.FC<ApiKeyErrorScreenProps> = ({ error, onBackToHome }) => {
   return (
     <div style={styles.container}>
       <WarningIcon width={48} height={48} color={COLORS.nero} />
@@ -18,6 +19,9 @@ export const ApiKeyErrorScreen: React.FC<ApiKeyErrorScreenProps> = ({ error }) =
       <p style={styles.message}>
         Assicurati che la chiave API sia stata impostata correttamente nell'ambiente di esecuzione come variabile d'ambiente `API_KEY`.
       </p>
+      <button onClick={onBackToHome} style={styles.backButton}>
+        <HomeIcon /> Torna al Menu
+      </button>
     </div>
   );
 };
@@ -53,5 +57,20 @@ const styles: { [key: string]: React.CSSProperties } = {
         maxWidth: '500px',
         wordBreak: 'break-all',
         margin: '10px 0',
+    },
+    backButton: {
+        marginTop: '24px',
+        padding: '12px 24px',
+        fontSize: '16px',
+        fontWeight: '500',
+        border: 'none',
+        backgroundColor: COLORS.salviaVerde,
+        color: 'white',
+        borderRadius: '8px',
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        transition: 'background-color 0.2s ease',
     },
 };
