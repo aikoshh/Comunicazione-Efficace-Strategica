@@ -13,8 +13,7 @@ type AppState =
   | { screen: 'module'; module: Module }
   | { screen: 'custom_setup'; module: Module }
   | { screen: 'exercise'; exercise: Exercise }
-  | { screen: 'report'; result: AnalysisResult; exercise: Exercise }
-  | { screen: 'api_key_error'; error: string };
+  | { screen: 'report'; result: AnalysisResult; exercise: Exercise };
 
 const App: React.FC = () => {
   const [appState, setAppState] = useState<AppState>({ screen: 'home' });
@@ -84,10 +83,6 @@ const App: React.FC = () => {
     }
   };
 
-  const handleApiKeyError = (error: string) => {
-      setAppState({ screen: 'api_key_error', error });
-  };
-
   const handleBackToHome = () => {
     setAppState({ screen: 'home' });
   };
@@ -100,11 +95,9 @@ const App: React.FC = () => {
     case 'custom_setup':
       return <CustomSetupScreen module={appState.module} onStart={handleStartCustomExercise} onBack={handleBack} />;
     case 'exercise':
-        return <ExerciseScreen exercise={appState.exercise} onComplete={handleCompleteExercise} onBack={handleBack} onApiKeyError={handleApiKeyError} />;
+        return <ExerciseScreen exercise={appState.exercise} onComplete={handleCompleteExercise} onBack={handleBack} />;
     case 'report':
         return <AnalysisReportScreen result={appState.result} exercise={appState.exercise} onRetry={handleRetryExercise} onNext={handleNextExercise} />;
-    case 'api_key_error':
-        return <ApiKeyErrorScreen error={appState.error} onBackToHome={handleBackToHome} />;
     default:
         return <HomeScreen onSelectModule={handleSelectModule} />;
   }
