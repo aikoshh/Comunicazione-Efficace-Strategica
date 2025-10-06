@@ -20,6 +20,7 @@ type AppState =
 const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [appState, setAppState] = useState<AppState>({ screen: 'home' });
+  const [lastStateBeforeError, setLastStateBeforeError] = useState<AppState | null>(null);
 
   const handleLogin = (email: string, pass: string) => {
     // In una vera app, qui si validerebbero le credenziali.
@@ -97,7 +98,17 @@ const App: React.FC = () => {
   };
 
   const handleApiKeyError = (error: string) => {
+      setLastStateBeforeError(appState);
       setAppState({ screen: 'api_key_error', error });
+  };
+
+  const handleRetryFromError = () => {
+      if (lastStateBeforeError) {
+          setAppState(lastStateBeforeError);
+          setLastStateBeforeError(null);
+      } else {
+          setAppState({ screen: 'home' }); // Fallback to home
+      }
   };
 
   if (!isAuthenticated) {
@@ -116,7 +127,7 @@ const App: React.FC = () => {
     case 'report':
         return <AnalysisReportScreen result={appState.result} exercise={appState.exercise} onRetry={handleRetryExercise} onNext={handleNextExercise} />;
     case 'api_key_error':
-        return <ApiKeyErrorScreen error={appState.error} />;
+        return <ApiKeyErrorScreen error={appState.error} onRetry={handleRetryFromError} />;
     default:
         return <HomeScreen onSelectModule={handleSelectModule} />;
   }
