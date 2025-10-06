@@ -1,61 +1,52 @@
-import { GoogleGenAI, Type, FinishReason } from "@google/genai";
+import { GoogleGenAI } from "@google/genai";
 import type { AnalysisResult, ImprovementArea } from '../types';
 
 const getAI = () => {
-  // Crea una nuova istanza ogni volta per garantire che venga utilizzata la configurazione 
-  // più recente dell'ambiente, inclusa la API_KEY, che potrebbe essere caricata 
-  // in modo asincrono o con un leggero ritardo. Questo approccio è più robusto.
   return new GoogleGenAI({ apiKey: process.env.API_KEY });
 };
 
-const analysisSchema = {
-    type: Type.OBJECT,
-    properties: {
-        score: {
-            type: Type.NUMBER,
-            description: "Un punteggio da 0 a 100 che rappresenta l'efficacia complessiva della risposta dell'utente, basato sui criteri di valutazione forniti."
-        },
-        strengths: {
-            type: Type.ARRAY,
-            items: { type: Type.STRING },
-            description: "Un elenco di 2-3 punti che evidenziano ciò che l'utente ha fatto bene, in relazione ai criteri di valutazione."
-        },
-        areasForImprovement: {
-            type: Type.ARRAY,
-            items: {
-                type: Type.OBJECT,
-                properties: {
-                    suggestion: {
-                        type: Type.STRING,
-                        description: "Il consiglio specifico su cosa l'utente potrebbe migliorare, collegato a uno dei criteri di valutazione."
-                    },
-                    example: {
-                        type: Type.STRING,
-                        description: "Una frase di esempio virgolettata che mostra come applicare il suggerimento. Es: \"Invece di dire 'hai sbagliato', potresti dire 'ho notato che questo approccio ha portato a...'\""
-                    }
-                },
-                required: ["suggestion", "example"]
-            },
-            description: "Un elenco di 2-3 punti su cosa l'utente potrebbe migliorare, ognuno con un suggerimento e un esempio pratico virgolettato."
-        },
-        suggestedResponse: {
-            type: Type.OBJECT,
-            properties: {
-                short: {
-                    type: Type.STRING,
-                    description: "Una versione concisa e riscritta della risposta dell'utente (1-2 frasi). Le parole chiave importanti sono evidenziate con **doppi asterischi**."
-                },
-                long: {
-                    type: Type.STRING,
-                    description: "Una versione più dettagliata e completa della risposta dell'utente che incarna i principi di comunicazione efficace. Le parole chiave importanti sono evidenziate con **doppi asterischi**."
-                }
-            },
-            required: ["short", "long"]
-        }
-    },
-    required: ["score", "strengths", "areasForImprovement", "suggestedResponse"]
-};
+// Helper function to parse the text-based analysis from the first AI call
+const parseQualitativeAnalysis = (text: string): Omit<AnalysisResult, 'score'> => {
+  const getSectionContent = (header: string) => {
+    // Regex to find content between the header and the next header or end of string
+    const regex = new RegExp(`### ${header}\\s*([\\s\\S]*?)(?=\\s*###|$)`, 'i');
+    const match = text.match(regex);
+    return match ? match[1].trim() : '';
+  };
 
+  const strengthsContent = getSectionContent('Punti di Forza');
+  const improvementContent = getSectionContent('Aree di Miglioramento');
+  const shortResponseContent = getSectionContent('Risposta Suggerita \\(Breve\\)');
+  const longResponseContent = getSectionContent('Risposta Suggerita \\(Lunga\\)');
+
+  const strengths = strengthsContent.split('\n').map(s => s.replace(/^- \s*/, '').trim()).filter(Boolean);
+  
+  const areasForImprovement: ImprovementArea[] = [];
+  const improvementRegex = /- \*\*Suggerimento:\*\*\s*([\s\S]*?)\s*-\s*\*\*Esempio:\*\*\s*([\s\S]*?)(?=- \*\*Suggerimento:\*\*|$)/g;
+  let match;
+  while ((match = improvementRegex.exec(improvementContent)) !== null) {
+    areasForImprovement.push({
+      suggestion: match[1].trim(),
+      example: match[2].trim().replace(/^"|"$/g, ''), // Remove quotes
+    });
+  }
+
+  const suggestedResponse = {
+    short: shortResponseContent.replace(/^"|"$/g, '').trim(),
+    long: longResponseContent.replace(/^"|"$/g, '').trim(),
+  };
+
+  if (strengths.length === 0 || areasForImprovement.length === 0 || !suggestedResponse.short || !suggestedResponse.long) {
+      console.error("Parsing failed for qualitative analysis:", { text });
+      throw new Error("Impossibile interpretare l'analisi qualitativa del modello.");
+  }
+  
+  return {
+    strengths,
+    areasForImprovement,
+    suggestedResponse,
+  };
+};
 
 export const analyzeResponse = async (
   userResponse: string,
@@ -80,102 +71,92 @@ export const analyzeResponse = async (
       4.  **Assertività**: L'utente esprime i propri bisogni o punti di vista in modo chiaro e rispettoso, senza essere passivo o aggressivo?
       5.  **Struttura**: La comunicazione segue una logica chiara (es. descrivere i fatti, esprimere l'impatto, proporre una soluzione)?
       
-      Basa il tuo punteggio (score) su una valutazione olistica di questi criteri in relazione allo specifico scenario e compito. Il punteggio deve riflettere fedelmente la qualità della risposta dell'utente. Una risposta molto buona dovrebbe avere un punteggio alto, una mediocre un punteggio medio, e una cattiva un punteggio basso. Non dare sempre lo stesso punteggio.
-      
-      Le tue analisi devono essere incoraggianti e mirate ad aiutare l'utente a migliorare concretamente. Fornisci la tua analisi esclusivamente nel formato JSON richiesto.
+      Le tue analisi devono essere incoraggianti e mirate ad aiutare l'utente a migliorare concretamente.
     `;
-
-    const prompt = `
+    
+    // --- STEP 1: Qualitative Analysis ---
+    const qualitativePrompt = `
       **Scenario:** ${scenario}
-      
       **Compito dell'utente:** ${task}
-
       **Risposta dell'utente:** "${userResponse}"
-
       **Contesto di analisi:** ${verbalContext}
 
-      Analizza la risposta dell'utente secondo le direttive fornite nella tua istruzione di sistema.
+      Analizza la risposta dell'utente secondo le direttive fornite nella tua istruzione di sistema. Fornisci la tua analisi ESCLUSIVAMENTE nel seguente formato, usando esattamente queste intestazioni in markdown. NON aggiungere alcun testo introduttivo o conclusivo.
+
+      ### Punti di Forza
+      - [Primo punto di forza]
+      - [Secondo punto di forza]
+
+      ### Aree di Miglioramento
+      - **Suggerimento:** [Primo suggerimento]
+      - **Esempio:** "[Esempio pratico]"
+      - **Suggerimento:** [Secondo suggerimento]
+      - **Esempio:** "[Esempio pratico]"
+
+      ### Risposta Suggerita (Breve)
+      "[Testo della risposta breve con **parole chiave** in grassetto]"
+
+      ### Risposta Suggerita (Lunga)
+      "[Testo della risposta lunga con **parole chiave** in grassetto]"
     `;
-    
-    const response = await ai.models.generateContent({
+
+    const qualitativeResponse = await ai.models.generateContent({
       model: "gemini-2.5-flash",
-      contents: prompt,
+      contents: qualitativePrompt,
       config: {
         systemInstruction: systemInstruction,
-        temperature: 0.8,
+        temperature: 0.7,
         topP: 0.95,
         topK: 64,
-        responseMimeType: "application/json",
-        responseSchema: analysisSchema,
       },
     });
+
+    const qualitativeText = qualitativeResponse.text;
+    if (!qualitativeText) {
+        throw new Error("Il modello non ha generato l'analisi qualitativa.");
+    }
     
-    const candidate = response.candidates?.[0];
-    if (!candidate || !candidate.content) {
-        const finishReason = candidate?.finishReason;
-        const safetyRatings = candidate?.safetyRatings;
-        console.error("Nessun contenuto valido dal modello.", { finishReason, safetyRatings });
-        
-        let errorMessage = "Il modello non ha generato una risposta valida.";
-        if (finishReason === FinishReason.SAFETY) {
-            errorMessage = "La tua risposta o lo scenario contengono elementi che sono stati bloccati per motivi di sicurezza. Prova a riformulare.";
-        } else if (finishReason === FinishReason.RECITATION) {
-             errorMessage = "La risposta è stata bloccata perché troppo simile a materiale protetto da copyright.";
-        } else if (finishReason === FinishReason.MAX_TOKENS) {
-            errorMessage = "La risposta è troppo lunga e ha superato il limite di token.";
+    const parsedQualitativeResult = parseQualitativeAnalysis(qualitativeText);
+
+    // --- STEP 2: Quantitative Analysis (Scoring) ---
+    const scoringPrompt = `
+      Data la seguente analisi di una risposta utente a uno scenario di comunicazione, fornisci un punteggio numerico da 0 a 100 che rappresenti l'efficacia complessiva.
+      Il punteggio deve riflettere fedelmente la qualità della risposta dell'utente in base all'analisi fornita. Una risposta molto buona dovrebbe avere un punteggio alto, una mediocre un punteggio medio, e una cattiva un punteggio basso. Non dare sempre lo stesso punteggio.
+      RISPONDI SOLO E SOLTANTO CON IL NUMERO, SENZA ALCUN TESTO AGGIUNTIVO.
+
+      **Scenario:** ${scenario}
+      **Compito:** ${task}
+      **Risposta Utente:** "${userResponse}"
+      
+      **Analisi Qualitativa:**
+      ${qualitativeText}
+
+      **Punteggio (0-100):**
+    `;
+
+    const scoringResponse = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: scoringPrompt,
+        config: {
+            temperature: 0.2, // Low temperature for a deterministic score
         }
-        throw new Error(errorMessage);
-    }
-    
-    const rawText = response.text;
-    if (!rawText) {
-        throw new Error("La risposta del servizio di analisi era vuota.");
-    }
-    
-    let jsonStringToParse = rawText.trim();
+    });
 
-    // The model might wrap the JSON in ```json ... ``` or add introductory text.
-    // We need to robustly extract the JSON part.
-    const jsonBlockMatch = jsonStringToParse.match(/```json\s*([\s\S]+?)\s*```/);
-    if (jsonBlockMatch && jsonBlockMatch[1]) {
-        jsonStringToParse = jsonBlockMatch[1];
-    } else {
-        // If not in a code block, find the first '{' and last '}'
-        const firstBrace = jsonStringToParse.indexOf('{');
-        const lastBrace = jsonStringToParse.lastIndexOf('}');
-        if (firstBrace !== -1 && lastBrace > firstBrace) {
-            jsonStringToParse = jsonStringToParse.substring(firstBrace, lastBrace + 1);
-        }
+    const scoreText = scoringResponse.text.trim();
+    const score = parseInt(scoreText, 10);
+
+    if (isNaN(score) || score < 0 || score > 100) {
+        console.error("Punteggio non valido ricevuto dal modello:", scoreText);
+        throw new Error("Il modello ha restituito un punteggio non valido.");
     }
 
-    let result: AnalysisResult;
-    try {
-        result = JSON.parse(jsonStringToParse);
-    } catch (parseError) {
-        console.error("Errore durante il parsing del JSON ricevuto dal servizio.", parseError);
-        console.error("Stringa ricevuta:", rawText);
-        throw new Error("Il servizio di analisi ha restituito una risposta in un formato non valido e non è stato possibile interpretarla.");
-    }
-
-    // Validation
-    const isValidImprovementArea = (item: any): item is ImprovementArea => {
-        return typeof item === 'object' && item !== null && typeof item.suggestion === 'string' && typeof item.example === 'string';
+    // --- STEP 3: Combine results ---
+    const finalResult: AnalysisResult = {
+        score,
+        ...parsedQualitativeResult,
     };
-
-    if (
-        typeof result.score !== 'number' || 
-        !Array.isArray(result.strengths) || 
-        !Array.isArray(result.areasForImprovement) ||
-        !result.areasForImprovement.every(isValidImprovementArea) ||
-        !result.suggestedResponse ||
-        typeof result.suggestedResponse.short !== 'string' || 
-        typeof result.suggestedResponse.long !== 'string'
-    ) {
-        console.error("Il JSON ricevuto non rispetta lo schema atteso.", result);
-        throw new Error("Il formato dei dati di analisi non è valido.");
-    }
-
-    return result;
+    
+    return finalResult;
 
   } catch (error: any) {
     console.error("Errore durante l'analisi della risposta con Gemini:", error);
