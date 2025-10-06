@@ -1,4 +1,4 @@
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI, Type, FinishReason } from "@google/genai";
 import type { AnalysisResult, ImprovementArea } from '../types';
 
 const getAI = () => {
@@ -110,7 +110,28 @@ export const analyzeResponse = async (
       },
     });
     
+    const candidate = response.candidates?.[0];
+    if (!candidate || !candidate.content) {
+        const finishReason = candidate?.finishReason;
+        const safetyRatings = candidate?.safetyRatings;
+        console.error("Nessun contenuto valido dal modello.", { finishReason, safetyRatings });
+        
+        let errorMessage = "Il modello non ha generato una risposta valida.";
+        if (finishReason === FinishReason.SAFETY) {
+            errorMessage = "La tua risposta o lo scenario contengono elementi che sono stati bloccati per motivi di sicurezza. Prova a riformulare.";
+        } else if (finishReason === FinishReason.RECITATION) {
+             errorMessage = "La risposta è stata bloccata perché troppo simile a materiale protetto da copyright.";
+        } else if (finishReason === FinishReason.MAX_TOKENS) {
+            errorMessage = "La risposta è troppo lunga e ha superato il limite di token.";
+        }
+        throw new Error(errorMessage);
+    }
+    
     const rawText = response.text;
+    if (!rawText) {
+        throw new Error("La risposta del servizio di analisi era vuota.");
+    }
+    
     let jsonStringToParse = rawText.trim();
 
     // The model might wrap the JSON in ```json ... ``` or add introductory text.
@@ -118,9 +139,23 @@ export const analyzeResponse = async (
     const jsonBlockMatch = jsonStringToParse.match(/```json\s*([\s\S]+?)\s*```/);
     if (jsonBlockMatch && jsonBlockMatch[1]) {
         jsonStringToParse = jsonBlockMatch[1];
+    } else {
+        // If not in a code block, find the first '{' and last '}'
+        const firstBrace = jsonStringToParse.indexOf('{');
+        const lastBrace = jsonStringToParse.lastIndexOf('}');
+        if (firstBrace !== -1 && lastBrace > firstBrace) {
+            jsonStringToParse = jsonStringToParse.substring(firstBrace, lastBrace + 1);
+        }
     }
 
-    const result: AnalysisResult = JSON.parse(jsonStringToParse);
+    let result: AnalysisResult;
+    try {
+        result = JSON.parse(jsonStringToParse);
+    } catch (parseError) {
+        console.error("Errore durante il parsing del JSON ricevuto dal servizio.", parseError);
+        console.error("Stringa ricevuta:", rawText);
+        throw new Error("Il servizio di analisi ha restituito una risposta in un formato non valido e non è stato possibile interpretarla.");
+    }
 
     // Validation
     const isValidImprovementArea = (item: any): item is ImprovementArea => {
@@ -132,10 +167,12 @@ export const analyzeResponse = async (
         !Array.isArray(result.strengths) || 
         !Array.isArray(result.areasForImprovement) ||
         !result.areasForImprovement.every(isValidImprovementArea) ||
-        typeof result.suggestedResponse?.short !== 'string' || 
-        typeof result.suggestedResponse?.long !== 'string'
+        !result.suggestedResponse ||
+        typeof result.suggestedResponse.short !== 'string' || 
+        typeof result.suggestedResponse.long !== 'string'
     ) {
-        throw new Error("Formato di analisi non valido ricevuto dall'API.");
+        console.error("Il JSON ricevuto non rispetta lo schema atteso.", result);
+        throw new Error("Il formato dei dati di analisi non è valido.");
     }
 
     return result;
@@ -145,6 +182,6 @@ export const analyzeResponse = async (
     if (error.message.includes('API key') || error.message.includes('API_KEY')) {
          throw new Error("API_KEY non valida o mancante. Controlla la configurazione del tuo ambiente.");
     }
-    throw new Error("Impossibile ottenere l'analisi dal servizio. Riprova più tardi.");
+    throw new Error(error.message || "Impossibile ottenere l'analisi dal servizio. Riprova più tardi.");
   }
 };
