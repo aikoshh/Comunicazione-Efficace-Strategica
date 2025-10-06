@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { AnalysisResult, Exercise } from '../types';
 import { COLORS } from '../constants';
-import { CheckCircleIcon, XCircleIcon, RetryIcon, HomeIcon } from './Icons';
+import { CheckCircleIcon, XCircleIcon, RetryIcon, HomeIcon, WarningIcon } from './Icons';
 
 interface AnalysisReportScreenProps {
   result: AnalysisResult;
@@ -65,6 +65,12 @@ export const AnalysisReportScreen: React.FC<AnalysisReportScreenProps> = ({ resu
   return (
     <div style={styles.container}>
       <div style={styles.card}>
+        {result.isMock && (
+            <div style={styles.demoBanner}>
+                <WarningIcon style={{ flexShrink: 0, color: '#F4A731' }}/>
+                <span><b>Modalità Demo:</b> Questa è un'analisi di esempio. Configura la tua <code>API_KEY</code> per ricevere feedback reali.</span>
+            </div>
+        )}
         <h1 style={styles.title}>Risultato dell'Analisi</h1>
 
         <div style={styles.exerciseRecap}>
@@ -149,6 +155,18 @@ const styles: { [key: string]: React.CSSProperties } = {
         padding: '32px',
         maxWidth: '800px',
         width: '100%',
+    },
+    demoBanner: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '12px',
+        backgroundColor: '#FFFBEB',
+        color: '#B45309',
+        padding: '12px 16px',
+        borderRadius: '8px',
+        marginBottom: '24px',
+        fontSize: '15px',
+        lineHeight: 1.5,
     },
     title: {
         fontSize: '28px',
