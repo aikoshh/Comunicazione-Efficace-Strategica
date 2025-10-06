@@ -5,6 +5,7 @@ import { ExerciseScreen } from './components/ExerciseScreen';
 import { AnalysisReportScreen } from './components/AnalysisReportScreen';
 import { ApiKeyErrorScreen } from './components/ApiKeyErrorScreen';
 import CustomSetupScreen from './components/CustomSetupScreen';
+import { LoginScreen } from './components/LoginScreen';
 import type { Module, Exercise, AnalysisResult, DifficultyLevel } from './types';
 import { MODULES } from './constants';
 
@@ -13,10 +14,23 @@ type AppState =
   | { screen: 'module'; module: Module }
   | { screen: 'custom_setup'; module: Module }
   | { screen: 'exercise'; exercise: Exercise }
-  | { screen: 'report'; result: AnalysisResult; exercise: Exercise };
+  | { screen: 'report'; result: AnalysisResult; exercise: Exercise }
+  | { screen: 'api_key_error'; error: string };
 
 const App: React.FC = () => {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [appState, setAppState] = useState<AppState>({ screen: 'home' });
+
+  const handleLogin = (email: string, pass: string) => {
+    // In una vera app, qui si validerebbero le credenziali.
+    // Per ora, l'accesso è sempre consentito.
+    console.log(`Tentativo di login con email: ${email}`);
+    setIsAuthenticated(true);
+  };
+  
+  const handleGuestAccess = () => {
+    setIsAuthenticated(true);
+  };
 
   const handleSelectModule = (module: Module) => {
     if (module.isCustom) {
@@ -54,8 +68,7 @@ const App: React.FC = () => {
   };
 
   const handleNextExercise = () => {
-    // For simplicity, this just goes back to the home screen.
-    // A more complex app might go to the next exercise in the module.
+    // Per semplicità, torna alla schermata principale.
     setAppState({ screen: 'home' });
   };
   
@@ -83,9 +96,13 @@ const App: React.FC = () => {
     }
   };
 
-  const handleBackToHome = () => {
-    setAppState({ screen: 'home' });
+  const handleApiKeyError = (error: string) => {
+      setAppState({ screen: 'api_key_error', error });
   };
+
+  if (!isAuthenticated) {
+    return <LoginScreen onLogin={handleLogin} onGuestAccess={handleGuestAccess} />;
+  }
 
   switch (appState.screen) {
     case 'home':
@@ -95,9 +112,11 @@ const App: React.FC = () => {
     case 'custom_setup':
       return <CustomSetupScreen module={appState.module} onStart={handleStartCustomExercise} onBack={handleBack} />;
     case 'exercise':
-        return <ExerciseScreen exercise={appState.exercise} onComplete={handleCompleteExercise} onBack={handleBack} />;
+        return <ExerciseScreen exercise={appState.exercise} onComplete={handleCompleteExercise} onBack={handleBack} onApiKeyError={handleApiKeyError} />;
     case 'report':
         return <AnalysisReportScreen result={appState.result} exercise={appState.exercise} onRetry={handleRetryExercise} onNext={handleNextExercise} />;
+    case 'api_key_error':
+        return <ApiKeyErrorScreen error={appState.error} />;
     default:
         return <HomeScreen onSelectModule={handleSelectModule} />;
   }
