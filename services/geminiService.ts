@@ -1,16 +1,11 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import type { AnalysisResult, ImprovementArea } from '../types';
 
-let ai: GoogleGenAI | null = null;
-
 const getAI = () => {
-  if (!ai) {
-    // As per guidelines, assume API_KEY is provided by the execution environment.
-    // The explicit check was removed to prevent browser-side errors.
-    // The Gemini library will handle authentication errors if the key is invalid.
-    ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  }
-  return ai;
+  // Crea una nuova istanza ogni volta per garantire che venga utilizzata la configurazione 
+  // più recente dell'ambiente, inclusa la API_KEY, che potrebbe essere caricata 
+  // in modo asincrono o con un leggero ritardo. Questo approccio è più robusto.
+  return new GoogleGenAI({ apiKey: process.env.API_KEY });
 };
 
 const analysisSchema = {
