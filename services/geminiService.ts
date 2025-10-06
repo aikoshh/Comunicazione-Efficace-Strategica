@@ -18,12 +18,12 @@ const analysisSchema = {
     properties: {
         score: {
             type: Type.NUMBER,
-            description: "Un punteggio da 0 a 100 che rappresenta l'efficacia complessiva della risposta dell'utente."
+            description: "Un punteggio da 0 a 100 che rappresenta l'efficacia complessiva della risposta dell'utente, basato sui criteri di valutazione forniti."
         },
         strengths: {
             type: Type.ARRAY,
             items: { type: Type.STRING },
-            description: "Un elenco di 2-3 punti che evidenziano ciò che l'utente ha fatto bene."
+            description: "Un elenco di 2-3 punti che evidenziano ciò che l'utente ha fatto bene, in relazione ai criteri di valutazione."
         },
         areasForImprovement: {
             type: Type.ARRAY,
@@ -32,7 +32,7 @@ const analysisSchema = {
                 properties: {
                     suggestion: {
                         type: Type.STRING,
-                        description: "Il consiglio specifico su cosa l'utente potrebbe migliorare."
+                        description: "Il consiglio specifico su cosa l'utente potrebbe migliorare, collegato a uno dei criteri di valutazione."
                     },
                     example: {
                         type: Type.STRING,
@@ -52,7 +52,7 @@ const analysisSchema = {
                 },
                 long: {
                     type: Type.STRING,
-                    description: "Una versione più dettagliata e completa della risposta dell'utente. Le parole chiave importanti sono evidenziate con **doppi asterischi**."
+                    description: "Una versione più dettagliata e completa della risposta dell'utente che incarna i principi di comunicazione efficace. Le parole chiave importanti sono evidenziate con **doppi asterischi**."
                 }
             },
             required: ["short", "long"]
@@ -75,9 +75,22 @@ export const analyzeResponse = async (
         ? "La risposta dell'utente è stata fornita verbalmente. Considera fattori come la concisione e la chiarezza adatti alla comunicazione parlata. Ignora eventuali errori di trascrizione o di battitura."
         : "La risposta dell'utente è stata scritta. Analizzala per chiarezza, tono e struttura come faresti con un testo scritto.";
 
-    const prompt = `
-      Sei un coach esperto di comunicazione. Il tuo compito è analizzare la risposta di un utente in un determinato scenario e fornire un feedback costruttivo. Rispondi SEMPRE in italiano.
+    const systemInstruction = `
+      Sei un coach di Comunicazione Efficace Strategica (CES) di livello mondiale. Il tuo ruolo è analizzare le risposte degli utenti a scenari di comunicazione complessi e fornire un feedback dettagliato, costruttivo e personalizzato. Rispondi SEMPRE e solo in italiano.
 
+      Valuta ogni risposta in base ai seguenti criteri chiave:
+      1.  **Chiarezza e Concisinza**: La risposta è diretta, facile da capire e priva di ambiguità?
+      2.  **Tono ed Empatia**: Il tono è appropriato per lo scenario? Dimostra comprensione e rispetto per l'altra persona?
+      3.  **Orientamento alla Soluzione**: La risposta si concentra sulla risoluzione del problema o sul raggiungimento di un obiettivo costruttivo, invece che sulla colpa?
+      4.  **Assertività**: L'utente esprime i propri bisogni o punti di vista in modo chiaro e rispettoso, senza essere passivo o aggressivo?
+      5.  **Struttura**: La comunicazione segue una logica chiara (es. descrivere i fatti, esprimere l'impatto, proporre una soluzione)?
+      
+      Basa il tuo punteggio (score) su una valutazione olistica di questi criteri in relazione allo specifico scenario e compito. Il punteggio deve riflettere fedelmente la qualità della risposta dell'utente. Una risposta molto buona dovrebbe avere un punteggio alto, una mediocre un punteggio medio, e una cattiva un punteggio basso. Non dare sempre lo stesso punteggio.
+      
+      Le tue analisi devono essere incoraggianti e mirate ad aiutare l'utente a migliorare concretamente. Fornisci la tua analisi esclusivamente nel formato JSON richiesto.
+    `;
+
+    const prompt = `
       **Scenario:** ${scenario}
       
       **Compito dell'utente:** ${task}
@@ -86,23 +99,15 @@ export const analyzeResponse = async (
 
       **Contesto di analisi:** ${verbalContext}
 
-      Per favore, analizza la risposta dell'utente sulla base delle migliori pratiche di comunicazione. Valuta la sua efficacia nel raggiungere l'obiettivo del compito all'interno dello scenario dato.
-      
-      Fornisci la tua analisi nel seguente formato JSON. L'intero output, inclusi i suggerimenti, deve essere in italiano.
-      - Lo "score" deve essere un numero intero da 0 a 100.
-      - "strengths" deve essere un elenco di stringhe con i punti di forza.
-      - "areasForImprovement" deve essere un elenco di oggetti, dove ogni oggetto contiene una "suggestion" (il consiglio) e un "example" (una frase di esempio virgolettata che mostra come applicare il suggerimento).
-      - Per "suggestedResponse", fornisci due versioni:
-        - una versione 'short': una risposta concisa e riscritta (1-2 frasi).
-        - una versione 'long': una risposta più dettagliata e completa che spieghi il ragionamento.
-      - In entrambe le risposte suggerite, evidenzia le parole chiave più importanti racchiudendole tra doppi asterischi, come **questo**.
+      Analizza la risposta dell'utente secondo le direttive fornite nella tua istruzione di sistema e genera il feedback strutturato in formato JSON.
     `;
     
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
       contents: prompt,
       config: {
-        temperature: 0.7,
+        systemInstruction: systemInstruction,
+        temperature: 0.8,
         topP: 0.95,
         topK: 64,
         responseMimeType: "application/json",
@@ -111,9 +116,7 @@ export const analyzeResponse = async (
     });
     
     const jsonText = response.text.trim();
-
     const sanitizedJsonText = jsonText.replace(/^```json\s*|```$/g, '').trim();
-
     const result: AnalysisResult = JSON.parse(sanitizedJsonText);
 
     // Validation
