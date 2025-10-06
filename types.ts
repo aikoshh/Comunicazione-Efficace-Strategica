@@ -44,5 +44,5 @@ export interface AnalysisResult {
     short: string;
     long: string;
   };
-  isMock?: boolean;
+  isDemo?: boolean;
 }
