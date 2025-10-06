@@ -4,14 +4,36 @@ import type { AnalysisResult, ImprovementArea } from '../types';
 let ai: GoogleGenAI | null = null;
 
 const getAI = () => {
-  if (!process.env.API_KEY) {
-    throw new Error("La variabile d'ambiente API_KEY non è impostata. Per favore, imposta la variabile d'ambiente API_KEY.");
-  }
-  if (!ai) {
+  if (!ai && process.env.API_KEY) {
     ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   }
   return ai;
 };
+
+// A mock result for demo mode
+const getMockAnalysis = (): AnalysisResult => ({
+    score: 85,
+    strengths: [
+        "Ottima apertura, chiara e diretta.",
+        "Hai espresso il tuo punto di vista in modo costruttivo.",
+        "Buona proposta di soluzione collaborativa."
+    ],
+    areasForImprovement: [
+        {
+            suggestion: "Potresti usare un linguaggio leggermente più orientato all'impatto sul team invece che solo su di te.",
+            example: "Invece di dire 'Questo mi causa ritardi', potresti provare con 'Ho notato che questo approccio sta rallentando il nostro flusso di lavoro di squadra.'"
+        },
+        {
+            suggestion: "Prova a concludere con una domanda aperta per incoraggiare il dialogo.",
+            example: "Potresti finire la conversazione con 'Cosa ne pensi di questa idea?' o 'Come vedi la situazione dal tuo punto di vista?'"
+        }
+    ],
+    suggestedResponse: {
+        short: "Vorrei parlarti del nostro progetto. Ho notato che il tuo approccio di micro-gestione sta avendo un **impatto** sul nostro ritmo. Che ne diresti se provassimo a definire dei check-in regolari, così da avere entrambi più **autonomia** e **fiducia**?",
+        long: "Ciao Luca, grazie per il tempo che mi dedichi. Apprezzo molto la tua attenzione ai dettagli, ma ho notato che la supervisione costante sta rallentando il mio lavoro e minando un po' la mia **autonomia**. Per essere più efficienti entrambi, mi piacerebbe proporti un approccio diverso. Potremmo stabilire degli aggiornamenti giornalieri o a fine giornata, in cui ti mostro i progressi. Questo mi permetterebbe di procedere più speditamente e a te di rimanere aggiornato senza interrompere il flusso. Potrebbe funzionare per te? Sono convinto che con più **fiducia** reciproca potremmo ottenere risultati ancora migliori."
+    }
+});
+
 
 const analysisSchema = {
     type: Type.OBJECT,
@@ -68,8 +90,18 @@ export const analyzeResponse = async (
   task: string,
   isVerbal: boolean,
 ): Promise<AnalysisResult> => {
+  if (!process.env.API_KEY) {
+    console.warn("API_KEY non trovata. L'applicazione è in modalità demo.");
+    // Simulate network delay for a better UX
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    return getMockAnalysis();
+  }
+  
   try {
     const ai = getAI();
+    if (!ai) {
+        throw new Error("Inizializzazione del client AI fallita.");
+    }
 
     const verbalContext = isVerbal 
         ? "La risposta dell'utente è stata fornita verbalmente. Considera fattori come la concisione e la chiarezza adatti alla comunicazione parlata. Ignora eventuali errori di trascrizione o di battitura."
@@ -133,8 +165,8 @@ export const analyzeResponse = async (
 
   } catch (error: any) {
     console.error("Errore durante l'analisi della risposta con Gemini:", error);
-    if (error.message.includes('API key') || error.message.includes('API_KEY')) {
-         throw new Error("API_KEY non valida o mancante. Controlla la configurazione del tuo ambiente.");
+    if (error.message.includes('API key')) {
+         throw new Error("La tua API_KEY non è valida. Controlla la sua correttezza.");
     }
     throw new Error("Impossibile ottenere l'analisi dal servizio. Riprova più tardi.");
   }
