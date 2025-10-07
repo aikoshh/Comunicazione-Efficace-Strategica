@@ -10,42 +10,48 @@ interface ModuleScreenProps {
 }
 
 const difficultyColors: { [key in DifficultyLevel]: string } = {
-  [DifficultyLevel.BASE]: '#31C48D',
-  [DifficultyLevel.INTERMEDIO]: '#F4A731',
-  [DifficultyLevel.AVANZATO]: '#E5484D',
+  [DifficultyLevel.BASE]: COLORS.success,
+  [DifficultyLevel.INTERMEDIO]: COLORS.warning,
+  [DifficultyLevel.AVANZATO]: COLORS.error,
 };
+
+const hoverStyle = `
+  .exercise-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 15px rgba(0,0,0,0.08);
+  }
+`;
 
 export const ModuleScreen: React.FC<ModuleScreenProps> = ({ module, onSelectExercise, onBack }) => {
   return (
     <div style={styles.container}>
+       <style>{hoverStyle}</style>
       <header style={styles.header}>
         <button onClick={onBack} style={styles.backButton}>
-          Torna al Menu
-          <HomeIcon />
+          <HomeIcon /> Menu
         </button>
         <div style={styles.titleContainer}>
-            <module.icon width={40} height={40} color={COLORS.nero} />
+            <module.icon width={32} height={32} color={COLORS.primary} />
             <h1 style={styles.title}>{module.title}</h1>
         </div>
         <p style={styles.description}>{module.description}</p>
       </header>
       <main style={styles.exerciseList}>
         {module.exercises.map((exercise, index) => (
-          <div key={exercise.id} style={styles.exerciseCard} onClick={() => onSelectExercise(exercise)}>
+          <div key={exercise.id} className="exercise-card" style={styles.exerciseCard} onClick={() => onSelectExercise(exercise)}>
             <div style={styles.exerciseHeader}>
-                <span style={styles.exerciseNumber}>Esercizio {index + 1}</span>
+                <h2 style={styles.exerciseTitle}>{exercise.title}</h2>
                 <span style={{...styles.difficultyBadge, backgroundColor: difficultyColors[exercise.difficulty]}}>
                     {exercise.difficulty}
                 </span>
             </div>
-            <h2 style={styles.exerciseTitle}>{exercise.title}</h2>
+            <p style={styles.exerciseScenarioPreview}>{exercise.scenario.substring(0, 100)}...</p>
           </div>
         ))}
       </main>
       <div style={styles.footer}>
         <button onClick={onBack} style={styles.footerButton}>
-          Torna al Menu
-          <HomeIcon />
+           <HomeIcon /> Torna al Menu Principale
         </button>
       </div>
     </div>
@@ -56,12 +62,12 @@ const styles: { [key: string]: React.CSSProperties } = {
   container: {
     maxWidth: '800px',
     margin: '0 auto',
-    padding: '40px 20px',
-    backgroundColor: COLORS.fondo,
+    padding: '40px 20px 80px',
+    backgroundColor: COLORS.base,
     minHeight: '100vh',
   },
   header: {
-    marginBottom: '40px',
+    marginBottom: '48px',
     textAlign: 'center',
     paddingTop: '60px', // Add padding to avoid overlap with the absolute positioned button
   },
@@ -69,58 +75,57 @@ const styles: { [key: string]: React.CSSProperties } = {
     display: 'flex',
     alignItems: 'center',
     gap: '8px',
-    background: COLORS.salviaVerde,
-    color: 'white',
-    border: 'none',
+    background: 'transparent',
+    color: COLORS.primary,
+    border: `1px solid ${COLORS.primary}`,
     borderRadius: '8px',
-    padding: '10px 20px',
+    padding: '10px 16px',
     cursor: 'pointer',
-    fontSize: '16px',
+    fontSize: '14px',
     fontWeight: '500',
     position: 'absolute',
     top: '20px',
     left: '20px',
-    transition: 'background-color 0.2s ease',
+    transition: 'all 0.2s ease',
   },
   titleContainer: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     gap: '16px',
-    marginBottom: '16px',
+    marginBottom: '12px',
   },
   title: {
     fontSize: '32px',
-    color: COLORS.nero,
+    color: COLORS.textPrimary,
+    fontWeight: 'bold'
   },
   description: {
     fontSize: '18px',
-    color: '#666',
+    color: COLORS.textSecondary,
+    lineHeight: 1.6
   },
   exerciseList: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '16px',
+    gap: '20px',
   },
   exerciseCard: {
     backgroundColor: 'white',
     borderRadius: '12px',
     padding: '20px',
-    boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+    boxShadow: '0 2px 5px rgba(0,0,0,0.08)',
     cursor: 'pointer',
     transition: 'transform 0.2s, box-shadow 0.2s',
-    border: '1px solid #eee',
+    border: `1px solid ${COLORS.divider}`,
+    textAlign: 'left'
   },
   exerciseHeader: {
     display: 'flex',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: '12px',
-  },
-  exerciseNumber: {
-    fontSize: '14px',
-    color: '#777',
-    fontWeight: '500',
+    alignItems: 'flex-start',
+    gap: '16px',
+    marginBottom: '8px',
   },
   difficultyBadge: {
     color: 'white',
@@ -129,10 +134,19 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontSize: '12px',
     fontWeight: 'bold',
     textTransform: 'uppercase',
+    flexShrink: 0
   },
   exerciseTitle: {
-    fontSize: '20px',
-    color: COLORS.nero,
+    fontSize: '18px',
+    fontWeight: '600',
+    color: COLORS.textPrimary,
+    margin: 0
+  },
+  exerciseScenarioPreview: {
+    fontSize: '14px',
+    color: COLORS.textSecondary,
+    lineHeight: 1.5,
+    margin: 0,
   },
   footer: {
       marginTop: '40px',
@@ -143,14 +157,14 @@ const styles: { [key: string]: React.CSSProperties } = {
       display: 'flex',
       alignItems: 'center',
       gap: '8px',
-      background: COLORS.salviaVerde,
-      border: 'none',
+      background: 'transparent',
+      border: `1px solid ${COLORS.primary}`,
       borderRadius: '8px',
-      padding: '10px 20px',
+      padding: '12px 24px',
       cursor: 'pointer',
       fontSize: '16px',
-      color: 'white',
+      color: COLORS.primary,
       fontWeight: '500',
-      transition: 'background-color 0.2s ease',
+      transition: 'all 0.2s ease',
   },
 };

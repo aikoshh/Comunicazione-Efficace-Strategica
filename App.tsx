@@ -1,13 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { HomeScreen } from './components/HomeScreen';
 import { ModuleScreen } from './components/ModuleScreen';
 import { ExerciseScreen } from './components/ExerciseScreen';
 import { AnalysisReportScreen } from './components/AnalysisReportScreen';
+import { VoiceAnalysisReportScreen } from './components/VoiceAnalysisReportScreen';
 import { ApiKeyErrorScreen } from './components/ApiKeyErrorScreen';
 import CustomSetupScreen from './components/CustomSetupScreen';
 import { LoginScreen } from './components/LoginScreen';
-import type { Module, Exercise, AnalysisResult, DifficultyLevel } from './types';
-import { MODULES } from './constants';
+import type { Module, Exercise, AnalysisResult, VoiceAnalysisResult, DifficultyLevel, User, UserProgress } from './types';
+import { MODULES, COLORS } from './constants';
+import { initialUserDatabase } from './database';
 
 type AppState =
   | { screen: 'home' }
@@ -15,22 +17,98 @@ type AppState =
   | { screen: 'custom_setup'; module: Module }
   | { screen: 'exercise'; exercise: Exercise }
   | { screen: 'report'; result: AnalysisResult; exercise: Exercise }
+  | { screen: 'voice_report'; result: VoiceAnalysisResult; exercise: Exercise }
   | { screen: 'api_key_error'; error: string };
+
+const USERS_STORAGE_KEY = 'ces_coach_users';
+const PROGRESS_STORAGE_KEY = 'ces_coach_progress';
+
+const parseDatabase = (dbString: string): User[] => {
+    if (!dbString.trim()) return [];
+    return dbString.split('\n').map(line => {
+        const [email, password, firstName, lastName] = line.split(',');
+        return { email, password, firstName, lastName };
+    });
+};
+
+const saveToStorage = <T,>(key: string, value: T) => {
+    try {
+        localStorage.setItem(key, JSON.stringify(value));
+    } catch (error) {
+        console.error("Failed to save to storage:", error);
+    }
+};
+
+const loadFromStorage = <T,>(key: string): T | null => {
+    try {
+        const item = localStorage.getItem(key);
+        return item ? JSON.parse(item) : null;
+    } catch (error) {
+        console.error("Failed to load from storage:", error);
+        return null;
+    }
+};
+
 
 const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  
+  const [users, setUsers] = useState<User[]>(() => {
+    const storedUsers = loadFromStorage<User[]>(USERS_STORAGE_KEY);
+    if (storedUsers && storedUsers.length > 0) {
+        return storedUsers;
+    }
+    const initialUsers = parseDatabase(initialUserDatabase);
+    saveToStorage(USERS_STORAGE_KEY, initialUsers);
+    return initialUsers;
+  });
+
+  const [userProgress, setUserProgress] = useState<Record<string, UserProgress>>(() => {
+    return loadFromStorage<Record<string, UserProgress>>(PROGRESS_STORAGE_KEY) || {};
+  });
+
   const [appState, setAppState] = useState<AppState>({ screen: 'home' });
-  const [lastStateBeforeError, setLastStateBeforeError] = useState<AppState | null>(null);
+
+  // Effect to save users to localStorage whenever they change
+  useEffect(() => {
+    saveToStorage(USERS_STORAGE_KEY, users);
+  }, [users]);
+
+  // Effect to save progress to localStorage whenever it changes
+  useEffect(() => {
+    saveToStorage(PROGRESS_STORAGE_KEY, userProgress);
+  }, [userProgress]);
+
 
   const handleLogin = (email: string, pass: string) => {
-    // In una vera app, qui si validerebbero le credenziali.
-    // Per ora, l'accesso è sempre consentito.
-    console.log(`Tentativo di login con email: ${email}`);
-    setIsAuthenticated(true);
+    const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
+    if (user && user.password === pass) {
+      setCurrentUser(user);
+      setIsAuthenticated(true);
+    } else {
+      throw new Error("Email o password non validi.");
+    }
+  };
+  
+  const handleRegister = (newUser: Omit<User, 'password'> & { password: string }) => {
+    const userExists = users.some(u => u.email.toLowerCase() === newUser.email.toLowerCase());
+    if (userExists) {
+        throw new Error("Un utente con questa email è già registrato.");
+    }
+    const userToSave: User = { ...newUser };
+    setUsers(prevUsers => [...prevUsers, userToSave]);
   };
   
   const handleGuestAccess = () => {
+    setCurrentUser(null);
     setIsAuthenticated(true);
+  };
+
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    setCurrentUser(null);
+    setAppState({ screen: 'home' });
   };
 
   const handleSelectModule = (module: Module) => {
@@ -56,14 +134,48 @@ const App: React.FC = () => {
     setAppState({ screen: 'exercise', exercise: customExercise });
   };
   
-  const handleCompleteExercise = (result: AnalysisResult) => {
+  const handleCompleteWrittenExercise = (result: AnalysisResult) => {
     if (appState.screen === 'exercise') {
+      if (currentUser) {
+        const newScore = result.score;
+        setUserProgress(prev => {
+            const userEmail = currentUser.email;
+            const currentProgress = prev[userEmail] || { scores: [] };
+            return {
+                ...prev,
+                [userEmail]: {
+                    ...currentProgress,
+                    scores: [...currentProgress.scores, newScore]
+                }
+            };
+        });
+      }
       setAppState({ screen: 'report', result, exercise: appState.exercise });
     }
   };
 
+  const handleCompleteVerbalExercise = (result: VoiceAnalysisResult) => {
+      if (appState.screen === 'exercise') {
+          if (currentUser) {
+            const averageScore = result.scores.reduce((acc, s) => acc + s.score, 0) / result.scores.length * 10;
+            setUserProgress(prev => {
+                const userEmail = currentUser.email;
+                const currentProgress = prev[userEmail] || { scores: [] };
+                return {
+                    ...prev,
+                    [userEmail]: {
+                        ...currentProgress,
+                        scores: [...currentProgress.scores, Math.round(averageScore)]
+                    }
+                };
+            });
+          }
+          setAppState({ screen: 'voice_report', result, exercise: appState.exercise });
+      }
+  };
+
   const handleRetryExercise = () => {
-      if (appState.screen === 'report') {
+      if (appState.screen === 'report' || appState.screen === 'voice_report') {
           setAppState({ screen: 'exercise', exercise: appState.exercise });
       }
   };
@@ -98,39 +210,87 @@ const App: React.FC = () => {
   };
 
   const handleApiKeyError = (error: string) => {
-      setLastStateBeforeError(appState);
       setAppState({ screen: 'api_key_error', error });
   };
 
-  const handleRetryFromError = () => {
-      if (lastStateBeforeError) {
-          setAppState(lastStateBeforeError);
-          setLastStateBeforeError(null);
-      } else {
-          setAppState({ screen: 'home' }); // Fallback to home
-      }
-  };
-
   if (!isAuthenticated) {
-    return <LoginScreen onLogin={handleLogin} onGuestAccess={handleGuestAccess} />;
+    return <LoginScreen onLogin={handleLogin} onRegister={handleRegister} onGuestAccess={handleGuestAccess} />;
   }
+
+  let screenContent;
 
   switch (appState.screen) {
     case 'home':
-      return <HomeScreen onSelectModule={handleSelectModule} />;
+      screenContent = <HomeScreen 
+                onSelectModule={handleSelectModule} 
+                currentUser={currentUser}
+                userProgress={currentUser ? userProgress[currentUser.email] : undefined}
+             />;
+      break;
     case 'module':
-      return <ModuleScreen module={appState.module} onSelectExercise={handleSelectExercise} onBack={handleBack} />;
+      screenContent = <ModuleScreen module={appState.module} onSelectExercise={handleSelectExercise} onBack={handleBack} />;
+      break;
     case 'custom_setup':
-      return <CustomSetupScreen module={appState.module} onStart={handleStartCustomExercise} onBack={handleBack} />;
+      screenContent = <CustomSetupScreen module={appState.module} onStart={handleStartCustomExercise} onBack={handleBack} />;
+      break;
     case 'exercise':
-        return <ExerciseScreen exercise={appState.exercise} onComplete={handleCompleteExercise} onBack={handleBack} onApiKeyError={handleApiKeyError} />;
+        screenContent = <ExerciseScreen 
+                    exercise={appState.exercise} 
+                    onCompleteWritten={handleCompleteWrittenExercise} 
+                    onCompleteVerbal={handleCompleteVerbalExercise}
+                    onBack={handleBack} 
+                    onApiKeyError={handleApiKeyError} />;
+        break;
     case 'report':
-        return <AnalysisReportScreen result={appState.result} exercise={appState.exercise} onRetry={handleRetryExercise} onNext={handleNextExercise} />;
+        screenContent = <AnalysisReportScreen result={appState.result} exercise={appState.exercise} onRetry={handleRetryExercise} onNext={handleNextExercise} />;
+        break;
+    case 'voice_report':
+        screenContent = <VoiceAnalysisReportScreen result={appState.result} exercise={appState.exercise} onRetry={handleRetryExercise} onNext={handleNextExercise} />;
+        break;
     case 'api_key_error':
-        return <ApiKeyErrorScreen error={appState.error} onRetry={handleRetryFromError} />;
+        screenContent = <ApiKeyErrorScreen error={appState.error} />;
+        break;
     default:
-        return <HomeScreen onSelectModule={handleSelectModule} />;
+        screenContent = <HomeScreen 
+                 onSelectModule={handleSelectModule} 
+                 currentUser={currentUser}
+                 userProgress={currentUser ? userProgress[currentUser.email] : undefined}
+               />;
   }
+
+  return (
+    <div>
+        {screenContent}
+        {appState.screen !== 'api_key_error' && (
+            <footer style={styles.footer}>
+                <button onClick={handleLogout} style={styles.logoutButton}>
+                    Logout
+                </button>
+            </footer>
+        )}
+    </div>
+  );
 };
+
+const styles: { [key: string]: React.CSSProperties } = {
+    footer: {
+        textAlign: 'center',
+        padding: '32px 20px',
+        backgroundColor: COLORS.base,
+        borderTop: `1px solid ${COLORS.divider}`,
+    },
+    logoutButton: {
+        padding: '12px 24px',
+        fontSize: '16px',
+        fontWeight: '500',
+        border: `1px solid ${COLORS.error}`,
+        backgroundColor: 'transparent',
+        color: COLORS.error,
+        borderRadius: '8px',
+        cursor: 'pointer',
+        transition: 'all 0.2s ease',
+    }
+};
+
 
 export default App;

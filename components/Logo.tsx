@@ -1,21 +1,28 @@
 import React from 'react';
+import { COLORS } from '../constants';
 
-// FIX: Replaced invalid placeholder content with a valid Logo component.
-// This resolves multiple parsing and module resolution errors.
 export const Logo: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     <svg
-        height="48"
         width="48"
-        viewBox="0 0 24 24"
+        height="48"
+        viewBox="0 0 48 48"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
         {...props}
     >
-        <path
-            d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"
-            fill="#31C48D" // COLORS.accentoVerde
-            stroke="#111827" // COLORS.nero
-            strokeWidth="1"
+        <path 
+            d="M24 44C35.0457 44 44 35.0457 44 24C44 12.9543 35.0457 4 24 4C12.9543 4 4 12.9543 4 24C4 35.0457 12.9543 44 24 44Z" 
+            stroke={COLORS.primary} 
+            strokeWidth="2" 
+            strokeLinecap="round" 
+            strokeLinejoin="round"
+        />
+        <path 
+            d="M28 16L20 24L28 32" 
+            stroke={COLORS.secondary} 
+            strokeWidth="2" 
+            strokeLinecap="round" 
+            strokeLinejoin="round"
         />
     </svg>
 );

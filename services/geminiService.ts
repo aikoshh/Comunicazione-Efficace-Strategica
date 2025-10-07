@@ -1,29 +1,5 @@
 import { GoogleGenAI, Type } from "@google/genai";
-import type { AnalysisResult, ImprovementArea } from '../types';
-
-const DEMO_ANALYSIS_RESULT: AnalysisResult = {
-  score: 85,
-  strengths: [
-    "Ottimo uso di un tono calmo e collaborativo, che apre la porta al dialogo.",
-    "Hai descritto l'impatto del comportamento del collega sul tuo lavoro in modo chiaro e non accusatorio.",
-    "La proposta di una soluzione concreta dimostra un approccio proattivo e orientato al risultato.",
-  ],
-  areasForImprovement: [
-    {
-      suggestion: "Potresti iniziare con una frase che riconosca l'intenzione positiva del collega per ridurre ulteriormente le sue difese.",
-      example: "Invece di iniziare subito con il problema, potresti dire: \"Apprezzo molto la passione che metti nei tuoi progetti e volevo parlarti di come possiamo collaborare ancora meglio...\""
-    },
-    {
-      suggestion: "Sii ancora più specifico sulla soluzione che proponi, definendo un 'come' e un 'quando'.",
-      example: "Invece di un generico 'troviamo una soluzione', potresti dire: \"Che ne dici se facciamo un rapido check di 10 minuti ogni mattina per allinearci sulle priorità? In questo modo, dovremmo evitare sovrapposizioni.\""
-    }
-  ],
-  suggestedResponse: {
-    short: "Una risposta suggerita potrebbe essere: \"Ciao Giulia, grazie per il tuo impegno sul progetto. Ho notato che abbiamo **due approcci diversi** e vorrei trovare un modo per **integrare il meglio di entrambi**. Possiamo parlarne un attimo?\"",
-    long: "Una versione più completa: \"Ciao Giulia, so che entrambi teniamo molto al successo di questo progetto e apprezzo l'energia che ci stai mettendo. Mi sono reso conto che abbiamo visioni diverse su come procedere e questo sta creando un po' di attrito. Vorrei capire meglio il tuo punto di vista e trovare una soluzione che **unisca le nostre idee** per ottenere il miglior risultato possibile. Avresti tempo per discuterne con calma questo pomeriggio?\""
-  },
-  isDemo: true,
-};
+import type { AnalysisResult, ImprovementArea, VoiceAnalysisResult, VoiceScore } from '../types';
 
 const getAI = () => {
   // Crea una nuova istanza ogni volta per garantire che venga utilizzata la configurazione 
@@ -87,12 +63,6 @@ export const analyzeResponse = async (
   task: string,
   isVerbal: boolean,
 ): Promise<AnalysisResult> => {
-  if (!process.env.API_KEY) {
-    console.log("API_KEY non trovata. Restituzione dell'analisi demo.");
-    await new Promise(resolve => setTimeout(resolve, 1500)); // Simula il caricamento
-    return DEMO_ANALYSIS_RESULT;
-  }
-    
   try {
     const ai = getAI();
 
@@ -177,4 +147,138 @@ export const analyzeResponse = async (
     }
     throw new Error("Impossibile ottenere l'analisi dal servizio. Riprova più tardi.");
   }
+};
+
+
+const paraverbalAnalysisSchema = {
+    type: Type.OBJECT,
+    properties: {
+        scores: {
+            type: Type.ARRAY,
+            items: {
+                type: Type.OBJECT,
+                properties: {
+                    criterion_id: { type: Type.STRING },
+                    score: { type: Type.NUMBER },
+                    why: { type: Type.STRING }
+                },
+                required: ["criterion_id", "score", "why"]
+            },
+            description: "Un elenco di punteggi (da 1 a 10) per ciascuno dei 10 criteri paraverbali, con una breve motivazione per ogni punteggio."
+        },
+        strengths: {
+            type: Type.ARRAY,
+            items: { type: Type.STRING },
+            description: "Un elenco di esattamente 3 punti di forza paraverbali emersi dalla risposta."
+        },
+        improvements: {
+            type: Type.ARRAY,
+            items: { type: Type.STRING },
+            description: "Un elenco di esattamente 3 aree di miglioramento paraverbali."
+        },
+        actions: {
+            type: Type.ARRAY,
+            items: { type: Type.STRING },
+            description: "Un elenco di esattamente 3 azioni pratiche e concrete che l'utente può intraprendere per migliorare."
+        },
+        micro_drill_60s: {
+            type: Type.STRING,
+            description: "Un micro-esercizio specifico e immediato, della durata massima di 60 secondi, per lavorare su uno dei punti deboli."
+        },
+        suggested_delivery: {
+            type: Type.OBJECT,
+            properties: {
+                instructions: { type: Type.STRING },
+                annotated_text: { type: Type.STRING, description: "Il testo della risposta dell'utente, arricchito con simboli per indicare pause (☐) ed enfasi (△)." }
+            },
+            required: ["instructions", "annotated_text"]
+        }
+    },
+    required: ["scores", "strengths", "improvements", "actions", "micro_drill_60s", "suggested_delivery"]
+};
+
+export const analyzeParaverbalResponse = async (
+  transcript: string,
+  scenario: string,
+  task: string
+): Promise<VoiceAnalysisResult> => {
+    try {
+        const ai = getAI();
+
+        const systemInstruction = `
+            Sei **CES Coach Engine** esteso con il modulo **Voce Strategica (Paraverbale)**. Valuta e allena il paraverbale per rendere più efficace il messaggio secondo i principi della Comunicazione Efficace Strategica®.
+            
+            Considera i seguenti **fattori chiave paraverbali**:
+            - **Respirazione & ritmo (pacing)**: regolarità, pause significative, assenza di affanno.
+            - **Velocità (parole/minuto)**: ritmo naturale; evitare eccesso/deficit di velocità.
+            - **Volume**: udibile e stabile; variazioni intenzionali per enfasi.
+            - **Tono/Timbro & Calore**: fermo, empatico, professionale; evitare piattezza/metallicità.
+            - **Intonazione & Melodia**: variazione per mantenere attenzione; evitare monotonia/cantilena.
+            - **Articolazione & Dizione**: nitidezza di consonanti, sillabe non elise.
+            - **Enfasi strategica**: parole-chiave evidenziate con pause/intonazione.
+            - **Pause strategiche**: prima/dopo concetti chiave; evitare silenzi imbarazzanti.
+            - **Disfluenze & filler**: gestione di “ehm”, autocorrezioni, sovrapposizioni.
+            - **Allineamento con intento strategico**: coerenza vocale con obiettivo (empatia, fermezza, negoziazione, de-escalation).
+
+            Stile del feedback: **fermo, empatico, strategico**. Linguaggio operativo, non giudicante.
+            Output preferito: **JSON strutturato + testo breve esplicativo quando richiesto**.
+            Sii rigoroso nella valutazione. Se un criterio è sotto 6, deve essere considerato un'area di miglioramento. Punta ad avere la maggioranza dei criteri fra 7 e 9.
+
+            Fornisci la tua analisi esclusivamente nel formato JSON richiesto.
+        `;
+
+        const prompt = `
+            Valuta la seguente traccia vocale (trascritta) e genera un feedback operativo.
+
+            **Scenario:** ${scenario}
+            **Compito dell'utente:** ${task}
+            **Trascrizione della risposta dell'utente:** "${transcript}"
+            
+            Istruzioni:
+            1. Valuta ogni criterio della rubrica da 1 a 10 con una motivazione breve (1-2 frasi). Per il campo 'criterion_id' nel tuo output JSON, DEVI usare ESATTAMENTE uno dei seguenti valori: "pacing_breath", "speed", "volume", "tone_warmth", "intonation", "articulation", "emphasis", "pauses", "disfluencies", "strategy_alignment".
+            2. Evidenzia **3 punti di forza** e **3 aree da migliorare**.
+            3. Suggerisci **3 azioni pratiche** e **1 micro-drill (≤60s)** immediato.
+            4. Fornisci una **"consegna annotata"** del testo originale con simboli: ☐ (pausa), △ (enfasi). Ad esempio: "Capisco ☐ la tua preoccupazione. △ Possiamo lavorare insieme su un primo passo."
+            
+            Genera l'output in formato JSON.
+        `;
+
+        const response = await ai.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: prompt,
+            config: {
+                systemInstruction: systemInstruction,
+                temperature: 0.7,
+                topP: 0.95,
+                topK: 64,
+                responseMimeType: "application/json",
+                responseSchema: paraverbalAnalysisSchema,
+            },
+        });
+        
+        const rawText = response.text;
+        const result: VoiceAnalysisResult = JSON.parse(rawText.trim());
+
+        // Basic validation
+        if (
+            !Array.isArray(result.scores) || 
+            !result.scores.every((s: VoiceScore) => typeof s.score === 'number') ||
+            !Array.isArray(result.strengths) ||
+            !Array.isArray(result.improvements) ||
+            !Array.isArray(result.actions) ||
+            typeof result.micro_drill_60s !== 'string' ||
+            typeof result.suggested_delivery?.annotated_text !== 'string'
+        ) {
+            throw new Error("Formato di analisi paraverbale non valido ricevuto dall'API.");
+        }
+
+        return result;
+
+    } catch (error: any) {
+        console.error("Errore durante l'analisi paraverbale con Gemini:", error);
+        if (error.message.includes('API key') || error.message.includes('API_KEY')) {
+             throw new Error("API_KEY non valida o mancante. Controlla la configurazione del tuo ambiente.");
+        }
+        throw new Error("Impossibile ottenere l'analisi vocale dal servizio. Riprova più tardi.");
+    }
 };

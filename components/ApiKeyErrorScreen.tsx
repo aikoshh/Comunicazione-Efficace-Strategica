@@ -1,16 +1,15 @@
 import React from 'react';
-import { WarningIcon, RetryIcon } from './Icons';
+import { WarningIcon } from './Icons';
 import { COLORS } from '../constants';
 
 interface ApiKeyErrorScreenProps {
   error: string;
-  onRetry: () => void;
 }
 
-export const ApiKeyErrorScreen: React.FC<ApiKeyErrorScreenProps> = ({ error, onRetry }) => {
+export const ApiKeyErrorScreen: React.FC<ApiKeyErrorScreenProps> = ({ error }) => {
   return (
     <div style={styles.container}>
-      <WarningIcon width={48} height={48} color={COLORS.nero} />
+      <WarningIcon width={48} height={48} color={COLORS.error} />
       <h1 style={styles.title}>Errore di Configurazione</h1>
       <p style={styles.message}>
         L'applicazione non è configurata correttamente. Impossibile comunicare con i servizi di analisi.
@@ -19,9 +18,6 @@ export const ApiKeyErrorScreen: React.FC<ApiKeyErrorScreenProps> = ({ error, onR
       <p style={styles.message}>
         Assicurati che la chiave API sia stata impostata correttamente nell'ambiente di esecuzione come variabile d'ambiente `API_KEY`.
       </p>
-      <button onClick={onRetry} style={styles.retryButton}>
-        <RetryIcon /> Riprova
-      </button>
     </div>
   );
 };
@@ -32,45 +28,37 @@ const styles: { [key: string]: React.CSSProperties } = {
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        height: '100vh',
+        minHeight: '100vh',
         padding: '20px',
         textAlign: 'center',
-        backgroundColor: COLORS.fondo,
-        color: COLORS.nero,
+        backgroundColor: COLORS.base,
     },
     title: {
-        fontSize: '24px',
-        margin: '20px 0 10px',
+        fontSize: '28px',
+        fontWeight: 'bold',
+        color: COLORS.textPrimary,
+        margin: '24px 0 12px',
     },
     message: {
         fontSize: '16px',
-        maxWidth: '500px',
-        lineHeight: '1.5',
-        marginBottom: '10px',
+        color: COLORS.textSecondary,
+        maxWidth: '600px',
+        lineHeight: '1.6',
+        margin: '0 0 16px 0',
     },
     errorMessage: {
         fontSize: '14px',
         fontFamily: 'monospace',
-        backgroundColor: '#f0f0f0',
-        padding: '10px',
-        borderRadius: '4px',
-        maxWidth: '500px',
+        backgroundColor: '#f8f9fa',
+        color: COLORS.error,
+        padding: '16px',
+        borderRadius: '12px',
+        border: `1px solid ${COLORS.divider}`,
+        maxWidth: '600px',
+        width: '100%',
+        boxSizing: 'border-box',
         wordBreak: 'break-all',
-        margin: '10px 0',
-    },
-    retryButton: {
-        marginTop: '20px',
-        padding: '12px 24px',
-        fontSize: '16px',
-        fontWeight: 'bold',
-        border: 'none',
-        backgroundColor: COLORS.accentoVerde,
-        color: 'white',
-        borderRadius: '8px',
-        cursor: 'pointer',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        transition: 'background-color 0.2s ease',
+        margin: '16px 0',
+        textAlign: 'left',
     },
 };

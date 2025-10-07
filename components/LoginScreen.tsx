@@ -1,149 +1,175 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { COLORS } from '../constants';
 import { Logo } from './Logo';
+import type { User } from '../types';
 
 interface LoginScreenProps {
   onLogin: (email: string, pass: string) => void;
+  onRegister: (newUser: Omit<User, 'password'> & { password: string }) => void;
   onGuestAccess: () => void;
 }
 
-export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onGuestAccess }) => {
+const RegistrationForm: React.FC<{
+    onRegister: (newUser: Omit<User, 'password'> & { password: string }) => void;
+    setView: (view: 'login') => void;
+}> = ({ onRegister, setView }) => {
+    const [firstName, setFirstName] = useState('');
+    const [lastName, setLastName] = useState('');
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [captchaAnswer, setCaptchaAnswer] = useState('');
+    const [error, setError] = useState('');
+    const [success, setSuccess] = useState('');
+
+    const captcha = useMemo(() => {
+        const num1 = Math.floor(Math.random() * 10) + 1;
+        const num2 = Math.floor(Math.random() * 10) + 1;
+        return {
+            num1,
+            num2,
+            sum: num1 + num2,
+        };
+    }, []);
+
+    const handleRegisterSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setError('');
+        setSuccess('');
+
+        if (!firstName || !lastName || !email || !password) {
+            setError("Tutti i campi sono obbligatori.");
+            return;
+        }
+        if (password !== confirmPassword) {
+            setError("Le password non coincidono.");
+            return;
+        }
+        if (parseInt(captchaAnswer, 10) !== captcha.sum) {
+            setError("La verifica non è corretta. Riprova.");
+            return;
+        }
+
+        try {
+            onRegister({ firstName, lastName, email, password });
+            setSuccess("Registrazione completata! Ora puoi accedere.");
+            setTimeout(() => {
+                setView('login');
+            }, 2000);
+        } catch (err: any) {
+            setError(err.message || "Si è verificato un errore durante la registrazione.");
+        }
+    };
+
+    return (
+        <>
+            <h1 style={styles.title}>Crea il tuo Account</h1>
+            <p style={styles.subtitle}>Inizia il tuo percorso di allenamento.</p>
+            {error && <p style={styles.errorText}>{error}</p>}
+            {success && <p style={styles.successText}>{success}</p>}
+            <form onSubmit={handleRegisterSubmit} style={styles.form}>
+                <div style={styles.inputRow}>
+                    <div style={styles.inputGroup}>
+                        <label htmlFor="firstName" style={styles.label}>Nome</label>
+                        <input type="text" id="firstName" value={firstName} onChange={(e) => setFirstName(e.target.value)} style={styles.input} required />
+                    </div>
+                    <div style={styles.inputGroup}>
+                        <label htmlFor="lastName" style={styles.label}>Cognome</label>
+                        <input type="text" id="lastName" value={lastName} onChange={(e) => setLastName(e.target.value)} style={styles.input} required />
+                    </div>
+                </div>
+                <div style={styles.inputGroup}>
+                    <label htmlFor="reg-email" style={styles.label}>Email</label>
+                    <input type="email" id="reg-email" value={email} onChange={(e) => setEmail(e.target.value)} style={styles.input} required />
+                </div>
+                <div style={styles.inputGroup}>
+                    <label htmlFor="reg-password" style={styles.label}>Password</label>
+                    <input type="password" id="reg-password" value={password} onChange={(e) => setPassword(e.target.value)} style={styles.input} required />
+                </div>
+                <div style={styles.inputGroup}>
+                    <label htmlFor="confirmPassword" style={styles.label}>Conferma Password</label>
+                    <input type="password" id="confirmPassword" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} style={styles.input} required />
+                </div>
+                <div style={styles.inputGroup}>
+                    <label htmlFor="captcha" style={styles.label}>Verifica: quanto fa {captcha.num1} + {captcha.num2}?</label>
+                    <input type="number" id="captcha" value={captchaAnswer} onChange={(e) => setCaptchaAnswer(e.target.value)} style={styles.input} required />
+                </div>
+                <button type="submit" style={styles.loginButton}>Registrati</button>
+            </form>
+             <button onClick={() => setView('login')} style={styles.switchLink}>
+                Hai già un account? Accedi
+            </button>
+        </>
+    );
+};
+
+export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onRegister, onGuestAccess }) => {
+  const [view, setView] = useState<'login' | 'register'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
 
   const handleLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
     if (email && password) {
-      onLogin(email, password);
+      try {
+        onLogin(email, password);
+      } catch (err: any) {
+        setError(err.message || "Errore sconosciuto.");
+      }
     }
   };
-
+  
   return (
     <div style={styles.container}>
       <div style={styles.loginBox}>
-        <div style={styles.logoContainer}>
-            <Logo />
-        </div>
-        <h1 style={styles.title}>
-            <strong>Comunicazione Efficace Strategica®</strong>
-        </h1>
-        <p style={styles.subtitle}>
-            Inizia ora il tuo allenamento personalizzato per migliorare rapidamente e in modo concreto la tua comunicazione.
-        </p>
-        
-        <form onSubmit={handleLoginSubmit} style={styles.form}>
-          <div style={styles.inputGroup}>
-            <label htmlFor="email" style={styles.label}>Email</label>
-            <input
-              type="email"
-              id="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              style={styles.input}
-              placeholder="iltuoindirizzo@email.com"
-              required
-            />
-          </div>
-          <div style={styles.inputGroup}>
-            <label htmlFor="password" style={styles.label}>Password</label>
-            <input
-              type="password"
-              id="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              style={styles.input}
-              placeholder="••••••••"
-              required
-            />
-          </div>
-          <button type="submit" style={styles.loginButton}>Accedi</button>
-        </form>
-
-        <button onClick={onGuestAccess} style={styles.guestLink}>
-          Accedi senza essere registrato
-        </button>
+        <div style={styles.logoContainer}><Logo /></div>
+        {view === 'login' ? (
+           <>
+            <h1 style={styles.title}>Benvenuto in <strong>CES Coach</strong></h1>
+            <p style={styles.subtitle}>Allena la tua mente strategica.</p>
+             {error && <p style={styles.errorText}>{error}</p>}
+            <form onSubmit={handleLoginSubmit} style={styles.form}>
+              <div style={styles.inputGroup}>
+                <label htmlFor="email" style={styles.label}>Email</label>
+                <input type="email" id="email" value={email} onChange={(e) => setEmail(e.target.value)} style={styles.input} placeholder="iltuoindirizzo@email.com" required />
+              </div>
+              <div style={styles.inputGroup}>
+                <label htmlFor="password" style={styles.label}>Password</label>
+                <input type="password" id="password" value={password} onChange={(e) => setPassword(e.target.value)} style={styles.input} placeholder="••••••••" required />
+              </div>
+              <button type="submit" style={styles.loginButton}>Accedi</button>
+            </form>
+            <button onClick={() => setView('register')} style={styles.switchLink}>
+                Non hai un account? Registrati adesso
+            </button>
+            <button onClick={onGuestAccess} style={styles.guestLink}>
+                Accedi senza essere registrato
+            </button>
+          </>
+        ) : (
+          <RegistrationForm onRegister={onRegister} setView={setView} />
+        )}
       </div>
     </div>
   );
 };
 
 const styles: { [key: string]: React.CSSProperties } = {
-    container: {
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        minHeight: '100vh',
-        backgroundColor: COLORS.fondo,
-        padding: '20px',
-    },
-    loginBox: {
-        backgroundColor: 'white',
-        padding: '40px',
-        borderRadius: '16px',
-        boxShadow: '0 8px 24px rgba(0,0,0,0.1)',
-        width: '100%',
-        maxWidth: '420px',
-        textAlign: 'center',
-        border: '1px solid #eee',
-    },
-    logoContainer: {
-        marginBottom: '24px',
-        display: 'flex',
-        justifyContent: 'center'
-    },
-    title: {
-        fontSize: '24px',
-        color: COLORS.nero,
-        marginBottom: '8px',
-    },
-    subtitle: {
-        fontSize: '18px',
-        color: '#555',
-        maxWidth: '600px',
-        margin: '0 auto 32px',
-        lineHeight: 1.6,
-    },
-    form: {
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '20px',
-        textAlign: 'left',
-    },
-    inputGroup: {
-        display: 'flex',
-        flexDirection: 'column',
-    },
-    label: {
-        marginBottom: '8px',
-        fontSize: '14px',
-        fontWeight: '500',
-        color: COLORS.nero,
-    },
-    input: {
-        padding: '12px 16px',
-        fontSize: '16px',
-        borderRadius: '8px',
-        border: '1px solid #ccc',
-        fontFamily: 'inherit',
-    },
-    loginButton: {
-        padding: '14px',
-        fontSize: '16px',
-        fontWeight: 'bold',
-        color: 'white',
-        backgroundColor: COLORS.accentoVerde,
-        border: 'none',
-        borderRadius: '8px',
-        cursor: 'pointer',
-        marginTop: '8px',
-    },
-    guestLink: {
-        marginTop: '24px',
-        background: 'none',
-        border: 'none',
-        color: '#555',
-        textDecoration: 'underline',
-        cursor: 'pointer',
-        fontSize: '14px',
-    }
+    container: { display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', backgroundColor: COLORS.base, padding: '20px' },
+    loginBox: { backgroundColor: 'white', padding: '40px', borderRadius: '12px', boxShadow: '0 2px 5px rgba(0,0,0,0.08)', border: `1px solid ${COLORS.divider}`, width: '100%', maxWidth: '450px', textAlign: 'center' },
+    logoContainer: { marginBottom: '16px', display: 'flex', justifyContent: 'center' },
+    title: { fontSize: '24px', color: COLORS.textPrimary, marginBottom: '8px', fontWeight: 400 },
+    subtitle: { fontSize: '16px', color: COLORS.textSecondary, margin: '0 auto 32px', lineHeight: 1.6 },
+    form: { display: 'flex', flexDirection: 'column', gap: '20px', textAlign: 'left' },
+    inputRow: { display: 'flex', gap: '16px' },
+    inputGroup: { display: 'flex', flexDirection: 'column', flex: 1 },
+    label: { marginBottom: '8px', fontSize: '14px', fontWeight: '500', color: COLORS.textPrimary },
+    input: { padding: '12px 16px', fontSize: '16px', borderRadius: '8px', border: `1px solid ${COLORS.divider}`, fontFamily: 'inherit' },
+    loginButton: { padding: '14px', fontSize: '16px', fontWeight: 'bold', color: 'white', background: COLORS.primaryGradient, border: 'none', borderRadius: '8px', cursor: 'pointer', marginTop: '8px', transition: 'opacity 0.2s ease' },
+    guestLink: { marginTop: '16px', background: 'none', border: 'none', color: COLORS.textSecondary, textDecoration: 'underline', cursor: 'pointer', fontSize: '14px' },
+    switchLink: { marginTop: '24px', background: 'none', border: 'none', color: COLORS.primary, cursor: 'pointer', fontSize: '14px', fontWeight: '500' },
+    errorText: { color: COLORS.error, backgroundColor: 'rgba(231, 111, 81, 0.1)', padding: '10px', borderRadius: '8px', fontSize: '14px', marginBottom: '16px', border: `1px solid ${COLORS.error}` },
+    successText: { color: COLORS.success, backgroundColor: 'rgba(71, 195, 124, 0.1)', padding: '10px', borderRadius: '8px', fontSize: '14px', marginBottom: '16px', border: `1px solid ${COLORS.success}` }
 };
