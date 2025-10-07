@@ -80,9 +80,9 @@ const App: React.FC = () => {
     saveToStorage(PROGRESS_STORAGE_KEY, userProgress);
   }, [userProgress]);
 
-  // Effect to scroll to top when returning to home screen
+  // Effect to scroll to top when returning to home or module screen
   useEffect(() => {
-    if (appState.screen === 'home') {
+    if (appState.screen === 'home' || appState.screen === 'module' || appState.screen === 'custom_setup') {
       window.scrollTo(0, 0);
     }
   }, [appState.screen]);

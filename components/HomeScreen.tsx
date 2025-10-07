@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import type { Module, User, UserProgress } from '../types';
 import { MODULES, COLORS, SAGE_PALETTE } from '../constants';
 import { Logo } from './Logo';
 import { ProgressOverview } from './ProgressOverview';
+import { ChevronDownIcon } from './Icons';
 
 interface HomeScreenProps {
   onSelectModule: (module: Module) => void;
@@ -18,6 +19,7 @@ const hoverStyle = `
 `;
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectModule, currentUser, userProgress }) => {
+  const [isSectoralExpanded, setIsSectoralExpanded] = useState(false);
   const foundationalModules = MODULES.filter(m => m.category === 'Fondamentali' || !m.category);
   const sectoralPacks = MODULES.filter(m => m.category === 'Pacchetti Settoriali');
 
@@ -68,8 +70,25 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectModule, currentU
 
         {sectoralPacks.length > 0 && (
           <section style={{ marginTop: '48px' }}>
-            <h2 style={styles.sectionTitle}>Pacchetti Settoriali Professionali</h2>
-            {renderModuleGrid(sectoralPacks, foundationalModules.length)}
+             <div onClick={() => setIsSectoralExpanded(!isSectoralExpanded)} style={styles.sectionHeader}>
+                <h2 style={styles.sectionTitle}>Pacchetti Settoriali Professionali</h2>
+                <ChevronDownIcon 
+                    style={{
+                        ...styles.chevronIcon,
+                        transform: isSectoralExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                    }}
+                />
+             </div>
+             <div style={{
+                maxHeight: isSectoralExpanded ? '2000px' : '0',
+                opacity: isSectoralExpanded ? 1 : 0,
+                overflow: 'hidden',
+                transition: 'max-height 0.7s ease-in-out, opacity 0.5s ease-in-out',
+             }}>
+                <div style={{ paddingTop: '24px' }}>
+                    {renderModuleGrid(sectoralPacks, foundationalModules.length)}
+                </div>
+             </div>
           </section>
         )}
       </main>
@@ -106,13 +125,27 @@ const styles: { [key: string]: React.CSSProperties } = {
         margin: '0 auto',
         lineHeight: 1.6,
     },
+    sectionHeader: {
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        cursor: 'pointer',
+        paddingBottom: '8px',
+        borderBottom: `2px solid ${COLORS.divider}`,
+    },
     sectionTitle: {
         fontSize: '24px',
         fontWeight: 'bold',
         color: COLORS.textPrimary,
-        marginBottom: '24px',
-        paddingBottom: '8px',
-        borderBottom: `2px solid ${COLORS.divider}`,
+        margin: 0,
+        padding: 0,
+        border: 'none',
+    },
+    chevronIcon: {
+        width: '28px',
+        height: '28px',
+        color: COLORS.textSecondary,
+        transition: 'transform 0.3s ease',
     },
     moduleGrid: {
         display: 'grid',

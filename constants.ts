@@ -8,12 +8,14 @@ import { cardImage1, cardImage2, cardImage3, cardImage4, cardImage5, cardImage6 
 
 export const COLORS = {
   // Base
-  base: '#FAF8F5', // Warm Ivory background
+  base: '#F5F2EF', // Light Beige background
   card: '#FFFFFF',
   cardDark: '#F5F2EF', // Slightly darker warm off-white
   textPrimary: '#1C1C1E', // Almost black
   textSecondary: '#6D6D72', // Dark gray
   divider: '#EAE6E2', // Warm gray for borders
+  accentBeige: '#D8C3A5', // Deep pastel beige for accents
+  textAccent: '#796A53', // Dark beige for text on light backgrounds
   
   // Accents
   primary: '#0E3A5D', // strategic blue
@@ -58,37 +60,6 @@ export const VOICE_RUBRIC_CRITERIA = [
 export const MODULES: Module[] = [
   // Fondamentali
   {
-    id: 'm1',
-    title: 'Dare Feedback Efficace',
-    description: 'Impara a fornire feedback costruttivi che motivano il cambiamento senza demotivare.',
-    icon: FeedbackIcon,
-    cardImage: cardImage1,
-    category: 'Fondamentali',
-    exercises: [
-      {
-        id: 'e1',
-        title: 'Feedback a un Collaboratore con Prestazioni Scadenti',
-        scenario: 'Devi dare un feedback a Marco, un membro del tuo team, che recentemente ha mancato diverse scadenze e il cui lavoro è stato di qualità inferiore al solito. Vuoi affrontare il problema in modo costruttivo senza demotivarlo.',
-        task: 'Prepara e fornisci un feedback a Marco, concentrandoti sui fatti, sull\'impatto del suo comportamento e sui passi futuri per migliorare.',
-        difficulty: DifficultyLevel.BASE,
-      },
-      {
-        id: 'e2',
-        title: 'Feedback a un Manager',
-        scenario: 'Il tuo manager, Luca, tende a micro-gestire il tuo lavoro, controllando ogni piccolo dettaglio e causando ritardi. Questo sta minando la tua autonomia e la tua fiducia. Vuoi dargli un feedback per migliorare la vostra collaborazione.',
-        task: 'Esponi la situazione a Luca in modo rispettoso, spiegando l\'impatto del suo comportamento sul tuo lavoro e suggerendo un approccio diverso.',
-        difficulty: DifficultyLevel.INTERMEDIO,
-      },
-      {
-        id: 'e7',
-        title: 'Feedback a uno Stakeholder Senior',
-        scenario: 'Devi comunicare un feedback critico a un direttore di un altro dipartimento riguardo a un ritardo da parte sua che sta bloccando un progetto strategico. La conversazione è delicata a causa della gerarchia e delle possibili implicazioni politiche.',
-        task: 'Comunica il feedback in modo diplomatico ma chiaro, focalizzandoti sull\'impatto oggettivo sul progetto e proponendo soluzioni collaborative per sbloccare la situazione.',
-        difficulty: DifficultyLevel.AVANZATO,
-      }
-    ],
-  },
-  {
     id: 'm4',
     title: 'Ascolto Attivo Strategico',
     description: 'Affina la capacità di ascoltare non solo per sentire, ma per comprendere a fondo, individuando le parole chiave che svelano le reali intenzioni.',
@@ -120,34 +91,34 @@ export const MODULES: Module[] = [
     ],
   },
   {
-    id: 'm2',
-    title: 'Gestire Conversazioni Difficili',
-    description: 'Sviluppa le competenze per navigare conversazioni complesse e conflittuali con calma e professionalità.',
-    icon: ConflictIcon,
-    cardImage: cardImage2,
+    id: 'm1',
+    title: 'Dare un feedback efficace',
+    description: 'Impara a fornire feedback costruttivi che motivano il cambiamento senza demotivare.',
+    icon: FeedbackIcon,
+    cardImage: cardImage1,
     category: 'Fondamentali',
     exercises: [
       {
-        id: 'e8',
-        title: 'Chiedere a un Collega di Abbassare il Tono',
-        scenario: 'Un collega nel tuo ufficio open space parla spesso a voce molto alta al telefono, disturbando la tua concentrazione. Non sembra accorgersene e la cosa inizia a irritare anche altri.',
-        task: 'Avvicinati al collega in modo gentile e privato e chiedigli se può abbassare il tono di voce, senza farlo sentire attaccato o in imbarazzo.',
+        id: 'e1',
+        title: 'Feedback a un Collaboratore con Prestazioni Scadenti',
+        scenario: 'Devi dare un feedback a Marco, un membro del tuo team, che recentemente ha mancato diverse scadenze e il cui lavoro è stato di qualità inferiore al solito. Vuoi affrontare il problema in modo costruttivo senza demotivarlo.',
+        task: 'Prepara e fornisci un feedback a Marco, concentrandoti sui fatti, sull\'impatto del suo comportamento e sui passi futuri per migliorare.',
         difficulty: DifficultyLevel.BASE,
       },
       {
-        id: 'e3',
-        title: 'Disaccordo con un Collega su un Progetto',
-        scenario: 'Tu e il tuo collega, Giulia, avete visioni completamente diverse su come procedere con un progetto importante. La tensione sta crescendo e dovete trovare una soluzione per non bloccare il lavoro del team.',
-        task: 'Avvia una conversazione con Giulia per discutere delle vostre divergenze. Cerca di capire il suo punto di vista e di trovare un compromesso o una soluzione condivisa.',
+        id: 'e2',
+        title: 'Feedback a un Manager',
+        scenario: 'Il tuo manager, Luca, tende a micro-gestire il tuo lavoro, controllando ogni piccolo dettaglio e causando ritardi. Questo sta minando la tua autonomia e la tua fiducia. Vuoi dargli un feedback per migliorare la vostra collaborazione.',
+        task: 'Esponi la situazione a Luca in modo rispettoso, spiegando l\'impatto del suo comportamento sul tuo lavoro e suggerendo un approccio diverso.',
         difficulty: DifficultyLevel.INTERMEDIO,
       },
       {
-        id: 'e4',
-        title: 'Comunicare una Decisione Impopolare al Team',
-        scenario: 'Come team leader, devi comunicare alla tua squadra che, a causa di un taglio di budget, il progetto a cui tenevano molto è stato cancellato. C\'è il rischio di un forte malcontento.',
-        task: 'Comunica la notizia al team in modo chiaro, empatico e trasparente, gestendo le loro reazioni e rispondendo alle loro domande.',
+        id: 'e7',
+        title: 'Feedback a uno Stakeholder Senior',
+        scenario: 'Devi comunicare un feedback critico a un direttore di un altro dipartimento riguardo a un ritardo da parte sua che sta bloccando un progetto strategico. La conversazione è delicata a causa della gerarchia e delle possibili implicazioni politiche.',
+        task: 'Comunica il feedback in modo diplomatico ma chiaro, focalizzandoti sull\'impatto oggettivo sul progetto e proponendo soluzioni collaborative per sbloccare la situazione.',
         difficulty: DifficultyLevel.AVANZATO,
-      },
+      }
     ],
   },
   {
@@ -177,6 +148,37 @@ export const MODULES: Module[] = [
         title: 'Sessione di Coaching con un Membro del Team',
         scenario: 'Stai facendo da mentore a un collega più giovane, Sara, che si sente bloccata nella sua crescita professionale. Invece di darle soluzioni dirette, vuoi aiutarla a trovare le sue risposte.',
         task: 'Conduci una conversazione di coaching con Sara usando domande potenti per aiutarla a riflettere sulla sua situazione, identificare gli ostacoli e creare un piano d\'azione.',
+        difficulty: DifficultyLevel.AVANZATO,
+      },
+    ],
+  },
+  {
+    id: 'm2',
+    title: 'Gestire Conversazioni Difficili',
+    description: 'Sviluppa le competenze per navigare conversazioni complesse e conflittuali con calma e professionalità.',
+    icon: ConflictIcon,
+    cardImage: cardImage2,
+    category: 'Fondamentali',
+    exercises: [
+      {
+        id: 'e8',
+        title: 'Chiedere a un Collega di Abbassare il Tono',
+        scenario: 'Un collega nel tuo ufficio open space parla spesso a voce molto alta al telefono, disturbando la tua concentrazione. Non sembra accorgersene e la cosa inizia a irritare anche altri.',
+        task: 'Avvicinati al collega in modo gentile e privato e chiedigli se può abbassare il tono di voce, senza farlo sentire attaccato o in imbarazzo.',
+        difficulty: DifficultyLevel.BASE,
+      },
+      {
+        id: 'e3',
+        title: 'Disaccordo con un Collega su un Progetto',
+        scenario: 'Tu e il tuo collega, Giulia, avete visioni completamente diverse su come procedere con un progetto importante. La tensione sta crescendo e dovete trovare una soluzione per non bloccare il lavoro del team.',
+        task: 'Avvia una conversazione con Giulia per discutere delle vostre divergenze. Cerca di capire il suo punto di vista e di trovare un compromesso o una soluzione condivisa.',
+        difficulty: DifficultyLevel.INTERMEDIO,
+      },
+      {
+        id: 'e4',
+        title: 'Comunicare una Decisione Impopolare al Team',
+        scenario: 'Come team leader, devi comunicare alla tua squadra che, a causa di un taglio di budget, il progetto a cui tenevano molto è stato cancellato. C\'è il rischio di un forte malcontento.',
+        task: 'Comunica la notizia al team in modo chiaro, empatico e trasparente, gestendo le loro reazioni e rispondendo alle loro domande.',
         difficulty: DifficultyLevel.AVANZATO,
       },
     ],

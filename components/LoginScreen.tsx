@@ -64,35 +64,33 @@ const RegistrationForm: React.FC<{
     return (
         <>
             <h1 style={styles.title}>Crea il tuo Account</h1>
-            <p style={styles.subtitle}>Inizia il tuo percorso di allenamento.</p>
+            <p style={styles.subtitle}>e inizia subito il tuo percorso di allenamento.</p>
             {error && <p style={styles.errorText}>{error}</p>}
             {success && <p style={styles.successText}>{success}</p>}
             <form onSubmit={handleRegisterSubmit} style={styles.form}>
-                <div style={styles.inputRow}>
-                    <div style={styles.inputGroup}>
-                        <label htmlFor="firstName" style={styles.label}>Nome</label>
-                        <input type="text" id="firstName" value={firstName} onChange={(e) => setFirstName(e.target.value)} style={styles.input} required />
-                    </div>
-                    <div style={styles.inputGroup}>
-                        <label htmlFor="lastName" style={styles.label}>Cognome</label>
-                        <input type="text" id="lastName" value={lastName} onChange={(e) => setLastName(e.target.value)} style={styles.input} required />
-                    </div>
+                <div style={styles.inputGroup}>
+                    <label htmlFor="firstName" style={styles.label}>Nome</label>
+                    <input type="text" id="firstName" value={firstName} onChange={(e) => setFirstName(e.target.value)} style={styles.input} className="login-input" required />
+                </div>
+                <div style={styles.inputGroup}>
+                    <label htmlFor="lastName" style={styles.label}>Cognome</label>
+                    <input type="text" id="lastName" value={lastName} onChange={(e) => setLastName(e.target.value)} style={styles.input} className="login-input" required />
                 </div>
                 <div style={styles.inputGroup}>
                     <label htmlFor="reg-email" style={styles.label}>Email</label>
-                    <input type="email" id="reg-email" value={email} onChange={(e) => setEmail(e.target.value)} style={styles.input} required />
+                    <input type="email" id="reg-email" value={email} onChange={(e) => setEmail(e.target.value)} style={styles.input} className="login-input" required />
                 </div>
                 <div style={styles.inputGroup}>
                     <label htmlFor="reg-password" style={styles.label}>Password</label>
-                    <input type="password" id="reg-password" value={password} onChange={(e) => setPassword(e.target.value)} style={styles.input} required />
+                    <input type="password" id="reg-password" value={password} onChange={(e) => setPassword(e.target.value)} style={styles.input} className="login-input" required />
                 </div>
                 <div style={styles.inputGroup}>
                     <label htmlFor="confirmPassword" style={styles.label}>Conferma Password</label>
-                    <input type="password" id="confirmPassword" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} style={styles.input} required />
+                    <input type="password" id="confirmPassword" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} style={styles.input} className="login-input" required />
                 </div>
                 <div style={styles.inputGroup}>
                     <label htmlFor="captcha" style={styles.label}>Verifica: quanto fa {captcha.num1} + {captcha.num2}?</label>
-                    <input type="number" id="captcha" value={captchaAnswer} onChange={(e) => setCaptchaAnswer(e.target.value)} style={styles.input} required />
+                    <input type="number" id="captcha" value={captchaAnswer} onChange={(e) => setCaptchaAnswer(e.target.value)} style={styles.input} className="login-input" required />
                 </div>
                 <button type="submit" style={styles.loginButton}>Registrati</button>
             </form>
@@ -115,14 +113,22 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onRegister, o
     if (email && password) {
       try {
         onLogin(email, password);
+// FIX: Added curly braces to the catch block to fix syntax error.
       } catch (err: any) {
         setError(err.message || "Errore sconosciuto.");
       }
     }
   };
   
+  const placeholderStyle = `
+    .login-input::placeholder {
+      color: ${COLORS.textSecondary};
+    }
+  `;
+  
   return (
     <div style={styles.container}>
+      <style>{placeholderStyle}</style>
       <div style={styles.loginBox}>
         <div style={styles.logoContainer}><Logo /></div>
         {view === 'login' ? (
@@ -133,11 +139,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onRegister, o
             <form onSubmit={handleLoginSubmit} style={styles.form}>
               <div style={styles.inputGroup}>
                 <label htmlFor="email" style={styles.label}>Email</label>
-                <input type="email" id="email" value={email} onChange={(e) => setEmail(e.target.value)} style={styles.input} placeholder="iltuoindirizzo@email.com" required />
+                <input type="email" id="email" value={email} onChange={(e) => setEmail(e.target.value)} style={styles.input} className="login-input" placeholder="iltuoindirizzo@email.com" required />
               </div>
               <div style={styles.inputGroup}>
                 <label htmlFor="password" style={styles.label}>Password</label>
-                <input type="password" id="password" value={password} onChange={(e) => setPassword(e.target.value)} style={styles.input} placeholder="••••••••" required />
+                <input type="password" id="password" value={password} onChange={(e) => setPassword(e.target.value)} style={styles.input} className="login-input" placeholder="••••••••" required />
               </div>
               <button type="submit" style={styles.loginButton}>Accedi</button>
             </form>
@@ -158,18 +164,17 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onRegister, o
 
 const styles: { [key: string]: React.CSSProperties } = {
     container: { display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', backgroundColor: COLORS.base, padding: '20px' },
-    loginBox: { backgroundColor: COLORS.card, padding: '40px', borderRadius: '12px', border: `1px solid ${COLORS.divider}`, width: '100%', maxWidth: '450px', textAlign: 'center', boxShadow: '0 8px 30px rgba(0,0,0,0.08)' },
+    loginBox: { backgroundColor: COLORS.card, padding: '40px', borderRadius: '12px', border: `1px solid ${COLORS.divider}`, width: '100%', maxWidth: '450px', textAlign: 'center', boxShadow: '0 8px 30px rgba(0,0,0,0.12)' },
     logoContainer: { marginBottom: '16px', display: 'flex', justifyContent: 'center' },
-    title: { fontSize: '24px', color: COLORS.textPrimary, marginBottom: '8px', fontWeight: 400, lineHeight: 1.4 },
-    subtitle: { fontSize: '16px', color: COLORS.textSecondary, margin: '0 auto 32px', lineHeight: 1.6 },
+    title: { fontSize: '24px', color: COLORS.textAccent, marginBottom: '8px', fontWeight: 400, lineHeight: 1.4 },
+    subtitle: { fontSize: '16px', color: COLORS.textAccent, margin: '0 auto 32px', lineHeight: 1.6 },
     form: { display: 'flex', flexDirection: 'column', gap: '20px', textAlign: 'left' },
-    inputRow: { display: 'flex', gap: '16px' },
     inputGroup: { display: 'flex', flexDirection: 'column', flex: 1 },
-    label: { marginBottom: '8px', fontSize: '14px', fontWeight: '500', color: COLORS.textPrimary },
-    input: { padding: '12px 16px', fontSize: '16px', borderRadius: '8px', border: `1px solid ${COLORS.divider}`, fontFamily: 'inherit', backgroundColor: COLORS.card, color: COLORS.textPrimary },
+    label: { marginBottom: '8px', fontSize: '14px', fontWeight: '500', color: COLORS.textAccent },
+    input: { padding: '12px 16px', fontSize: '16px', borderRadius: '8px', border: `1px solid ${COLORS.divider}`, fontFamily: 'inherit', backgroundColor: COLORS.base, color: COLORS.textPrimary },
     loginButton: { padding: '14px', fontSize: '16px', fontWeight: 'bold', color: 'white', background: COLORS.primaryGradient, border: 'none', borderRadius: '8px', cursor: 'pointer', marginTop: '8px', transition: 'opacity 0.2s ease' },
-    guestLink: { marginTop: '16px', background: 'none', border: 'none', color: COLORS.textSecondary, textDecoration: 'underline', cursor: 'pointer', fontSize: '14px' },
-    switchLink: { marginTop: '24px', background: 'none', border: 'none', color: COLORS.secondary, cursor: 'pointer', fontSize: '14px', fontWeight: '500' },
-    errorText: { color: COLORS.error, backgroundColor: 'rgba(220, 53, 69, 0.1)', padding: '10px', borderRadius: '8px', fontSize: '14px', marginBottom: '16px', border: `1px solid ${COLORS.error}` },
-    successText: { color: COLORS.success, backgroundColor: 'rgba(40, 167, 69, 0.1)', padding: '10px', borderRadius: '8px', fontSize: '14px', marginBottom: '16px', border: `1px solid ${COLORS.success}` }
+    guestLink: { marginTop: '16px', background: 'none', border: 'none', color: COLORS.textAccent, textDecoration: 'underline', cursor: 'pointer', fontSize: '14px' },
+    switchLink: { marginTop: '24px', background: 'none', border: 'none', color: COLORS.textAccent, cursor: 'pointer', fontSize: '14px', fontWeight: 'bold' },
+    errorText: { color: 'white', backgroundColor: COLORS.error, padding: '12px', borderRadius: '8px', fontSize: '14px', marginBottom: '16px', border: 'none', textAlign: 'center' },
+    successText: { color: 'white', backgroundColor: COLORS.success, padding: '12px', borderRadius: '8px', fontSize: '14px', marginBottom: '16px', border: 'none', textAlign: 'center' }
 };

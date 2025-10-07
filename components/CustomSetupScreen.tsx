@@ -18,12 +18,6 @@ interface TrainingObjective {
 
 const trainingObjectives: TrainingObjective[] = [
     {
-        id: 'conflict',
-        label: "Gestire un conflitto",
-        icon: ConflictIcon,
-        color: COLORS.error,
-    },
-    {
         id: 'feedback',
         label: "Dare un feedback efficace",
         icon: FeedbackIcon,
@@ -41,12 +35,18 @@ const trainingObjectives: TrainingObjective[] = [
         icon: QuestionIcon,
         color: COLORS.warning,
     },
+    {
+        id: 'conflict',
+        label: "Gestire un conflitto",
+        icon: ConflictIcon,
+        color: COLORS.error,
+    },
 ];
 
 
 const CustomSetupScreen: React.FC<CustomSetupScreenProps> = ({ module, onStart, onBack }) => {
     const [scenario, setScenario] = useState('');
-    const [selectedObjective, setSelectedObjective] = useState<TrainingObjective>(trainingObjectives[0]);
+    const [selectedObjective, setSelectedObjective] = useState<TrainingObjective | null>(null);
     const [fileMessage, setFileMessage] = useState('');
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -77,14 +77,18 @@ const CustomSetupScreen: React.FC<CustomSetupScreenProps> = ({ module, onStart, 
         fileInputRef.current?.click();
     };
 
-    const isReadyToStart = scenario.trim() !== '' && selectedObjective.label.trim() !== '';
+    const isReadyToStart = scenario.trim() !== '' && selectedObjective !== null;
     
     const hoverStyle = `
       .objective-button:not(.selected):hover {
-        background-color: rgba(255, 255, 255, 0.2);
+        background-color: ${COLORS.cardDark};
       }
       .back-button:hover {
-        background-color: #3a3a3a;
+        opacity: 0.9;
+      }
+      #scenario-input::placeholder {
+        color: ${COLORS.textSecondary};
+        opacity: 1;
       }
     `;
 
@@ -131,7 +135,7 @@ const CustomSetupScreen: React.FC<CustomSetupScreenProps> = ({ module, onStart, 
                     <label style={styles.label}>2. Scegli il tuo obiettivo di allenamento</label>
                     <div style={styles.objectiveOptions}>
                         {trainingObjectives.map(objective => {
-                            const isSelected = selectedObjective.id === objective.id;
+                            const isSelected = selectedObjective?.id === objective.id;
                             const Icon = objective.icon;
                             return (
                                 <button
@@ -139,13 +143,13 @@ const CustomSetupScreen: React.FC<CustomSetupScreenProps> = ({ module, onStart, 
                                     onClick={() => setSelectedObjective(objective)}
                                     style={{
                                         ...styles.objectiveButton,
-                                        backgroundColor: isSelected ? objective.color : 'rgba(255, 255, 255, 0.1)',
-                                        color: 'white',
-                                        border: `2px solid ${isSelected ? objective.color : 'transparent'}`,
+                                        backgroundColor: isSelected ? objective.color : 'white',
+                                        color: isSelected ? 'white' : COLORS.textPrimary,
+                                        border: `2px solid ${isSelected ? objective.color : COLORS.divider}`,
                                     }}
                                     className={`objective-button ${isSelected ? 'selected' : ''}`}
                                 >
-                                    <Icon style={{ ...styles.objectiveIcon, color: isSelected ? 'white' : objective.color }}/>
+                                    <Icon style={{ ...styles.objectiveIcon, color: isSelected ? 'white' : COLORS.textPrimary }}/>
                                     <span style={styles.objectiveLabel}>{objective.label}</span>
                                 </button>
                             );
@@ -154,7 +158,7 @@ const CustomSetupScreen: React.FC<CustomSetupScreenProps> = ({ module, onStart, 
                 </div>
 
                 <button
-                    onClick={() => onStart(scenario, selectedObjective.label)}
+                    onClick={() => selectedObjective && onStart(scenario, selectedObjective.label)}
                     style={{...styles.startButton, ...(!isReadyToStart ? styles.startButtonDisabled : {})}}
                     disabled={!isReadyToStart}
                 >
@@ -173,9 +177,9 @@ const styles: { [key: string]: React.CSSProperties } = {
     display: 'flex',
     alignItems: 'center',
     gap: '8px',
-    backgroundColor: COLORS.card,
-    color: COLORS.textPrimary,
-    border: `1px solid ${COLORS.divider}`,
+    backgroundColor: COLORS.secondary,
+    color: 'white',
+    border: 'none',
     borderRadius: '8px',
     padding: '10px 16px',
     cursor: 'pointer',
@@ -189,20 +193,20 @@ const styles: { [key: string]: React.CSSProperties } = {
   titleContainer: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', marginBottom: '16px' },
   title: { fontSize: '32px', color: COLORS.textPrimary, fontWeight: 'bold' },
   description: { fontSize: '18px', color: COLORS.textSecondary, lineHeight: 1.6 },
-  setupForm: { display: 'flex', flexDirection: 'column', gap: '32px', backgroundColor: COLORS.secondary, padding: '24px', borderRadius: '12px' },
+  setupForm: { display: 'flex', flexDirection: 'column', gap: '32px', backgroundColor: COLORS.accentBeige, padding: '24px', borderRadius: '12px' },
   step: { display: 'flex', flexDirection: 'column', gap: '12px' },
-  label: { fontSize: '18px', fontWeight: '600', color: 'white', textAlign: 'left' },
-  textarea: { width: '100%', padding: '12px 16px', fontSize: '16px', borderRadius: '12px', border: `1px solid rgba(255, 255, 255, 0.3)`, resize: 'vertical', fontFamily: 'inherit', backgroundColor: 'rgba(0,0,0,0.2)', color: 'white' },
+  label: { fontSize: '18px', fontWeight: '600', color: COLORS.textPrimary, textAlign: 'left' },
+  textarea: { width: '100%', padding: '12px 16px', fontSize: '16px', borderRadius: '12px', border: `1px solid ${COLORS.divider}`, resize: 'vertical', fontFamily: 'inherit', backgroundColor: 'white', color: COLORS.textPrimary },
   uploadSection: {
     display: 'flex',
     alignItems: 'center',
     gap: '16px',
     flexWrap: 'wrap',
   },
-  uploadButton: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '10px 16px', fontSize: '14px', borderRadius: '8px', border: `1px solid rgba(255, 255, 255, 0.3)`, backgroundColor: 'rgba(255, 255, 255, 0.1)', cursor: 'pointer', color: 'white' },
+  uploadButton: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '10px 16px', fontSize: '14px', borderRadius: '8px', border: `1px solid ${COLORS.textSecondary}`, backgroundColor: 'rgba(0,0,0,0.05)', cursor: 'pointer', color: COLORS.textPrimary },
   fileMessage: {
     fontSize: '13px',
-    color: 'white',
+    color: COLORS.textSecondary,
     margin: 0,
     flex: 1,
   },
@@ -222,7 +226,6 @@ const styles: { [key: string]: React.CSSProperties } = {
       gap: '12px',
       textAlign: 'left',
       fontWeight: '600',
-      border: '2px solid transparent',
   },
   objectiveIcon: {
       width: '28px',
