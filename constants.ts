@@ -8,23 +8,39 @@ import { cardImage1, cardImage2, cardImage3, cardImage4, cardImage5, cardImage6 
 
 export const COLORS = {
   // Base
-  base: '#FFFFFF',
-  textPrimary: '#222222',
-  textSecondary: '#4A4A4A',
-  divider: '#E0E0E0',
+  base: '#FAF8F5', // Warm Ivory background
+  card: '#FFFFFF',
+  cardDark: '#F5F2EF', // Slightly darker warm off-white
+  textPrimary: '#1C1C1E', // Almost black
+  textSecondary: '#6D6D72', // Dark gray
+  divider: '#EAE6E2', // Warm gray for borders
   
   // Accents
   primary: '#0E3A5D', // strategic blue
   secondary: '#58A6A6', // sage green
   
   // States
-  success: '#47C37C', // light green
-  warning: '#F7B801', // amber
-  error: '#E76F51', // soft red
+  success: '#28a745', // A more vibrant green
+  warning: '#ffc107', // Amber
+  error: '#dc3545', // A more vibrant red
 
   // Gradients
   primaryGradient: 'linear-gradient(135deg, #0E3A5D 0%, #58A6A6 100%)',
 };
+
+// A dynamic palette of sage green shades, from lighter to darker.
+export const SAGE_PALETTE = [
+  '#73B5B5',
+  '#69ADAD',
+  '#5FACAC',
+  '#58A6A6', // Base color
+  '#509A9A',
+  '#488E8E',
+  '#408282',
+  '#387676',
+  '#306A6A',
+  '#285E5E',
+];
 
 export const VOICE_RUBRIC_CRITERIA = [
     { id: "pacing_breath", label: "Ritmo & Respirazione" },

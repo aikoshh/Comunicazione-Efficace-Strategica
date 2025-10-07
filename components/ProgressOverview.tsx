@@ -87,12 +87,12 @@ export const ProgressOverview: React.FC<ProgressOverviewProps> = ({ user, progre
 
 const styles: { [key: string]: React.CSSProperties } = {
   container: {
-    backgroundColor: 'white',
+    backgroundColor: COLORS.card,
     padding: '24px',
     borderRadius: '12px',
-    boxShadow: '0 2px 5px rgba(0,0,0,0.08)',
     border: `1px solid ${COLORS.divider}`,
     marginBottom: '24px',
+    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
   },
   loadingContainer: {
     textAlign: 'center',
@@ -114,7 +114,7 @@ const styles: { [key: string]: React.CSSProperties } = {
   levelPill: {
     padding: '4px 12px',
     borderRadius: '999px',
-    background: COLORS.primary,
+    background: COLORS.secondary,
     color: 'white',
     fontSize: '14px',
     fontWeight: 'bold',
@@ -127,13 +127,13 @@ const styles: { [key: string]: React.CSSProperties } = {
   progressBar: {
     height: '12px',
     width: '100%',
-    backgroundColor: '#E0E0E0',
+    backgroundColor: COLORS.divider,
     borderRadius: '12px',
     overflow: 'hidden',
   },
   progressBarFill: {
     height: '100%',
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.secondary,
     transition: 'width 0.6s ease',
     borderRadius: '12px',
   },
@@ -143,7 +143,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     transform: 'translate(-50%, -50%)',
     width: '4px',
     height: '20px',
-    backgroundColor: 'white',
+    backgroundColor: COLORS.card,
     border: `1px solid ${COLORS.divider}`,
     borderRadius: '2px',
     zIndex: 1,
@@ -163,7 +163,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     alignItems: 'center',
     gap: '6px',
     fontSize: '14px',
-    color: COLORS.primary,
+    color: COLORS.secondary,
     textDecoration: 'none',
     cursor: 'pointer',
     background: 'none',

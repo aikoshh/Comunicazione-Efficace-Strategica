@@ -70,7 +70,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     zIndex: 1000,
   },
   modal: {
-    backgroundColor: 'white',
+    backgroundColor: COLORS.card,
     borderRadius: '12px',
     width: '90%',
     maxWidth: '500px',
@@ -80,6 +80,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     display: 'flex',
     flexDirection: 'column',
     maxHeight: '90vh',
+    border: `1px solid ${COLORS.divider}`,
   },
   modalContent: {
       overflowY: 'auto',
@@ -120,7 +121,7 @@ const styles: { [key: string]: React.CSSProperties } = {
       display: 'flex',
       justifyContent: 'space-between',
       alignItems: 'center',
-      backgroundColor: '#f8f9fa',
+      backgroundColor: COLORS.cardDark,
       padding: '12px 16px',
       borderRadius: '8px'
   },
@@ -132,13 +133,13 @@ const styles: { [key: string]: React.CSSProperties } = {
   value: {
       fontSize: '16px',
       fontWeight: 'bold',
-      color: COLORS.primary,
+      color: COLORS.secondary,
   },
   formula: {
       fontSize: '13px',
       fontFamily: 'monospace',
       color: COLORS.textSecondary,
-      backgroundColor: '#f0f0f0',
+      backgroundColor: COLORS.cardDark,
       padding: '8px 12px',
       borderRadius: '6px',
       textAlign: 'center',
@@ -154,8 +155,8 @@ const styles: { [key: string]: React.CSSProperties } = {
     padding: '10px 20px',
     fontSize: '16px',
     fontWeight: '500',
-    border: `1px solid ${COLORS.primary}`,
-    backgroundColor: COLORS.primary,
+    border: `1px solid ${COLORS.secondary}`,
+    backgroundColor: COLORS.secondary,
     color: 'white',
     borderRadius: '8px',
     cursor: 'pointer',

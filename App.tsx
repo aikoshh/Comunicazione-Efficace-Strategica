@@ -80,6 +80,13 @@ const App: React.FC = () => {
     saveToStorage(PROGRESS_STORAGE_KEY, userProgress);
   }, [userProgress]);
 
+  // Effect to scroll to top when returning to home screen
+  useEffect(() => {
+    if (appState.screen === 'home') {
+      window.scrollTo(0, 0);
+    }
+  }, [appState.screen]);
+
 
   const handleLogin = (email: string, pass: string) => {
     const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
@@ -212,6 +219,12 @@ const App: React.FC = () => {
   const handleApiKeyError = (error: string) => {
       setAppState({ screen: 'api_key_error', error });
   };
+  
+  const hoverStyle = `
+      .logout-button:hover {
+        opacity: 0.9;
+      }
+    `;
 
   if (!isAuthenticated) {
     return <LoginScreen onLogin={handleLogin} onRegister={handleRegister} onGuestAccess={handleGuestAccess} />;
@@ -260,10 +273,11 @@ const App: React.FC = () => {
 
   return (
     <div>
+        <style>{hoverStyle}</style>
         {screenContent}
         {appState.screen !== 'api_key_error' && (
             <footer style={styles.footer}>
-                <button onClick={handleLogout} style={styles.logoutButton}>
+                <button onClick={handleLogout} style={styles.logoutButton} className="logout-button">
                     Logout
                 </button>
             </footer>
@@ -277,15 +291,14 @@ const styles: { [key: string]: React.CSSProperties } = {
         textAlign: 'center',
         padding: '32px 20px',
         backgroundColor: COLORS.base,
-        borderTop: `1px solid ${COLORS.divider}`,
     },
     logoutButton: {
         padding: '12px 24px',
         fontSize: '16px',
         fontWeight: '500',
-        border: `1px solid ${COLORS.error}`,
-        backgroundColor: 'transparent',
-        color: COLORS.error,
+        border: 'none',
+        backgroundColor: '#dc3545',
+        color: 'white',
         borderRadius: '8px',
         cursor: 'pointer',
         transition: 'all 0.2s ease',

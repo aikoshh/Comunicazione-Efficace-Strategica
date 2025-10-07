@@ -127,8 +127,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onRegister, o
         <div style={styles.logoContainer}><Logo /></div>
         {view === 'login' ? (
            <>
-            <h1 style={styles.title}>Benvenuto in <strong>CES Coach</strong></h1>
-            <p style={styles.subtitle}>Allena la tua mente strategica.</p>
+            <h1 style={styles.title}>Benvenuto in<br /><strong>CES Coach</strong></h1>
+            <p style={styles.subtitle}>Allena la tua mente strategica con la Comunicazione Efficace Strategica®.</p>
              {error && <p style={styles.errorText}>{error}</p>}
             <form onSubmit={handleLoginSubmit} style={styles.form}>
               <div style={styles.inputGroup}>
@@ -158,18 +158,18 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onRegister, o
 
 const styles: { [key: string]: React.CSSProperties } = {
     container: { display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', backgroundColor: COLORS.base, padding: '20px' },
-    loginBox: { backgroundColor: 'white', padding: '40px', borderRadius: '12px', boxShadow: '0 2px 5px rgba(0,0,0,0.08)', border: `1px solid ${COLORS.divider}`, width: '100%', maxWidth: '450px', textAlign: 'center' },
+    loginBox: { backgroundColor: COLORS.card, padding: '40px', borderRadius: '12px', border: `1px solid ${COLORS.divider}`, width: '100%', maxWidth: '450px', textAlign: 'center', boxShadow: '0 8px 30px rgba(0,0,0,0.08)' },
     logoContainer: { marginBottom: '16px', display: 'flex', justifyContent: 'center' },
-    title: { fontSize: '24px', color: COLORS.textPrimary, marginBottom: '8px', fontWeight: 400 },
+    title: { fontSize: '24px', color: COLORS.textPrimary, marginBottom: '8px', fontWeight: 400, lineHeight: 1.4 },
     subtitle: { fontSize: '16px', color: COLORS.textSecondary, margin: '0 auto 32px', lineHeight: 1.6 },
     form: { display: 'flex', flexDirection: 'column', gap: '20px', textAlign: 'left' },
     inputRow: { display: 'flex', gap: '16px' },
     inputGroup: { display: 'flex', flexDirection: 'column', flex: 1 },
     label: { marginBottom: '8px', fontSize: '14px', fontWeight: '500', color: COLORS.textPrimary },
-    input: { padding: '12px 16px', fontSize: '16px', borderRadius: '8px', border: `1px solid ${COLORS.divider}`, fontFamily: 'inherit' },
+    input: { padding: '12px 16px', fontSize: '16px', borderRadius: '8px', border: `1px solid ${COLORS.divider}`, fontFamily: 'inherit', backgroundColor: COLORS.card, color: COLORS.textPrimary },
     loginButton: { padding: '14px', fontSize: '16px', fontWeight: 'bold', color: 'white', background: COLORS.primaryGradient, border: 'none', borderRadius: '8px', cursor: 'pointer', marginTop: '8px', transition: 'opacity 0.2s ease' },
     guestLink: { marginTop: '16px', background: 'none', border: 'none', color: COLORS.textSecondary, textDecoration: 'underline', cursor: 'pointer', fontSize: '14px' },
-    switchLink: { marginTop: '24px', background: 'none', border: 'none', color: COLORS.primary, cursor: 'pointer', fontSize: '14px', fontWeight: '500' },
-    errorText: { color: COLORS.error, backgroundColor: 'rgba(231, 111, 81, 0.1)', padding: '10px', borderRadius: '8px', fontSize: '14px', marginBottom: '16px', border: `1px solid ${COLORS.error}` },
-    successText: { color: COLORS.success, backgroundColor: 'rgba(71, 195, 124, 0.1)', padding: '10px', borderRadius: '8px', fontSize: '14px', marginBottom: '16px', border: `1px solid ${COLORS.success}` }
+    switchLink: { marginTop: '24px', background: 'none', border: 'none', color: COLORS.secondary, cursor: 'pointer', fontSize: '14px', fontWeight: '500' },
+    errorText: { color: COLORS.error, backgroundColor: 'rgba(220, 53, 69, 0.1)', padding: '10px', borderRadius: '8px', fontSize: '14px', marginBottom: '16px', border: `1px solid ${COLORS.error}` },
+    successText: { color: COLORS.success, backgroundColor: 'rgba(40, 167, 69, 0.1)', padding: '10px', borderRadius: '8px', fontSize: '14px', marginBottom: '16px', border: `1px solid ${COLORS.success}` }
 };

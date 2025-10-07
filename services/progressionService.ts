@@ -16,6 +16,9 @@ const levelThresholds = [
 ];
 
 const getLevelForScore = (score: number): string => {
+    if (score === 0) {
+        return "Comunicatore principiante";
+    }
     // Find the highest threshold the score meets
     return [...levelThresholds].reverse().find(l => score >= l.min)?.label || "Comunicatore poco efficace";
 };
@@ -32,7 +35,7 @@ export const getProgressOverview = async (user: User, progress: UserProgress | u
 
         const overview: ProgressOverviewData = {
             header: {
-              welcome: `Bentornato, ${user.firstName}`,
+              welcome: `Bentornato ${user.firstName}`,
               score: score,
               level: getLevelForScore(score),
             },

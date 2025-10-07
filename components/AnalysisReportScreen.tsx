@@ -49,7 +49,7 @@ const ResponseText: React.FC<{ text: string }> = ({ text }) => {
             {parts.map((part, i) => {
                 if (part.startsWith('**') && part.endsWith('**')) {
                     // If the part is a keyword, wrap it in <strong>
-                    return <strong style={{color: COLORS.primary}} key={i}>{part.slice(2, -2)}</strong>;
+                    return <strong style={{color: COLORS.secondary}} key={i}>{part.slice(2, -2)}</strong>;
                 }
                 // Otherwise, return the text part as is
                 return part;
@@ -61,9 +61,19 @@ const ResponseText: React.FC<{ text: string }> = ({ text }) => {
 
 export const AnalysisReportScreen: React.FC<AnalysisReportScreenProps> = ({ result, exercise, onRetry, onNext }) => {
   const [activeTab, setActiveTab] = useState<'short' | 'long'>('short');
+  
+  const hoverStyle = `
+    .primary-button:hover {
+      opacity: 0.9;
+    }
+    .secondary-button:hover {
+      background-color: rgba(88, 166, 166, 0.1);
+    }
+  `;
 
   return (
     <div style={styles.container}>
+      <style>{hoverStyle}</style>
       <div style={styles.card}>
         <h1 style={styles.title}>Report dell'Analisi</h1>
         
@@ -115,10 +125,10 @@ export const AnalysisReportScreen: React.FC<AnalysisReportScreenProps> = ({ resu
         </div>
 
         <div style={styles.buttonContainer}>
-          <button onClick={onRetry} style={styles.secondaryButton}>
+          <button onClick={onRetry} style={styles.secondaryButton} className="secondary-button">
             <RetryIcon /> Riprova Esercizio
           </button>
-          <button onClick={onNext} style={styles.primaryButton}>
+          <button onClick={onNext} style={styles.primaryButton} className="primary-button">
             Menu Principale <HomeIcon />
           </button>
         </div>
@@ -137,13 +147,13 @@ const styles: { [key: string]: React.CSSProperties } = {
         alignItems: 'flex-start',
     },
     card: {
-        backgroundColor: 'white',
+        backgroundColor: COLORS.card,
         borderRadius: '12px',
-        boxShadow: '0 2px 5px rgba(0,0,0,0.08)',
         border: `1px solid ${COLORS.divider}`,
         padding: '32px',
         maxWidth: '800px',
         width: '100%',
+        boxShadow: '0 8px 30px rgba(0,0,0,0.08)',
     },
     title: {
         fontSize: '28px',
@@ -174,7 +184,7 @@ const styles: { [key: string]: React.CSSProperties } = {
         marginBottom: '32px',
     },
     feedbackCard: {
-        backgroundColor: '#f8f9fa',
+        backgroundColor: COLORS.cardDark,
         padding: '20px',
         borderRadius: '12px',
     },
@@ -202,9 +212,9 @@ const styles: { [key: string]: React.CSSProperties } = {
       display: 'block',
       marginTop: '8px',
       padding: '10px 12px',
-      backgroundColor: '#e9ecef',
+      backgroundColor: '#EAECEE',
       borderRadius: '8px',
-      color: '#495057',
+      color: COLORS.textSecondary,
       fontSize: '15px',
       borderLeft: `3px solid ${COLORS.secondary}`
     },
@@ -221,19 +231,19 @@ const styles: { [key: string]: React.CSSProperties } = {
         fontSize: '14px',
         fontWeight: '500',
         border: `1px solid ${COLORS.divider}`,
-        backgroundColor: '#f1f1f1',
+        backgroundColor: COLORS.divider,
         color: COLORS.textSecondary,
         borderRadius: '8px',
         cursor: 'pointer',
         transition: 'all 0.2s',
     },
     tabButtonActive: {
-        backgroundColor: COLORS.primary,
+        backgroundColor: COLORS.secondary,
         color: 'white',
-        borderColor: COLORS.primary,
+        borderColor: COLORS.secondary,
     },
     tabContent: {
-        backgroundColor: '#f8f9fa',
+        backgroundColor: COLORS.cardDark,
         padding: '20px',
         borderRadius: '12px',
         minHeight: '100px',
@@ -257,9 +267,9 @@ const styles: { [key: string]: React.CSSProperties } = {
     secondaryButton: {
         padding: '12px 24px',
         fontSize: '16px',
-        border: `1px solid ${COLORS.primary}`,
+        border: `1px solid ${COLORS.secondary}`,
         backgroundColor: 'transparent',
-        color: COLORS.primary,
+        color: COLORS.secondary,
         borderRadius: '8px',
         cursor: 'pointer',
         display: 'flex',
@@ -272,7 +282,7 @@ const styles: { [key: string]: React.CSSProperties } = {
         fontSize: '16px',
         fontWeight: 'bold',
         border: 'none',
-        background: COLORS.primaryGradient,
+        backgroundColor: COLORS.secondary,
         color: 'white',
         borderRadius: '8px',
         cursor: 'pointer',

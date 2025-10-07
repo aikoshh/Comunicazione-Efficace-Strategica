@@ -14,7 +14,6 @@ interface TrainingObjective {
     label: string;
     icon: IconComponent;
     color: string;
-    backgroundColor: string;
 }
 
 const trainingObjectives: TrainingObjective[] = [
@@ -23,28 +22,24 @@ const trainingObjectives: TrainingObjective[] = [
         label: "Gestire un conflitto",
         icon: ConflictIcon,
         color: COLORS.error,
-        backgroundColor: 'rgba(231, 111, 81, 0.1)',
     },
     {
         id: 'feedback',
         label: "Dare un feedback efficace",
         icon: FeedbackIcon,
         color: COLORS.success,
-        backgroundColor: 'rgba(71, 195, 124, 0.1)',
     },
     {
         id: 'listening',
         label: "Evitare di dare consigli non richiesti (Smutandamento)",
         icon: ListeningIcon,
         color: COLORS.secondary,
-        backgroundColor: 'rgba(88, 166, 166, 0.1)',
     },
     {
         id: 'questions',
         label: "Guidare la conversazione con domande efficaci",
         icon: QuestionIcon,
         color: COLORS.warning,
-        backgroundColor: 'rgba(247, 184, 1, 0.1)',
     },
 ];
 
@@ -86,9 +81,10 @@ const CustomSetupScreen: React.FC<CustomSetupScreenProps> = ({ module, onStart, 
     
     const hoverStyle = `
       .objective-button:not(.selected):hover {
-        transform: translateY(-3px);
-        box-shadow: 0 6px 15px rgba(0,0,0,0.08);
-        border-color: rgba(0,0,0,0.1);
+        background-color: rgba(255, 255, 255, 0.2);
+      }
+      .back-button:hover {
+        background-color: #3a3a3a;
       }
     `;
 
@@ -96,11 +92,11 @@ const CustomSetupScreen: React.FC<CustomSetupScreenProps> = ({ module, onStart, 
         <div style={styles.container}>
             <style>{hoverStyle}</style>
             <header style={styles.header}>
-                <button onClick={onBack} style={styles.backButton}>
+                <button onClick={onBack} className="back-button" style={styles.backButton}>
                     <HomeIcon /> Menu
                 </button>
                 <div style={styles.titleContainer}>
-                    <module.icon width={32} height={32} color={COLORS.primary} />
+                    <module.icon width={32} height={32} color={COLORS.secondary} />
                     <h1 style={styles.title}>{module.title}</h1>
                 </div>
                 <p style={styles.description}>{module.description}</p>
@@ -143,8 +139,8 @@ const CustomSetupScreen: React.FC<CustomSetupScreenProps> = ({ module, onStart, 
                                     onClick={() => setSelectedObjective(objective)}
                                     style={{
                                         ...styles.objectiveButton,
-                                        backgroundColor: isSelected ? objective.color : objective.backgroundColor,
-                                        color: isSelected ? 'white' : COLORS.textPrimary,
+                                        backgroundColor: isSelected ? objective.color : 'rgba(255, 255, 255, 0.1)',
+                                        color: 'white',
                                         border: `2px solid ${isSelected ? objective.color : 'transparent'}`,
                                     }}
                                     className={`objective-button ${isSelected ? 'selected' : ''}`}
@@ -177,9 +173,9 @@ const styles: { [key: string]: React.CSSProperties } = {
     display: 'flex',
     alignItems: 'center',
     gap: '8px',
-    background: 'transparent',
-    color: COLORS.primary,
-    border: `1px solid ${COLORS.primary}`,
+    backgroundColor: COLORS.card,
+    color: COLORS.textPrimary,
+    border: `1px solid ${COLORS.divider}`,
     borderRadius: '8px',
     padding: '10px 16px',
     cursor: 'pointer',
@@ -193,20 +189,20 @@ const styles: { [key: string]: React.CSSProperties } = {
   titleContainer: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', marginBottom: '16px' },
   title: { fontSize: '32px', color: COLORS.textPrimary, fontWeight: 'bold' },
   description: { fontSize: '18px', color: COLORS.textSecondary, lineHeight: 1.6 },
-  setupForm: { display: 'flex', flexDirection: 'column', gap: '32px', backgroundColor: 'white', padding: '24px', borderRadius: '12px', border: `1px solid ${COLORS.divider}` },
+  setupForm: { display: 'flex', flexDirection: 'column', gap: '32px', backgroundColor: COLORS.secondary, padding: '24px', borderRadius: '12px' },
   step: { display: 'flex', flexDirection: 'column', gap: '12px' },
-  label: { fontSize: '18px', fontWeight: '600', color: COLORS.textPrimary, textAlign: 'left' },
-  textarea: { width: '100%', padding: '12px 16px', fontSize: '16px', borderRadius: '12px', border: `1px solid ${COLORS.divider}`, resize: 'vertical', fontFamily: 'inherit' },
+  label: { fontSize: '18px', fontWeight: '600', color: 'white', textAlign: 'left' },
+  textarea: { width: '100%', padding: '12px 16px', fontSize: '16px', borderRadius: '12px', border: `1px solid rgba(255, 255, 255, 0.3)`, resize: 'vertical', fontFamily: 'inherit', backgroundColor: 'rgba(0,0,0,0.2)', color: 'white' },
   uploadSection: {
     display: 'flex',
     alignItems: 'center',
     gap: '16px',
     flexWrap: 'wrap',
   },
-  uploadButton: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '10px 16px', fontSize: '14px', borderRadius: '8px', border: `1px solid ${COLORS.divider}`, backgroundColor: 'white', cursor: 'pointer', color: COLORS.textSecondary },
+  uploadButton: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '10px 16px', fontSize: '14px', borderRadius: '8px', border: `1px solid rgba(255, 255, 255, 0.3)`, backgroundColor: 'rgba(255, 255, 255, 0.1)', cursor: 'pointer', color: 'white' },
   fileMessage: {
     fontSize: '13px',
-    color: COLORS.secondary,
+    color: 'white',
     margin: 0,
     flex: 1,
   },
@@ -236,8 +232,8 @@ const styles: { [key: string]: React.CSSProperties } = {
   objectiveLabel: {
       lineHeight: 1.4,
   },
-  startButton: { padding: '16px 24px', fontSize: '18px', fontWeight: 'bold', borderRadius: '8px', border: 'none', background: COLORS.primaryGradient, color: 'white', cursor: 'pointer', transition: 'all 0.2s ease', alignSelf: 'center' },
-  startButtonDisabled: { background: '#ccc', cursor: 'not-allowed', opacity: 0.7 },
+  startButton: { padding: '16px 24px', fontSize: '18px', fontWeight: 'bold', borderRadius: '8px', border: 'none', background: 'white', color: COLORS.secondary, cursor: 'pointer', transition: 'all 0.2s ease', alignSelf: 'center' },
+  startButtonDisabled: { background: '#ccc', cursor: 'not-allowed', opacity: 0.7, color: '#666' },
   footer: {
       marginTop: '40px',
       display: 'flex',

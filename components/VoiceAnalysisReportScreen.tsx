@@ -50,8 +50,18 @@ const AnnotatedText: React.FC<{ text: string }> = ({ text }) => {
 };
 
 export const VoiceAnalysisReportScreen: React.FC<VoiceAnalysisReportScreenProps> = ({ result, exercise, onRetry, onNext }) => {
+  const hoverStyle = `
+    .primary-button:hover {
+      opacity: 0.9;
+    }
+    .secondary-button:hover {
+      background-color: rgba(88, 166, 166, 0.1);
+    }
+  `;
+    
   return (
     <div style={styles.container}>
+      <style>{hoverStyle}</style>
       <div style={styles.card}>
         <h1 style={styles.title}>Report Voce & Paraverbale</h1>
         
@@ -85,7 +95,7 @@ export const VoiceAnalysisReportScreen: React.FC<VoiceAnalysisReportScreenProps>
         </div>
         
         <div style={styles.actionsContainer}>
-            <h2 style={styles.sectionTitle}><TargetIcon style={{color: COLORS.primary}}/> Azioni Pratiche</h2>
+            <h2 style={styles.sectionTitle}><TargetIcon style={{color: COLORS.secondary}}/> Azioni Pratiche</h2>
             <ul style={styles.list}>
                 {result.actions.map((item, index) => <li key={index} style={{...styles.listItem, ...styles.actionItem}}>{item}</li>)}
             </ul>
@@ -103,10 +113,10 @@ export const VoiceAnalysisReportScreen: React.FC<VoiceAnalysisReportScreenProps>
         </div>
 
         <div style={styles.buttonContainer}>
-          <button onClick={onRetry} style={styles.secondaryButton}>
+          <button onClick={onRetry} style={styles.secondaryButton} className="secondary-button">
             <RetryIcon /> Riprova Esercizio
           </button>
-          <button onClick={onNext} style={styles.primaryButton}>
+          <button onClick={onNext} style={styles.primaryButton} className="primary-button">
             Menu Principale <HomeIcon />
           </button>
         </div>
@@ -125,13 +135,13 @@ const styles: { [key: string]: React.CSSProperties } = {
         alignItems: 'flex-start',
     },
     card: {
-        backgroundColor: 'white',
+        backgroundColor: COLORS.card,
         borderRadius: '12px',
-        boxShadow: '0 2px 5px rgba(0,0,0,0.08)',
         border: `1px solid ${COLORS.divider}`,
         padding: '32px',
         maxWidth: '900px',
         width: '100%',
+        boxShadow: '0 8px 30px rgba(0,0,0,0.08)',
     },
     title: {
         fontSize: '28px',
@@ -187,7 +197,7 @@ const styles: { [key: string]: React.CSSProperties } = {
         marginBottom: '32px',
     },
     feedbackCard: {
-        backgroundColor: '#f8f9fa',
+        backgroundColor: COLORS.cardDark,
         padding: '20px',
         borderRadius: '12px',
     },
@@ -218,12 +228,12 @@ const styles: { [key: string]: React.CSSProperties } = {
     },
     actionItem: {
         padding: '12px',
-        backgroundColor: 'rgba(14, 58, 93, 0.05)',
+        backgroundColor: 'rgba(88, 166, 166, 0.1)',
         borderRadius: '8px',
-        borderLeft: `3px solid ${COLORS.primary}`,
+        borderLeft: `3px solid ${COLORS.secondary}`,
     },
     microDrillContainer: {
-        backgroundColor: 'rgba(247, 184, 1, 0.1)',
+        backgroundColor: 'rgba(255, 193, 7, 0.15)',
         padding: '20px',
         borderRadius: '12px',
         marginBottom: '32px',
@@ -251,7 +261,7 @@ const styles: { [key: string]: React.CSSProperties } = {
         lineHeight: 1.7,
         margin: 0,
         padding: '20px',
-        backgroundColor: '#f8f9fa',
+        backgroundColor: COLORS.cardDark,
         borderRadius: '12px',
     },
     pauseSymbol: {
@@ -269,7 +279,7 @@ const styles: { [key: string]: React.CSSProperties } = {
         height: 0,
         borderLeft: '6px solid transparent',
         borderRight: '6px solid transparent',
-        borderBottom: `10px solid ${COLORS.primary}`,
+        borderBottom: `10px solid ${COLORS.warning}`,
         margin: '0 4px',
         verticalAlign: 'middle',
     },
@@ -285,9 +295,9 @@ const styles: { [key: string]: React.CSSProperties } = {
     secondaryButton: {
         padding: '12px 24px',
         fontSize: '16px',
-        border: `1px solid ${COLORS.primary}`,
+        border: `1px solid ${COLORS.secondary}`,
         backgroundColor: 'transparent',
-        color: COLORS.primary,
+        color: COLORS.secondary,
         borderRadius: '8px',
         cursor: 'pointer',
         display: 'flex',
@@ -300,7 +310,7 @@ const styles: { [key: string]: React.CSSProperties } = {
         fontSize: '16px',
         fontWeight: 'bold',
         border: 'none',
-        background: COLORS.primaryGradient,
+        backgroundColor: COLORS.secondary,
         color: 'white',
         borderRadius: '8px',
         cursor: 'pointer',

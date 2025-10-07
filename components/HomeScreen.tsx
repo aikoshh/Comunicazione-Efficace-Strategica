@@ -1,6 +1,6 @@
 import React from 'react';
 import type { Module, User, UserProgress } from '../types';
-import { MODULES, COLORS } from '../constants';
+import { MODULES, COLORS, SAGE_PALETTE } from '../constants';
 import { Logo } from './Logo';
 import { ProgressOverview } from './ProgressOverview';
 
@@ -13,7 +13,7 @@ interface HomeScreenProps {
 const hoverStyle = `
   .module-card:hover {
     transform: translateY(-5px);
-    box-shadow: 0 10px 20px rgba(0,0,0,0.08);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
   }
 `;
 
@@ -21,21 +21,27 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectModule, currentU
   const foundationalModules = MODULES.filter(m => m.category === 'Fondamentali' || !m.category);
   const sectoralPacks = MODULES.filter(m => m.category === 'Pacchetti Settoriali');
 
-  const renderModuleGrid = (modules: Module[]) => (
+  const renderModuleGrid = (modules: Module[], offset: number = 0) => (
     <div style={styles.moduleGrid}>
-      {modules.map(module => (
-        <div key={module.id} className="module-card" style={styles.moduleCard} onClick={() => onSelectModule(module)}>
-          {module.id === 'm5' && <div style={styles.newBadge}>NUOVO</div>}
-          {module.cardImage && <img src={module.cardImage} alt={module.title} style={styles.cardImage} />}
-          <div style={styles.cardContent}>
-            <div style={styles.cardHeader}>
-              <module.icon style={styles.cardIcon} />
-              <h2 style={styles.cardTitle}>{module.title}</h2>
+      {modules.map((module, index) => {
+        const cardStyle = {
+          ...styles.moduleCard,
+          backgroundColor: SAGE_PALETTE[(index + offset) % SAGE_PALETTE.length],
+        };
+        return (
+          <div key={module.id} className="module-card" style={cardStyle} onClick={() => onSelectModule(module)}>
+            {module.id === 'm5' && <div style={styles.newBadge}>NUOVO</div>}
+            {module.cardImage && <img src={module.cardImage} alt={module.title} style={styles.cardImage} />}
+            <div style={styles.cardContent}>
+              <div style={styles.cardHeader}>
+                <module.icon style={styles.cardIcon} />
+                <h2 style={styles.cardTitle}>{module.title}</h2>
+              </div>
+              <p style={styles.cardDescription}>{module.description}</p>
             </div>
-            <p style={styles.cardDescription}>{module.description}</p>
           </div>
-        </div>
-      ))}
+        )
+      })}
     </div>
   );
 
@@ -56,14 +62,14 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectModule, currentU
       
       <main style={currentUser ? {marginTop: '48px'} : {}}>
         <section>
-          <h2 style={styles.sectionTitle}>Fondamentali della CES</h2>
+          <h2 style={styles.sectionTitle}>Scegli l'allenamento e inizia subito!</h2>
           {renderModuleGrid(foundationalModules)}
         </section>
 
         {sectoralPacks.length > 0 && (
           <section style={{ marginTop: '48px' }}>
             <h2 style={styles.sectionTitle}>Pacchetti Settoriali Professionali</h2>
-            {renderModuleGrid(sectoralPacks)}
+            {renderModuleGrid(sectoralPacks, foundationalModules.length)}
           </section>
         )}
       </main>
@@ -114,15 +120,14 @@ const styles: { [key: string]: React.CSSProperties } = {
         gap: '24px',
     },
     moduleCard: {
-        backgroundColor: 'white',
         borderRadius: '12px',
-        boxShadow: '0 2px 5px rgba(0,0,0,0.08)',
+        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
         cursor: 'pointer',
         transition: 'transform 0.3s ease, box-shadow 0.3s ease',
         overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column',
-        border: `1px solid ${COLORS.divider}`,
+        border: `1px solid transparent`,
         position: 'relative',
     },
     newBadge: {
@@ -159,18 +164,18 @@ const styles: { [key: string]: React.CSSProperties } = {
     cardIcon: {
         width: '32px',
         height: '32px',
-        color: COLORS.primary,
+        color: 'white',
         flexShrink: 0,
     },
     cardTitle: {
         fontSize: '20px',
         fontWeight: '600',
-        color: COLORS.textPrimary,
+        color: 'white',
         margin: 0,
     },
     cardDescription: {
         fontSize: '15px',
-        color: COLORS.textSecondary,
+        color: 'white',
         lineHeight: 1.6,
         flexGrow: 1,
         margin: 0,
