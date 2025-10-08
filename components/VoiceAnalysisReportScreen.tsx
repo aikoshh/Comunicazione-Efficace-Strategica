@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { VoiceAnalysisResult, Exercise } from '../types';
 import { COLORS, VOICE_RUBRIC_CRITERIA } from '../constants';
 import { CheckCircleIcon, XCircleIcon, RetryIcon, HomeIcon, LightbulbIcon, TargetIcon } from './Icons';
+import { soundService } from '../services/soundService';
 
 interface VoiceAnalysisReportScreenProps {
   result: VoiceAnalysisResult;
@@ -9,6 +10,33 @@ interface VoiceAnalysisReportScreenProps {
   onRetry: () => void;
   onNext: () => void;
 }
+
+const KEYWORDS = [
+    'efficace', 'chiaro', 'empatico', 'tono', 'ritmo', 'pause', 'volume', 'assertività', 'costruttivo', 
+    'soluzione', 'obiettivo', 'strategico', 'ottimo', 'eccellente', 'ben', 'buon', 'correttamente', 
+    'giusto', 'prova a', 'cerca di', 'evita di', 'potresti', 'considera', 'concentrati su', 
+    'ricorda di', 'lavora su', 'registra', 'ascolta', 'leggi', 'parla', 'esercitati', 
+    'identifica', 'scrivi', 'comunica', 'gestisci', 'usa', 'mantieni', 'assicurati'
+];
+
+const HighlightText: React.FC<{ text: string }> = ({ text }) => {
+    if (!text) return null;
+    const regex = new RegExp(`\\b(${KEYWORDS.join('|')})\\b`, 'gi');
+    const parts = text.split(regex);
+
+    return (
+        <>
+            {parts.map((part, index) => 
+                KEYWORDS.some(keyword => new RegExp(`^${keyword}$`, 'i').test(part)) ? (
+                    <strong key={index} style={{ color: COLORS.primary, fontWeight: '700' }}>{part}</strong>
+                ) : (
+                    part
+                )
+            )}
+        </>
+    );
+};
+
 
 const getScoreColor = (score: number): string => {
   if (score < 6) return COLORS.error;
@@ -50,12 +78,29 @@ const AnnotatedText: React.FC<{ text: string }> = ({ text }) => {
 };
 
 export const VoiceAnalysisReportScreen: React.FC<VoiceAnalysisReportScreenProps> = ({ result, exercise, onRetry, onNext }) => {
+  
+  useEffect(() => {
+    soundService.playSuccess();
+  }, []);
+  
+  const handleRetry = () => {
+    soundService.playClick();
+    onRetry();
+  };
+  
+  const handleNext = () => {
+    soundService.playClick();
+    onNext();
+  };
+
   const hoverStyle = `
-    .primary-button:hover {
-      opacity: 0.9;
+    .primary-button:hover, .secondary-button:hover {
+      transform: translateY(-2px);
+      filter: brightness(1.1);
     }
-    .secondary-button:hover {
-      background-color: rgba(88, 166, 166, 0.1);
+     .primary-button:active, .secondary-button:active {
+      transform: translateY(0);
+      filter: brightness(0.95);
     }
   `;
     
@@ -65,7 +110,7 @@ export const VoiceAnalysisReportScreen: React.FC<VoiceAnalysisReportScreenProps>
       <div style={styles.card}>
         <h1 style={styles.title}>Report Voce & Paraverbale</h1>
         
-        <div style={styles.scoresGrid}>
+        <div style={{...styles.scoresGrid, animation: 'fadeInUp 0.5s 0.2s ease-out both'}}>
             {VOICE_RUBRIC_CRITERIA.map(criterion => {
                 const scoreData = result.scores.find(s => s.criterion_id === criterion.id);
                 return (
@@ -79,44 +124,59 @@ export const VoiceAnalysisReportScreen: React.FC<VoiceAnalysisReportScreenProps>
         </div>
         
         <div style={styles.feedbackGrid}>
-            <div style={styles.feedbackCard}>
+            <div style={{...styles.feedbackCard, animation: 'fadeInUp 0.5s 0.4s ease-out both'}}>
                 <h2 style={styles.sectionTitle}><CheckCircleIcon style={{color: COLORS.success}}/> Punti di Forza</h2>
                 <ul style={styles.list}>
-                    {result.strengths.map((item, index) => <li key={index} style={styles.listItem}>{item}</li>)}
+                    {result.strengths.map((item, index) => 
+                        <li key={index} style={styles.listItem}>
+                            <CheckCircleIcon style={{...styles.listItemIcon, color: COLORS.success}}/>
+                            <span style={styles.listItemText}><HighlightText text={item}/></span>
+                        </li>
+                    )}
                 </ul>
             </div>
 
-            <div style={styles.feedbackCard}>
+            <div style={{...styles.feedbackCard, animation: 'fadeInUp 0.5s 0.5s ease-out both'}}>
                 <h2 style={styles.sectionTitle}><XCircleIcon style={{color: COLORS.error}}/> Aree di Miglioramento</h2>
                 <ul style={styles.list}>
-                  {result.improvements.map((item, index) => <li key={index} style={styles.listItem}>{item}</li>)}
+                  {result.improvements.map((item, index) => 
+                    <li key={index} style={styles.listItem}>
+                        <LightbulbIcon style={{...styles.listItemIcon, color: COLORS.warning}}/>
+                        <span style={styles.listItemText}><HighlightText text={item}/></span>
+                    </li>
+                  )}
                 </ul>
             </div>
         </div>
         
-        <div style={styles.actionsContainer}>
+        <div style={{...styles.actionsContainer, animation: 'fadeInUp 0.5s 0.6s ease-out both'}}>
             <h2 style={styles.sectionTitle}><TargetIcon style={{color: COLORS.secondary}}/> Azioni Pratiche</h2>
             <ul style={styles.list}>
-                {result.actions.map((item, index) => <li key={index} style={{...styles.listItem, ...styles.actionItem}}>{item}</li>)}
+                {result.actions.map((item, index) => 
+                    <li key={index} style={{...styles.listItem, ...styles.actionItem}}>
+                        <TargetIcon style={{...styles.listItemIcon, color: COLORS.secondary}}/>
+                        <span style={styles.listItemText}><HighlightText text={item}/></span>
+                    </li>
+                )}
             </ul>
         </div>
 
-        <div style={styles.microDrillContainer}>
+        <div style={{...styles.microDrillContainer, animation: 'fadeInUp 0.5s 0.7s ease-out both'}}>
             <h2 style={styles.sectionTitle}><LightbulbIcon style={{color: COLORS.warning}}/> Micro-Drill (60s)</h2>
-            <p style={styles.microDrillText}>{result.micro_drill_60s}</p>
+            <p style={styles.microDrillText}><HighlightText text={result.micro_drill_60s}/></p>
         </div>
         
-        <div style={styles.suggestedDeliveryContainer}>
+        <div style={{...styles.suggestedDeliveryContainer, animation: 'fadeInUp 0.5s 0.8s ease-out both'}}>
             <h2 style={styles.sectionTitle}>Consegna Suggerita</h2>
-            <p style={styles.deliveryInstructions}>{result.suggested_delivery.instructions}</p>
+            <p style={styles.deliveryInstructions}><HighlightText text={result.suggested_delivery.instructions}/></p>
             <AnnotatedText text={result.suggested_delivery.annotated_text} />
         </div>
 
         <div style={styles.buttonContainer}>
-          <button onClick={onRetry} style={styles.secondaryButton} className="secondary-button">
+          <button onClick={handleRetry} style={styles.secondaryButton} className="secondary-button">
             <RetryIcon /> Riprova Esercizio
           </button>
-          <button onClick={onNext} style={styles.primaryButton} className="primary-button">
+          <button onClick={handleNext} style={styles.primaryButton} className="primary-button">
             Menu Principale <HomeIcon />
           </button>
         </div>
@@ -179,7 +239,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     meterFill: {
         height: '100%',
         borderRadius: '4px',
-        transition: 'width 0.5s ease-in-out',
+        transition: 'width 0.8s cubic-bezier(0.25, 1, 0.5, 1)',
     },
     meterScore: {
         fontSize: '14px',
@@ -222,6 +282,18 @@ const styles: { [key: string]: React.CSSProperties } = {
         fontSize: '16px',
         color: COLORS.textSecondary,
         lineHeight: 1.6,
+        display: 'flex',
+        alignItems: 'flex-start',
+        gap: '12px',
+    },
+    listItemIcon: {
+        flexShrink: 0,
+        width: '20px',
+        height: '20px',
+        marginTop: '3px',
+    },
+    listItemText: {
+        flex: 1,
     },
     actionsContainer: {
         marginBottom: '32px',
@@ -231,6 +303,7 @@ const styles: { [key: string]: React.CSSProperties } = {
         backgroundColor: 'rgba(88, 166, 166, 0.1)',
         borderRadius: '8px',
         borderLeft: `3px solid ${COLORS.secondary}`,
+        color: COLORS.textPrimary,
     },
     microDrillContainer: {
         backgroundColor: 'rgba(255, 193, 7, 0.15)',
@@ -303,7 +376,8 @@ const styles: { [key: string]: React.CSSProperties } = {
         display: 'flex',
         alignItems: 'center',
         gap: '8px',
-        fontWeight: 500
+        fontWeight: 500,
+        transition: 'all 0.2s ease',
     },
     primaryButton: {
         padding: '12px 24px',
@@ -317,6 +391,6 @@ const styles: { [key: string]: React.CSSProperties } = {
         display: 'flex',
         alignItems: 'center',
         gap: '8px',
-        transition: 'opacity 0.2s ease',
+        transition: 'all 0.2s ease',
     },
 };

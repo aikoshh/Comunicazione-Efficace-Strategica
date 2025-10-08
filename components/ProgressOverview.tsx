@@ -22,6 +22,7 @@ export const ProgressOverview: React.FC<ProgressOverviewProps> = ({ user, progre
   const [explanationData, setExplanationData] = useState<ScoreExplanation | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [progressWidth, setProgressWidth] = useState(0);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -29,6 +30,8 @@ export const ProgressOverview: React.FC<ProgressOverviewProps> = ({ user, progre
       try {
         const data = await getProgressOverview(user, progress);
         setOverviewData(data);
+        // Set a timeout to allow the component to render before starting the animation
+        setTimeout(() => setProgressWidth(data.progress_bar.value), 100);
       } catch (error) {
         console.error("Failed to fetch progress overview:", error);
       } finally {
@@ -62,7 +65,7 @@ export const ProgressOverview: React.FC<ProgressOverviewProps> = ({ user, progre
       </div>
       <div style={styles.progressBarContainer}>
         <div style={styles.progressBar}>
-          <div style={{ ...styles.progressBarFill, width: `${overviewData.progress_bar.value}%` }} />
+          <div style={{ ...styles.progressBarFill, width: `${progressWidth}%` }} />
         </div>
         {levelThresholds.map(threshold => threshold.min > 0 && (
             <div key={threshold.id} style={{ ...styles.milestone, left: `${threshold.min}%` }} title={`${threshold.label} (${threshold.min})`}></div>
@@ -134,7 +137,7 @@ const styles: { [key: string]: React.CSSProperties } = {
   progressBarFill: {
     height: '100%',
     backgroundColor: COLORS.secondary,
-    transition: 'width 0.6s ease',
+    transition: 'width 1s cubic-bezier(0.25, 1, 0.5, 1)',
     borderRadius: '12px',
   },
   milestone: {

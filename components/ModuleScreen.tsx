@@ -2,6 +2,7 @@ import React from 'react';
 import { Module, Exercise, DifficultyLevel } from '../types';
 import { COLORS, SAGE_PALETTE } from '../constants';
 import { HomeIcon } from './Icons';
+import { soundService } from '../services/soundService';
 
 interface ModuleScreenProps {
   module: Module;
@@ -17,20 +18,37 @@ const difficultyColors: { [key in DifficultyLevel]: string } = {
 
 const hoverStyle = `
   .exercise-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+    border-left-color: white;
   }
   .menu-button:hover {
-    opacity: 0.9;
+    transform: translateY(-2px);
+    filter: brightness(1.1);
+  }
+  .menu-button:active {
+    transform: translateY(0);
+    filter: brightness(0.95);
   }
 `;
 
 export const ModuleScreen: React.FC<ModuleScreenProps> = ({ module, onSelectExercise, onBack }) => {
+
+  const handleBackClick = () => {
+    soundService.playClick();
+    onBack();
+  };
+
+  const handleExerciseClick = (exercise: Exercise) => {
+    soundService.playClick();
+    onSelectExercise(exercise);
+  }
+
   return (
     <div style={styles.container}>
        <style>{hoverStyle}</style>
       <header style={styles.header}>
-        <button onClick={onBack} style={styles.backButton} className="menu-button">
+        <button onClick={handleBackClick} style={styles.backButton} className="menu-button">
           <HomeIcon /> Menu
         </button>
         <div style={styles.titleContainer}>
@@ -44,9 +62,16 @@ export const ModuleScreen: React.FC<ModuleScreenProps> = ({ module, onSelectExer
           const cardStyle = {
             ...styles.exerciseCard,
             backgroundColor: SAGE_PALETTE[index % SAGE_PALETTE.length],
+            animation: `fadeInUp 0.4s ${0.1 + index * 0.05}s ease-out both`,
           };
           return (
-            <div key={exercise.id} className="exercise-card" style={cardStyle} onClick={() => onSelectExercise(exercise)}>
+            <div 
+              key={exercise.id} 
+              className="exercise-card" 
+              style={cardStyle} 
+              onClick={() => handleExerciseClick(exercise)}
+              onMouseEnter={() => soundService.playHover()}
+            >
               <div style={styles.exerciseHeader}>
                   <h2 style={styles.exerciseTitle}>{exercise.title}</h2>
                   <span style={{...styles.difficultyBadge, backgroundColor: difficultyColors[exercise.difficulty]}}>
@@ -59,7 +84,7 @@ export const ModuleScreen: React.FC<ModuleScreenProps> = ({ module, onSelectExer
         })}
       </main>
       <div style={styles.footer}>
-        <button onClick={onBack} style={styles.footerButton} className="menu-button">
+        <button onClick={handleBackClick} style={styles.footerButton} className="menu-button">
            <HomeIcon /> Torna al Menu Principale
         </button>
       </div>
@@ -96,6 +121,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     top: '20px',
     left: '20px',
     transition: 'all 0.2s ease',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
   },
   titleContainer: {
     display: 'flex',
@@ -124,8 +150,8 @@ const styles: { [key: string]: React.CSSProperties } = {
     padding: '20px',
     boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
     cursor: 'pointer',
-    transition: 'transform 0.2s, box-shadow 0.2s',
-    border: `1px solid transparent`,
+    transition: 'transform 0.3s, box-shadow 0.3s, border-left-color 0.3s',
+    borderLeft: `5px solid transparent`,
     textAlign: 'left'
   },
   exerciseHeader: {
@@ -174,5 +200,6 @@ const styles: { [key: string]: React.CSSProperties } = {
       color: 'white',
       fontWeight: '500',
       transition: 'all 0.2s ease',
+      boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
   },
 };

@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { COLORS } from '../constants';
 import { cesLogoUrl } from '../assets';
 import type { User } from '../types';
+import { soundService } from '../services/soundService';
 
 interface LoginScreenProps {
   onLogin: (email: string, pass: string) => void;
@@ -34,6 +35,7 @@ const RegistrationForm: React.FC<{
 
     const handleRegisterSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        soundService.playClick();
         setError('');
         setSuccess('');
 
@@ -92,9 +94,9 @@ const RegistrationForm: React.FC<{
                     <label htmlFor="captcha" style={styles.label}>Verifica: quanto fa {captcha.num1} + {captcha.num2}?</label>
                     <input type="number" id="captcha" value={captchaAnswer} onChange={(e) => setCaptchaAnswer(e.target.value)} style={styles.input} className="login-input" required />
                 </div>
-                <button type="submit" style={styles.loginButton}>Registrati</button>
+                <button type="submit" style={styles.loginButton} className="login-button">Registrati</button>
             </form>
-             <button onClick={() => setView('login')} style={styles.switchLink}>
+             <button onClick={() => { soundService.playClick(); setView('login'); }} style={styles.switchLink}>
                 Hai già un account? Accedi
             </button>
         </>
@@ -109,6 +111,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onRegister, o
 
   const handleLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    soundService.playClick();
     setError('');
     if (email && password) {
       try {
@@ -120,15 +123,27 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onRegister, o
     }
   };
   
-  const placeholderStyle = `
+  const dynamicStyles = `
     .login-input::placeholder {
       color: ${COLORS.textSecondary};
+    }
+    .login-input:focus {
+        border-color: ${COLORS.secondary};
+        box-shadow: 0 0 0 3px rgba(88, 166, 166, 0.2);
+    }
+    .login-button:hover {
+        transform: translateY(-2px);
+        filter: brightness(1.1);
+    }
+    .login-button:active {
+        transform: translateY(0px);
+        filter: brightness(0.95);
     }
   `;
   
   return (
     <div style={styles.container}>
-      <style>{placeholderStyle}</style>
+      <style>{dynamicStyles}</style>
       <div style={styles.loginBox}>
         <div style={styles.logoContainer}>
             <img src={cesLogoUrl} alt="Comunicazione Efficace Strategica Logo" style={styles.logoImage} />
@@ -146,9 +161,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onRegister, o
                 <label htmlFor="password" style={styles.label}>Password</label>
                 <input type="password" id="password" value={password} onChange={(e) => setPassword(e.target.value)} style={styles.input} className="login-input" placeholder="••••••••" required />
               </div>
-              <button type="submit" style={styles.loginButton}>Accedi</button>
+              <button type="submit" style={styles.loginButton} className="login-button">Accedi</button>
             </form>
-            <button onClick={() => setView('register')} style={styles.switchLink}>
+            <button onClick={() => { soundService.playClick(); setView('register'); }} style={styles.switchLink}>
                 Non hai un account? Registrati adesso
             </button>
             <button onClick={onGuestAccess} style={styles.guestLink}>
@@ -159,13 +174,16 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onRegister, o
           <RegistrationForm onRegister={onRegister} setView={setView} />
         )}
       </div>
+      <p style={styles.copyrightText}>
+          CES Coach © Copyright 2025 email: cfs@centrocfs.it
+      </p>
     </div>
   );
 };
 
 const styles: { [key: string]: React.CSSProperties } = {
-    container: { display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', backgroundColor: COLORS.base, padding: '20px' },
-    loginBox: { backgroundColor: COLORS.card, padding: '40px', borderRadius: '12px', border: `1px solid ${COLORS.divider}`, width: '100%', maxWidth: '450px', textAlign: 'center', boxShadow: '0 8px 30px rgba(0,0,0,0.12)' },
+    container: { display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', backgroundColor: COLORS.base, padding: '20px', position: 'relative' },
+    loginBox: { backgroundColor: COLORS.card, padding: '40px', borderRadius: '12px', border: `1px solid ${COLORS.divider}`, width: '100%', maxWidth: '450px', textAlign: 'center', boxShadow: '0 8px 30px rgba(0,0,0,0.12)', animation: 'fadeInUp 0.5s ease-out' },
     logoContainer: { marginBottom: '24px', display: 'flex', justifyContent: 'center' },
     logoImage: {
         width: '100%',
@@ -177,10 +195,19 @@ const styles: { [key: string]: React.CSSProperties } = {
     form: { display: 'flex', flexDirection: 'column', gap: '20px', textAlign: 'left' },
     inputGroup: { display: 'flex', flexDirection: 'column', flex: 1 },
     label: { marginBottom: '8px', fontSize: '14px', fontWeight: '500', color: COLORS.textAccent },
-    input: { padding: '12px 16px', fontSize: '16px', borderRadius: '8px', border: `1px solid ${COLORS.divider}`, fontFamily: 'inherit', backgroundColor: COLORS.base, color: COLORS.textPrimary },
-    loginButton: { padding: '14px', fontSize: '16px', fontWeight: 'bold', color: 'white', background: COLORS.primaryGradient, border: 'none', borderRadius: '8px', cursor: 'pointer', marginTop: '8px', transition: 'opacity 0.2s ease' },
+    input: { padding: '12px 16px', fontSize: '16px', borderRadius: '8px', border: `1px solid ${COLORS.divider}`, fontFamily: 'inherit', backgroundColor: COLORS.base, color: COLORS.textPrimary, outline: 'none', transition: 'border-color 0.2s, box-shadow 0.2s' },
+    loginButton: { padding: '14px', fontSize: '16px', fontWeight: 'bold', color: 'white', background: COLORS.primaryGradient, border: 'none', borderRadius: '8px', cursor: 'pointer', marginTop: '8px', transition: 'transform 0.2s ease, filter 0.2s ease' },
     guestLink: { marginTop: '16px', background: 'none', border: 'none', color: COLORS.textAccent, textDecoration: 'underline', cursor: 'pointer', fontSize: '14px' },
     switchLink: { marginTop: '24px', background: 'none', border: 'none', color: COLORS.textAccent, cursor: 'pointer', fontSize: '14px', fontWeight: 'bold' },
     errorText: { color: 'white', backgroundColor: COLORS.error, padding: '12px', borderRadius: '8px', fontSize: '14px', marginBottom: '16px', border: 'none', textAlign: 'center' },
-    successText: { color: 'white', backgroundColor: COLORS.success, padding: '12px', borderRadius: '8px', fontSize: '14px', marginBottom: '16px', border: 'none', textAlign: 'center' }
+    successText: { color: 'white', backgroundColor: COLORS.success, padding: '12px', borderRadius: '8px', fontSize: '14px', marginBottom: '16px', border: 'none', textAlign: 'center' },
+    copyrightText: {
+        position: 'absolute',
+        bottom: '20px',
+        left: 0,
+        right: 0,
+        textAlign: 'center',
+        fontSize: '14px',
+        color: COLORS.textSecondary,
+    }
 };

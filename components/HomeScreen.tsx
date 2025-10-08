@@ -4,6 +4,7 @@ import { MODULES, COLORS, SAGE_PALETTE } from '../constants';
 import { Logo } from './Logo';
 import { ProgressOverview } from './ProgressOverview';
 import { ChevronDownIcon } from './Icons';
+import { soundService } from '../services/soundService';
 
 interface HomeScreenProps {
   onSelectModule: (module: Module) => void;
@@ -13,8 +14,11 @@ interface HomeScreenProps {
 
 const hoverStyle = `
   .module-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+    transform: translateY(-8px);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+  }
+  .module-card:hover .card-image {
+    transform: scale(1.05);
   }
 `;
 
@@ -23,17 +27,31 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectModule, currentU
   const foundationalModules = MODULES.filter(m => m.category === 'Fondamentali' || !m.category);
   const sectoralPacks = MODULES.filter(m => m.category === 'Pacchetti Settoriali');
 
+  const handleModuleClick = (module: Module) => {
+      soundService.playClick();
+      onSelectModule(module);
+  };
+
   const renderModuleGrid = (modules: Module[], offset: number = 0) => (
     <div style={styles.moduleGrid}>
       {modules.map((module, index) => {
         const cardStyle = {
           ...styles.moduleCard,
           backgroundColor: SAGE_PALETTE[(index + offset) % SAGE_PALETTE.length],
+          animation: `fadeInUp 0.5s ${index * 0.05}s ease-out both`,
         };
         return (
-          <div key={module.id} className="module-card" style={cardStyle} onClick={() => onSelectModule(module)}>
+          <div 
+            key={module.id} 
+            className="module-card" 
+            style={cardStyle} 
+            onClick={() => handleModuleClick(module)}
+            onMouseEnter={() => soundService.playHover()}
+            >
             {module.id === 'm5' && <div style={styles.newBadge}>NUOVO</div>}
-            {module.cardImage && <img src={module.cardImage} alt={module.title} style={styles.cardImage} />}
+            <div style={styles.cardImageContainer}>
+                {module.cardImage && <img src={module.cardImage} alt={module.title} style={styles.cardImage} className="card-image"/>}
+            </div>
             <div style={styles.cardContent}>
               <div style={styles.cardHeader}>
                 <module.icon style={styles.cardIcon} />
@@ -68,7 +86,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectModule, currentU
 
         {sectoralPacks.length > 0 && (
           <section style={{ marginTop: '48px' }}>
-             <div onClick={() => setIsSectoralExpanded(!isSectoralExpanded)} style={styles.sectionHeader}>
+             <div onClick={() => { soundService.playClick(); setIsSectoralExpanded(!isSectoralExpanded); }} style={styles.sectionHeader}>
                 <h2 style={styles.sectionTitle}>Pacchetti Settoriali Professionali</h2>
                 <ChevronDownIcon 
                     style={{
@@ -128,8 +146,10 @@ const styles: { [key: string]: React.CSSProperties } = {
         justifyContent: 'space-between',
         alignItems: 'center',
         cursor: 'pointer',
-        paddingBottom: '8px',
+        padding: '8px',
+        borderRadius: '8px',
         borderBottom: `2px solid ${COLORS.divider}`,
+        transition: 'background-color 0.2s ease',
     },
     sectionTitle: {
         fontSize: '20px',
@@ -174,12 +194,19 @@ const styles: { [key: string]: React.CSSProperties } = {
         fontWeight: 'bold',
         zIndex: 1,
         textTransform: 'uppercase',
+        animation: 'popIn 0.5s 0.5s ease-out both',
+    },
+    cardImageContainer: {
+        width: '100%',
+        height: '180px',
+        overflow: 'hidden',
     },
     cardImage: {
         width: '100%',
-        height: '180px',
+        height: '100%',
         objectFit: 'cover',
         backgroundColor: '#f0f0f0',
+        transition: 'transform 0.4s ease',
     },
     cardContent: {
         padding: '20px',

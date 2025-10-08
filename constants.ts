@@ -92,7 +92,7 @@ export const MODULES: Module[] = [
   },
   {
     id: 'm1',
-    title: 'Dare un feedback efficace',
+    title: 'Dare un Feedback Efficace',
     description: 'Impara a fornire feedback costruttivi che motivano il cambiamento senza demotivare.',
     icon: FeedbackIcon,
     cardImage: cardImage1,

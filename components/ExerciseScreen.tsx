@@ -5,6 +5,7 @@ import { analyzeResponse, analyzeParaverbalResponse } from '../services/geminiSe
 import { Loader } from './Loader';
 import { COLORS } from '../constants';
 import { BackIcon, MicIcon, SendIcon, WrittenIcon, VerbalIcon, SpeakerIcon, SpeakerOffIcon } from './Icons';
+import { soundService } from '../services/soundService';
 
 interface ExerciseScreenProps {
   exercise: Exercise;
@@ -29,14 +30,31 @@ export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({ exercise, onComp
   }, [transcript]);
 
   const handleScenarioPlayback = () => {
+    soundService.playClick();
     if (isSpeaking) {
         stopSpeaking();
     } else {
         speak(`${exercise.title}. Scenario: ${exercise.scenario}. Compito: ${exercise.task}`);
     }
   };
+  
+  const handleStartListening = () => {
+    soundService.playStartRecording();
+    startListening();
+  }
+
+  const handleStopListening = () => {
+    soundService.playStopRecording();
+    stopListening();
+  }
+  
+  const handleBackClick = () => {
+    soundService.playClick();
+    onBack();
+  }
 
   const handleSubmit = async () => {
+    soundService.playClick();
     if (!userResponse.trim()) {
       setError("La risposta non può essere vuota.");
       return;
@@ -72,8 +90,8 @@ export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({ exercise, onComp
             <div style={styles.verbalContainer}>
                 <p style={styles.transcript}>{isListening ? 'Sto ascoltando...' : (userResponse || 'Tocca il microfono per registrare la tua risposta.')}</p>
                 <button
-                    onClick={isListening ? stopListening : startListening}
-                    style={{ ...styles.micButton, ...(isListening ? styles.micButtonListening : {}) }}
+                    onClick={isListening ? handleStopListening : handleStartListening}
+                    style={{ ...styles.micButton, animation: !isListening && !isLoading ? 'pulse 2s infinite' : 'none' }}
                     disabled={isLoading}
                 >
                     <MicIcon color="white" width={32} height={32} />
@@ -111,7 +129,7 @@ export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({ exercise, onComp
 
   return (
     <div style={styles.container}>
-      <button onClick={onBack} style={styles.backButton}>
+      <button onClick={handleBackClick} style={styles.backButton}>
         <BackIcon /> Indietro
       </button>
       <div style={styles.scenarioCard}>
@@ -166,7 +184,7 @@ const styles: { [key: string]: React.CSSProperties } = {
   scenarioCard: { backgroundColor: COLORS.card, borderRadius: '12px', padding: '24px', border: `1px solid ${COLORS.divider}`, boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)' },
   scenarioHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', gap: '16px'},
   title: { fontSize: '24px', color: COLORS.textPrimary, margin: 0, fontWeight: 'bold' },
-  speakerButton: { background: 'none', border: 'none', cursor: 'pointer', padding: '8px', borderRadius: '50%' },
+  speakerButton: { background: 'none', border: 'none', cursor: 'pointer', padding: '8px', borderRadius: '50%', transition: 'background-color 0.2s ease' },
   scenarioText: { fontSize: '16px', color: COLORS.textSecondary, lineHeight: '1.6', marginBottom: '12px' },
   taskText: { fontSize: '16px', color: COLORS.textPrimary, lineHeight: '1.6', fontWeight: '500' },
   toggleContainer: { display: 'flex', gap: '8px', justifyContent: 'center', backgroundColor: COLORS.divider, padding: '6px', borderRadius: '12px' },
@@ -175,12 +193,12 @@ const styles: { [key: string]: React.CSSProperties } = {
   responseSection: { display: 'flex', flexDirection: 'column', gap: '16px'},
   responseTitle: {fontSize: '20px', color: COLORS.textPrimary, margin: 0, fontWeight: 'bold'},
   inputContainer: { display: 'flex', flexDirection: 'column', gap: '16px'},
-  textarea: { width: '100%', padding: '16px', fontSize: '16px', borderRadius: '12px', border: `1px solid ${COLORS.divider}`, resize: 'vertical', fontFamily: 'inherit', backgroundColor: COLORS.card, color: COLORS.textPrimary },
-  mainButton: { padding: '12px 24px', fontSize: '16px', fontWeight: 'bold', borderRadius: '8px', border: 'none', background: COLORS.primaryGradient, color: 'white', cursor: 'pointer', transition: 'all 0.2s ease', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', alignSelf: 'center' },
-  mainButtonDisabled: { background: '#ccc', cursor: 'not-allowed', opacity: 0.7 },
+  textarea: { width: '100%', padding: '16px', fontSize: '16px', borderRadius: '12px', border: `1px solid ${COLORS.divider}`, resize: 'vertical', fontFamily: 'inherit', backgroundColor: COLORS.card, color: COLORS.textPrimary, transition: 'border-color 0.2s, box-shadow 0.2s' },
+  mainButton: { padding: '12px 24px', fontSize: '16px', fontWeight: 'bold', borderRadius: '8px', border: 'none', background: COLORS.primaryGradient, color: 'white', cursor: 'pointer', transition: 'all 0.2s ease', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', alignSelf: 'center', boxShadow: '0 4px 15px rgba(14, 58, 93, 0.3)' },
+  mainButtonDisabled: { background: '#ccc', cursor: 'not-allowed', opacity: 0.7, boxShadow: 'none' },
   verbalContainer: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px', padding: '20px', backgroundColor: COLORS.card, borderRadius: '12px', border: `1px solid ${COLORS.divider}` },
   transcript: { fontSize: '18px', color: COLORS.textPrimary, minHeight: '50px', textAlign: 'center', fontStyle: 'italic' },
-  micButton: { width: '72px', height: '72px', borderRadius: '50%', background: COLORS.primaryGradient, border: 'none', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', transition: 'all 0.2s' },
+  micButton: { width: '72px', height: '72px', borderRadius: '50%', background: COLORS.primaryGradient, border: '4px solid white', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', transition: 'all 0.2s', boxShadow: '0 4px 12px rgba(0,0,0,0.2)' },
   micButtonListening: { backgroundColor: COLORS.error, background: COLORS.error },
   errorText: { color: COLORS.error, textAlign: 'center', fontWeight: '500' },
 };

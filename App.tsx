@@ -10,6 +10,7 @@ import { LoginScreen } from './components/LoginScreen';
 import type { Module, Exercise, AnalysisResult, VoiceAnalysisResult, DifficultyLevel, User, UserProgress } from './types';
 import { MODULES, COLORS } from './constants';
 import { initialUserDatabase } from './database';
+import { soundService } from './services/soundService';
 
 type AppState =
   | { screen: 'home' }
@@ -113,6 +114,7 @@ const App: React.FC = () => {
   };
 
   const handleLogout = () => {
+    soundService.playClick();
     setIsAuthenticated(false);
     setCurrentUser(null);
     setAppState({ screen: 'home' });
@@ -223,6 +225,7 @@ const App: React.FC = () => {
   const hoverStyle = `
       .logout-button:hover {
         opacity: 0.9;
+        transform: translateY(-2px);
       }
     `;
 
@@ -231,9 +234,11 @@ const App: React.FC = () => {
   }
 
   let screenContent;
+  let screenKey = 'home'; // default key
 
   switch (appState.screen) {
     case 'home':
+      screenKey = 'home';
       screenContent = <HomeScreen 
                 onSelectModule={handleSelectModule} 
                 currentUser={currentUser}
@@ -241,12 +246,15 @@ const App: React.FC = () => {
              />;
       break;
     case 'module':
+      screenKey = appState.module.id;
       screenContent = <ModuleScreen module={appState.module} onSelectExercise={handleSelectExercise} onBack={handleBack} />;
       break;
     case 'custom_setup':
+      screenKey = 'custom_setup';
       screenContent = <CustomSetupScreen module={appState.module} onStart={handleStartCustomExercise} onBack={handleBack} />;
       break;
     case 'exercise':
+        screenKey = appState.exercise.id;
         screenContent = <ExerciseScreen 
                     exercise={appState.exercise} 
                     onCompleteWritten={handleCompleteWrittenExercise} 
@@ -255,12 +263,15 @@ const App: React.FC = () => {
                     onApiKeyError={handleApiKeyError} />;
         break;
     case 'report':
+        screenKey = `report-${appState.exercise.id}`;
         screenContent = <AnalysisReportScreen result={appState.result} exercise={appState.exercise} onRetry={handleRetryExercise} onNext={handleNextExercise} />;
         break;
     case 'voice_report':
+        screenKey = `voice-report-${appState.exercise.id}`;
         screenContent = <VoiceAnalysisReportScreen result={appState.result} exercise={appState.exercise} onRetry={handleRetryExercise} onNext={handleNextExercise} />;
         break;
     case 'api_key_error':
+        screenKey = 'api_key_error';
         screenContent = <ApiKeyErrorScreen error={appState.error} />;
         break;
     default:
@@ -274,12 +285,17 @@ const App: React.FC = () => {
   return (
     <div>
         <style>{hoverStyle}</style>
-        {screenContent}
+        <div key={screenKey} style={{ animation: 'fadeInUp 0.5s ease-out' }}>
+            {screenContent}
+        </div>
         {appState.screen !== 'api_key_error' && (
             <footer style={styles.footer}>
                 <button onClick={handleLogout} style={styles.logoutButton} className="logout-button">
                     Logout
                 </button>
+                <p style={styles.copyrightText}>
+                    CES Coach © Copyright 2025 email: cfs@centrocfs.it
+                </p>
             </footer>
         )}
     </div>
@@ -302,6 +318,12 @@ const styles: { [key: string]: React.CSSProperties } = {
         borderRadius: '8px',
         cursor: 'pointer',
         transition: 'all 0.2s ease',
+        boxShadow: '0 4px 12px rgba(220, 53, 69, 0.3)',
+    },
+    copyrightText: {
+        marginTop: '24px',
+        fontSize: '14px',
+        color: COLORS.textSecondary,
     }
 };
 

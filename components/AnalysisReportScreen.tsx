@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AnalysisResult, Exercise } from '../types';
 import { COLORS } from '../constants';
-import { CheckCircleIcon, XCircleIcon, RetryIcon, HomeIcon } from './Icons';
+import { CheckCircleIcon, XCircleIcon, RetryIcon, HomeIcon, LightbulbIcon } from './Icons';
+import { soundService } from '../services/soundService';
 
 interface AnalysisReportScreenProps {
   result: AnalysisResult;
@@ -10,13 +11,48 @@ interface AnalysisReportScreenProps {
   onNext: () => void;
 }
 
+const KEYWORDS = [
+    'efficace', 'chiaro', 'empatico', 'tono', 'ritmo', 'pause', 'volume', 'assertività', 'costruttivo', 
+    'soluzione', 'obiettivo', 'strategico', 'ottimo', 'eccellente', 'ben', 'buon', 'correttamente', 
+    'giusto', 'prova a', 'cerca di', 'evita di', 'potresti', 'considera', 'concentrati su', 
+    'ricorda di', 'lavora su', 'registra', 'ascolta', 'leggi', 'parla', 'esercitati', 
+    'identifica', 'scrivi', 'comunica', 'gestisci', 'usa', 'mantieni', 'assicurati'
+];
+
+const HighlightText: React.FC<{ text: string }> = ({ text }) => {
+    if (!text) return null;
+    // Regex to split by keywords, keeping the delimiters, ensuring they are whole words (\b)
+    const regex = new RegExp(`\\b(${KEYWORDS.join('|')})\\b`, 'gi');
+    const parts = text.split(regex);
+
+    return (
+        <>
+            {parts.map((part, index) => 
+                KEYWORDS.some(keyword => new RegExp(`^${keyword}$`, 'i').test(part)) ? (
+                    <strong key={index} style={{ color: COLORS.primary, fontWeight: '700' }}>{part}</strong>
+                ) : (
+                    part
+                )
+            )}
+        </>
+    );
+};
+
 const ScoreCircle: React.FC<{ score: number }> = ({ score }) => {
+  const [displayScore, setDisplayScore] = useState(0);
   const circumference = 2 * Math.PI * 52; // 2 * pi * radius
-  const offset = circumference - (score / 100) * circumference;
   
   let strokeColor = COLORS.success;
   if (score < 70) strokeColor = COLORS.warning;
   if (score < 40) strokeColor = COLORS.error;
+
+  useEffect(() => {
+    const animation = requestAnimationFrame(() => {
+        setDisplayScore(score);
+    });
+    return () => cancelAnimationFrame(animation);
+  }, [score]);
+
 
   return (
     <div style={styles.scoreContainer}>
@@ -30,12 +66,12 @@ const ScoreCircle: React.FC<{ score: number }> = ({ score }) => {
           stroke={strokeColor}
           strokeWidth="8"
           strokeDasharray={circumference}
-          strokeDashoffset={offset}
+          strokeDashoffset={circumference - (displayScore / 100) * circumference}
           strokeLinecap="round"
-          style={{ transition: 'stroke-dashoffset 0.8s ease-out' }}
+          style={{ transition: 'stroke-dashoffset 1s cubic-bezier(0.25, 1, 0.5, 1)' }}
         />
       </svg>
-      <div style={styles.scoreText}>{score}<span style={{fontSize: '20px'}}>%</span></div>
+      <div style={{...styles.scoreText, animation: 'popIn 0.5s 0.8s ease-out both'}}>{score}<span style={{fontSize: '20px'}}>%</span></div>
     </div>
   );
 };
@@ -61,13 +97,29 @@ const ResponseText: React.FC<{ text: string }> = ({ text }) => {
 
 export const AnalysisReportScreen: React.FC<AnalysisReportScreenProps> = ({ result, exercise, onRetry, onNext }) => {
   const [activeTab, setActiveTab] = useState<'short' | 'long'>('short');
+
+  useEffect(() => {
+    soundService.playSuccess();
+  }, []);
+  
+  const handleRetry = () => {
+    soundService.playClick();
+    onRetry();
+  };
+  
+  const handleNext = () => {
+    soundService.playClick();
+    onNext();
+  };
   
   const hoverStyle = `
-    .primary-button:hover {
-      opacity: 0.9;
+    .primary-button:hover, .secondary-button:hover {
+      transform: translateY(-2px);
+      filter: brightness(1.1);
     }
-    .secondary-button:hover {
-      background-color: rgba(88, 166, 166, 0.1);
+     .primary-button:active, .secondary-button:active {
+      transform: translateY(0);
+      filter: brightness(0.95);
     }
   `;
 
@@ -80,29 +132,37 @@ export const AnalysisReportScreen: React.FC<AnalysisReportScreenProps> = ({ resu
         <ScoreCircle score={result.score} />
         
         <div style={styles.feedbackGrid}>
-            <div style={styles.feedbackCard}>
+            <div style={{...styles.feedbackCard, animation: 'fadeInUp 0.5s 0.2s ease-out both'}}>
                 <h2 style={styles.sectionTitle}><CheckCircleIcon style={{color: COLORS.success}}/> Punti di Forza</h2>
                 <ul style={styles.list}>
-                    {result.strengths.map((item, index) => <li key={index} style={styles.listItem}>{item}</li>)}
+                    {result.strengths.map((item, index) => 
+                        <li key={index} style={styles.listItem}>
+                            <CheckCircleIcon style={{...styles.listItemIcon, color: COLORS.success}} />
+                            <span style={styles.listItemText}><HighlightText text={item} /></span>
+                        </li>
+                    )}
                 </ul>
             </div>
 
-            <div style={styles.feedbackCard}>
-                <h2 style={styles.sectionTitle}><XCircleIcon style={{color: COLORS.error}}/> Aree di Miglioramento</h2>
+            <div style={{...styles.feedbackCard, animation: 'fadeInUp 0.5s 0.4s ease-out both'}}>
+                <h2 style={styles.sectionTitle}><LightbulbIcon style={{color: COLORS.warning}}/> Aree di Miglioramento</h2>
                 <ul style={styles.list}>
                   {result.areasForImprovement.map((item, index) => (
                     <li key={index} style={styles.listItem}>
-                      <span>{item.suggestion}</span>
-                      <span style={styles.exampleText}>
-                        <strong>Esempio:</strong> <em>"{item.example}"</em>
-                      </span>
+                      <LightbulbIcon style={{...styles.listItemIcon, color: COLORS.warning}} />
+                      <div style={styles.listItemText}>
+                        <span><HighlightText text={item.suggestion} /></span>
+                        <span style={styles.exampleText}>
+                          <strong>Esempio:</strong> <em>"{item.example}"</em>
+                        </span>
+                      </div>
                     </li>
                   ))}
                 </ul>
             </div>
         </div>
         
-        <div style={styles.suggestedResponseContainer}>
+        <div style={{...styles.suggestedResponseContainer, animation: 'fadeInUp 0.5s 0.6s ease-out both'}}>
           <h2 style={styles.sectionTitle}>Risposta Suggerita</h2>
           <div style={styles.tabs}>
             <button 
@@ -125,10 +185,10 @@ export const AnalysisReportScreen: React.FC<AnalysisReportScreenProps> = ({ resu
         </div>
 
         <div style={styles.buttonContainer}>
-          <button onClick={onRetry} style={styles.secondaryButton} className="secondary-button">
+          <button onClick={handleRetry} style={styles.secondaryButton} className="secondary-button">
             <RetryIcon /> Riprova Esercizio
           </button>
-          <button onClick={onNext} style={styles.primaryButton} className="primary-button">
+          <button onClick={handleNext} style={styles.primaryButton} className="primary-button">
             Menu Principale <HomeIcon />
           </button>
         </div>
@@ -207,6 +267,18 @@ const styles: { [key: string]: React.CSSProperties } = {
         color: COLORS.textSecondary,
         lineHeight: 1.6,
         marginBottom: '18px',
+        display: 'flex',
+        alignItems: 'flex-start',
+        gap: '12px',
+    },
+    listItemIcon: {
+        flexShrink: 0,
+        width: '20px',
+        height: '20px',
+        marginTop: '3px',
+    },
+    listItemText: {
+        flex: 1,
     },
     exampleText: {
       display: 'block',
@@ -275,7 +347,8 @@ const styles: { [key: string]: React.CSSProperties } = {
         display: 'flex',
         alignItems: 'center',
         gap: '8px',
-        fontWeight: 500
+        fontWeight: 500,
+        transition: 'all 0.2s ease',
     },
     primaryButton: {
         padding: '12px 24px',
@@ -289,6 +362,6 @@ const styles: { [key: string]: React.CSSProperties } = {
         display: 'flex',
         alignItems: 'center',
         gap: '8px',
-        transition: 'opacity 0.2s ease',
+        transition: 'all 0.2s ease',
     },
 };

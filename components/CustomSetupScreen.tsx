@@ -1,7 +1,8 @@
 import React, { useState, useRef } from 'react';
 import { Module, IconComponent } from '../types';
 import { COLORS } from '../constants';
-import { HomeIcon, UploadIcon, ConflictIcon, FeedbackIcon, ListeningIcon, QuestionIcon } from './Icons';
+import { HomeIcon, UploadIcon, ConflictIcon, FeedbackIcon, ListeningIcon, QuestionIcon, NextIcon } from './Icons';
+import { soundService } from '../services/soundService';
 
 interface CustomSetupScreenProps {
   module: Module;
@@ -74,7 +75,25 @@ const CustomSetupScreen: React.FC<CustomSetupScreenProps> = ({ module, onStart, 
     };
 
     const handleUploadClick = () => {
+        soundService.playClick();
         fileInputRef.current?.click();
+    };
+    
+    const handleObjectiveClick = (objective: TrainingObjective) => {
+        soundService.playClick();
+        setSelectedObjective(objective);
+    };
+    
+    const handleStartClick = () => {
+        if(selectedObjective) {
+            soundService.playClick();
+            onStart(scenario, selectedObjective.label)
+        }
+    };
+    
+    const handleBackClick = () => {
+        soundService.playClick();
+        onBack();
     };
 
     const isReadyToStart = scenario.trim() !== '' && selectedObjective !== null;
@@ -82,21 +101,30 @@ const CustomSetupScreen: React.FC<CustomSetupScreenProps> = ({ module, onStart, 
     const hoverStyle = `
       .objective-button:not(.selected):hover {
         background-color: ${COLORS.cardDark};
+        transform: translateY(-3px);
       }
-      .back-button:hover {
+      .back-button:hover, .upload-button:hover, .start-button:hover {
         opacity: 0.9;
+        transform: translateY(-2px);
+      }
+      .start-button:active {
+        transform: translateY(0px);
       }
       #scenario-input::placeholder {
         color: ${COLORS.textSecondary};
         opacity: 1;
       }
+       #scenario-input:focus {
+        border-color: ${COLORS.secondary};
+        box-shadow: 0 0 0 3px rgba(88, 166, 166, 0.2);
+    }
     `;
 
     return (
         <div style={styles.container}>
             <style>{hoverStyle}</style>
             <header style={styles.header}>
-                <button onClick={onBack} className="back-button" style={styles.backButton}>
+                <button onClick={handleBackClick} className="back-button" style={styles.backButton}>
                     <HomeIcon /> Menu
                 </button>
                 <div style={styles.titleContainer}>
@@ -106,7 +134,7 @@ const CustomSetupScreen: React.FC<CustomSetupScreenProps> = ({ module, onStart, 
                 <p style={styles.description}>{module.description}</p>
             </header>
             <main style={styles.setupForm}>
-                <div style={styles.step}>
+                <div style={{...styles.step, animation: 'fadeInUp 0.3s ease-out both'}}>
                     <label style={styles.label} htmlFor="scenario-input">1. Descrivi il tuo scenario</label>
                     <textarea
                         id="scenario-input"
@@ -117,7 +145,7 @@ const CustomSetupScreen: React.FC<CustomSetupScreenProps> = ({ module, onStart, 
                         rows={8}
                     />
                     <div style={styles.uploadSection}>
-                        <button onClick={handleUploadClick} style={styles.uploadButton}>
+                        <button onClick={handleUploadClick} style={styles.uploadButton} className="upload-button">
                             <UploadIcon /> Carica da File (.txt, .pdf)
                         </button>
                         {fileMessage && <p style={styles.fileMessage}>{fileMessage}</p>}
@@ -131,7 +159,7 @@ const CustomSetupScreen: React.FC<CustomSetupScreenProps> = ({ module, onStart, 
                     />
                 </div>
 
-                <div style={styles.step}>
+                <div style={{...styles.step, animation: 'fadeInUp 0.3s 0.1s ease-out both'}}>
                     <label style={styles.label}>2. Scegli il tuo obiettivo di allenamento</label>
                     <div style={styles.objectiveOptions}>
                         {trainingObjectives.map(objective => {
@@ -140,12 +168,14 @@ const CustomSetupScreen: React.FC<CustomSetupScreenProps> = ({ module, onStart, 
                             return (
                                 <button
                                     key={objective.id}
-                                    onClick={() => setSelectedObjective(objective)}
+                                    onClick={() => handleObjectiveClick(objective)}
+                                    onMouseEnter={() => soundService.playHover()}
                                     style={{
                                         ...styles.objectiveButton,
                                         backgroundColor: isSelected ? objective.color : 'white',
                                         color: isSelected ? 'white' : COLORS.textPrimary,
                                         border: `2px solid ${isSelected ? objective.color : COLORS.divider}`,
+                                        transform: isSelected ? 'translateY(-3px)' : 'none',
                                     }}
                                     className={`objective-button ${isSelected ? 'selected' : ''}`}
                                 >
@@ -158,11 +188,12 @@ const CustomSetupScreen: React.FC<CustomSetupScreenProps> = ({ module, onStart, 
                 </div>
 
                 <button
-                    onClick={() => selectedObjective && onStart(scenario, selectedObjective.label)}
-                    style={{...styles.startButton, ...(!isReadyToStart ? styles.startButtonDisabled : {})}}
+                    onClick={handleStartClick}
+                    style={{...styles.startButton, ...(!isReadyToStart ? styles.startButtonDisabled : {}), animation: 'fadeInUp 0.3s 0.2s ease-out both'}}
                     disabled={!isReadyToStart}
+                    className="start-button"
                 >
-                    Inizia Allenamento
+                    Inizia Allenamento <NextIcon/>
                 </button>
             </main>
         </div>
@@ -189,6 +220,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     top: '20px',
     left: '20px',
     transition: 'all 0.2s ease',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
   },
   titleContainer: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', marginBottom: '16px' },
   title: { fontSize: '32px', color: COLORS.textPrimary, fontWeight: 'bold' },
@@ -196,14 +228,14 @@ const styles: { [key: string]: React.CSSProperties } = {
   setupForm: { display: 'flex', flexDirection: 'column', gap: '32px', backgroundColor: COLORS.accentBeige, padding: '24px', borderRadius: '12px' },
   step: { display: 'flex', flexDirection: 'column', gap: '12px' },
   label: { fontSize: '18px', fontWeight: '600', color: COLORS.textPrimary, textAlign: 'left' },
-  textarea: { width: '100%', padding: '12px 16px', fontSize: '16px', borderRadius: '12px', border: `1px solid ${COLORS.divider}`, resize: 'vertical', fontFamily: 'inherit', backgroundColor: 'white', color: COLORS.textPrimary },
+  textarea: { width: '100%', padding: '12px 16px', fontSize: '16px', borderRadius: '12px', border: `1px solid ${COLORS.divider}`, resize: 'vertical', fontFamily: 'inherit', backgroundColor: 'white', color: COLORS.textPrimary, outline: 'none', transition: 'border-color 0.2s, box-shadow 0.2s' },
   uploadSection: {
     display: 'flex',
     alignItems: 'center',
     gap: '16px',
     flexWrap: 'wrap',
   },
-  uploadButton: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '10px 16px', fontSize: '14px', borderRadius: '8px', border: `1px solid ${COLORS.textSecondary}`, backgroundColor: 'rgba(0,0,0,0.05)', cursor: 'pointer', color: COLORS.textPrimary },
+  uploadButton: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '10px 16px', fontSize: '14px', borderRadius: '8px', border: 'none', backgroundColor: COLORS.secondary, cursor: 'pointer', color: 'white', transition: 'opacity 0.2s ease, transform 0.2s ease' },
   fileMessage: {
     fontSize: '13px',
     color: COLORS.textSecondary,
@@ -226,6 +258,7 @@ const styles: { [key: string]: React.CSSProperties } = {
       gap: '12px',
       textAlign: 'left',
       fontWeight: '600',
+      boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
   },
   objectiveIcon: {
       width: '28px',
@@ -235,8 +268,8 @@ const styles: { [key: string]: React.CSSProperties } = {
   objectiveLabel: {
       lineHeight: 1.4,
   },
-  startButton: { padding: '16px 24px', fontSize: '18px', fontWeight: 'bold', borderRadius: '8px', border: 'none', background: 'white', color: COLORS.secondary, cursor: 'pointer', transition: 'all 0.2s ease', alignSelf: 'center' },
-  startButtonDisabled: { background: '#ccc', cursor: 'not-allowed', opacity: 0.7, color: '#666' },
+  startButton: { display: 'flex', alignItems: 'center', gap: '8px', padding: '16px 24px', fontSize: '18px', fontWeight: 'bold', borderRadius: '8px', border: 'none', background: COLORS.primaryGradient, color: 'white', cursor: 'pointer', transition: 'all 0.2s ease', alignSelf: 'center', boxShadow: '0 4px 15px rgba(14, 58, 93, 0.3)' },
+  startButtonDisabled: { background: '#ccc', cursor: 'not-allowed', opacity: 0.7, color: '#666', boxShadow: 'none' },
   footer: {
       marginTop: '40px',
       display: 'flex',

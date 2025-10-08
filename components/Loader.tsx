@@ -3,7 +3,11 @@ import { COLORS } from '../constants';
 
 export const Loader = () => (
   <div style={styles.container}>
-    <div style={styles.spinner}></div>
+    <div style={styles.dotsContainer}>
+      <div style={{...styles.dot, animationDelay: '0s'}}></div>
+      <div style={{...styles.dot, animationDelay: '0.2s'}}></div>
+      <div style={{...styles.dot, animationDelay: '0.4s'}}></div>
+    </div>
     <p style={styles.text}>Analisi in corso...</p>
     <p style={styles.subtext}>L'AI sta elaborando la tua risposta.</p>
   </div>
@@ -19,16 +23,19 @@ const styles: { [key: string]: React.CSSProperties } = {
     textAlign: 'center',
     backgroundColor: COLORS.base,
   },
-  spinner: {
-    border: `4px solid ${COLORS.divider}`,
-    borderTop: `4px solid ${COLORS.primary}`,
+  dotsContainer: {
+    display: 'flex',
+    gap: '12px',
+  },
+  dot: {
+    width: '16px',
+    height: '16px',
     borderRadius: '50%',
-    width: '40px',
-    height: '40px',
-    animation: 'spin 1s linear infinite',
+    backgroundColor: COLORS.primary,
+    animation: 'pulse-dot 1.4s infinite ease-in-out both',
   },
   text: {
-    marginTop: '24px',
+    marginTop: '32px',
     color: COLORS.textPrimary,
     fontSize: '18px',
     fontWeight: 500,
@@ -40,15 +47,21 @@ const styles: { [key: string]: React.CSSProperties } = {
 };
 
 const keyframes = `
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+@keyframes pulse-dot {
+  0%, 80%, 100% {
+    transform: scale(0.6);
+    opacity: 0.5;
+  }
+  40% {
+    transform: scale(1.0);
+    opacity: 1;
+  }
 }
 `;
-const styleSheet = document.getElementById('app-keyframes');
+const styleSheet = document.getElementById('app-keyframes-loader');
 if (!styleSheet) {
     const newStyleSheet = document.createElement("style");
-    newStyleSheet.id = 'app-keyframes';
+    newStyleSheet.id = 'app-keyframes-loader';
     newStyleSheet.innerText = keyframes;
     document.head.appendChild(newStyleSheet);
 }
