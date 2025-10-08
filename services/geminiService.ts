@@ -2,10 +2,18 @@ import { GoogleGenAI, Type } from "@google/genai";
 import type { AnalysisResult, ImprovementArea, VoiceAnalysisResult, VoiceScore, CommunicatorProfile } from '../types';
 
 const getAI = () => {
-  // Crea una nuova istanza ogni volta per garantire che venga utilizzata la configurazione 
-  // più recente dell'ambiente, inclusa la API_KEY, che potrebbe essere caricata 
-  // in modo asincrono o con un leggero ritardo. Questo approccio è più robusto.
-  return new GoogleGenAI({ apiKey: process.env.API_KEY });
+  // Basandosi sulle informazioni di debug fornite dall'utente, l'ambiente potrebbe essere
+  // configurato con GOOGLE_API_KEY. Diamo priorità a quella, con un fallback a API_KEY.
+  const apiKey = process.env.GOOGLE_API_KEY || process.env.API_KEY;
+
+  // Lanciamo un errore specifico se nessuna chiave viene trovata. Questo errore verrà
+  // catturato dalle funzioni chiamanti e passato al gestore onApiKeyError per
+  // mostrare un messaggio chiaro all'utente, invece di un errore generico.
+  if (!apiKey) {
+    throw new Error("Né GOOGLE_API_KEY né API_KEY sono state trovate nelle variabili d'ambiente. Impossibile inizializzare il servizio AI.");
+  }
+  
+  return new GoogleGenAI({ apiKey });
 };
 
 const analysisSchema = {
@@ -64,7 +72,7 @@ export const analyzeResponse = async (
   isVerbal: boolean,
 ): Promise<AnalysisResult> => {
   try {
-    const ai = getAI();
+    const ai = getAI(); // This will now throw if the key is missing
 
     const verbalContext = isVerbal 
         ? "La risposta dell'utente è stata fornita verbalmente. Considera fattori come la concisione e la chiarezza adatti alla comunicazione parlata. Ignora eventuali errori di trascrizione o di battitura."
@@ -117,7 +125,6 @@ export const analyzeResponse = async (
 
     let jsonStringToParse = rawText.trim();
     
-    // Fallback in case the model wraps the response in markdown despite schema definition
     const jsonBlockMatch = jsonStringToParse.match(/```json\s*([\s\S]+?)\s*```/);
     if (jsonBlockMatch && jsonBlockMatch[1]) {
         jsonStringToParse = jsonBlockMatch[1];
@@ -150,14 +157,12 @@ export const analyzeResponse = async (
     return result;
 
   } catch (error: any) {
-    console.error("Errore durante l'analisi della risposta con Gemini:", error);
-    if (error.message.includes('API key') || error.message.includes('API_KEY')) {
-         throw new Error("API_KEY non valida o mancante. Controlla la configurazione del tuo ambiente.");
+    console.error("Errore dettagliato durante l'analisi della risposta con Gemini:", error);
+    // Se l'errore è dovuto alla chiave API mancante, la UI mostrerà una schermata dedicata.
+    if (error.message.includes('API_KEY')) {
+         throw error;
     }
-    // Re-throw specific errors for better frontend handling
-    if (error.message.includes("L'API") || error.message.includes("Formato di analisi")) {
-        throw error;
-    }
+    // Per altri errori, mostriamo un messaggio più generico ma manteniamo il dettaglio in console.
     throw new Error("Impossibile ottenere l'analisi dal servizio. Riprova più tardi.");
   }
 };
@@ -302,12 +307,9 @@ export const analyzeParaverbalResponse = async (
         return result;
 
     } catch (error: any) {
-        console.error("Errore durante l'analisi paraverbale con Gemini:", error);
-        if (error.message.includes('API key') || error.message.includes('API_KEY')) {
-             throw new Error("API_KEY non valida o mancante. Controlla la configurazione del tuo ambiente.");
-        }
-        if (error.message.includes("L'API") || error.message.includes("Formato di analisi")) {
-            throw error;
+        console.error("Errore dettagliato durante l'analisi paraverbale con Gemini:", error);
+        if (error.message.includes('API_KEY')) {
+             throw error;
         }
         throw new Error("Impossibile ottenere l'analisi vocale dal servizio. Riprova più tardi.");
     }
@@ -402,12 +404,9 @@ export const generateCommunicatorProfile = async (
         return result;
 
     } catch (error: any) {
-        console.error("Errore durante la generazione del profilo comunicatore:", error);
-        if (error.message.includes('API key')) {
-             throw new Error("API_KEY non valida o mancante.");
-        }
-        if (error.message.includes("L'API") || error.message.includes("Formato del profilo")) {
-            throw error;
+        console.error("Errore dettagliato durante la generazione del profilo comunicatore:", error);
+        if (error.message.includes('API_KEY')) {
+             throw error;
         }
         throw new Error("Impossibile generare il profilo comunicatore.");
     }
