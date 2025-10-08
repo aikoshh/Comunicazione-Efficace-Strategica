@@ -1,15 +1,5 @@
 {
-  "name": "ces-coach-app",
-  "version": "1.0.0",
-  "description": "CES Coach with Vercel Serverless Functions",
-  "private": true,
   "dependencies": {
     "@google/genai": "^1.22.0"
-  },
-  "devDependencies": {
-    "@types/react": "^18.0.0",
-    "@types/react-dom": "^18.0.0",
-    "@vercel/node": "^3.1.0",
-    "typescript": "^5.0.0"
   }
 }
