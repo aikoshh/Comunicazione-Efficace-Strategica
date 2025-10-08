@@ -173,16 +173,16 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onRegister, o
         ) : (
           <RegistrationForm onRegister={onRegister} setView={setView} />
         )}
+        <p style={styles.copyrightText}>
+            CES Coach © Copyright 2025 email: cfs@centrocfs.it
+        </p>
       </div>
-      <p style={styles.copyrightText}>
-          CES Coach © Copyright 2025 email: cfs@centrocfs.it
-      </p>
     </div>
   );
 };
 
 const styles: { [key: string]: React.CSSProperties } = {
-    container: { display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', backgroundColor: COLORS.base, padding: '20px', position: 'relative' },
+    container: { display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', backgroundColor: COLORS.base, padding: '20px' },
     loginBox: { backgroundColor: COLORS.card, padding: '40px', borderRadius: '12px', border: `1px solid ${COLORS.divider}`, width: '100%', maxWidth: '450px', textAlign: 'center', boxShadow: '0 8px 30px rgba(0,0,0,0.12)', animation: 'fadeInUp 0.5s ease-out' },
     logoContainer: { marginBottom: '24px', display: 'flex', justifyContent: 'center' },
     logoImage: {
@@ -202,12 +202,10 @@ const styles: { [key: string]: React.CSSProperties } = {
     errorText: { color: 'white', backgroundColor: COLORS.error, padding: '12px', borderRadius: '8px', fontSize: '14px', marginBottom: '16px', border: 'none', textAlign: 'center' },
     successText: { color: 'white', backgroundColor: COLORS.success, padding: '12px', borderRadius: '8px', fontSize: '14px', marginBottom: '16px', border: 'none', textAlign: 'center' },
     copyrightText: {
-        position: 'absolute',
-        bottom: '20px',
-        left: 0,
-        right: 0,
+        marginTop: '32px',
         textAlign: 'center',
-        fontSize: '14px',
+        fontSize: '12px',
         color: COLORS.textSecondary,
+        lineHeight: '1.4',
     }
 };

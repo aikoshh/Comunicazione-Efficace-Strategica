@@ -1,4 +1,4 @@
-import { Module, DifficultyLevel, ExerciseType } from './types';
+import { Module, DifficultyLevel, ExerciseType, Exercise } from './types';
 import { 
     FeedbackIcon, ConflictIcon, QuestionIcon, CustomIcon, ListeningIcon,
     HealthcareIcon, EducationIcon, CustomerCareIcon, RetailIcon, BankingIcon,
@@ -56,6 +56,34 @@ export const VOICE_RUBRIC_CRITERIA = [
     { id: "disfluencies", label: "Disfluenze & Filler" },
     { id: "strategy_alignment", label: "Allineamento all'Obiettivo CES" },
 ];
+
+export const STRATEGIC_CHECKUP_EXERCISES: Exercise[] = [
+    {
+      id: 'checkup-1',
+      title: 'Check-up 1/3: Dare un Feedback',
+      scenario: 'Devi dare un feedback a un collega, Alex, che ha presentato un lavoro incompleto e con diversi errori. È la prima volta che succede, ma il progetto è critico.',
+      task: 'Scrivi o registra il feedback che daresti ad Alex per affrontare la situazione in modo costruttivo.',
+      difficulty: DifficultyLevel.INTERMEDIO,
+      exerciseType: ExerciseType.WRITTEN,
+    },
+    {
+      id: 'checkup-2',
+      title: 'Check-up 2/3: Gestire un Conflitto',
+      scenario: 'Durante una riunione, un altro team leader mette in discussione pubblicamente l\'approccio del tuo team, usando un tono che percepisci come accusatorio.',
+      task: 'Scrivi o registra la tua risposta immediata per gestire la situazione professionalmente, senza innescare un\'escalation.',
+      difficulty: DifficultyLevel.INTERMEDIO,
+      exerciseType: ExerciseType.WRITTEN,
+    },
+    {
+      id: 'checkup-3',
+      title: 'Check-up 3/3: Ascolto e Domande',
+      scenario: 'Un cliente ti dice: "Non sono soddisfatto del servizio. Semplicemente non sta funzionando come mi aspettavo".',
+      task: 'Scrivi o registra la prima domanda che faresti per capire a fondo il problema del cliente, dimostrando ascolto attivo.',
+      difficulty: DifficultyLevel.BASE,
+      exerciseType: ExerciseType.WRITTEN,
+    },
+];
+
 
 export const MODULES: Module[] = [
   // Fondamentali
@@ -234,6 +262,7 @@ export const MODULES: Module[] = [
     description: 'Comunica con empatia e chiarezza con pazienti e colleghi in contesti sanitari complessi.',
     icon: HealthcareIcon,
     category: 'Pacchetti Settoriali',
+    prerequisites: ['m4', 'm2'], // Requires Listening and Conflict Management
     exercises: [
         {
             id: 's1e1',
@@ -250,6 +279,7 @@ export const MODULES: Module[] = [
     description: 'Gestisci la comunicazione con studenti, genitori e colleghi per un ambiente educativo più efficace.',
     icon: EducationIcon,
     category: 'Pacchetti Settoriali',
+    prerequisites: ['m1', 'm2'], // Requires Feedback and Conflict Management
     exercises: [
         {
             id: 's2e1',
@@ -266,6 +296,7 @@ export const MODULES: Module[] = [
     description: 'Trasforma clienti insoddisfatti in sostenitori del brand attraverso una comunicazione magistrale.',
     icon: CustomerCareIcon,
     category: 'Pacchetti Settoriali',
+    prerequisites: ['m4', 'm2'], // Requires Listening and Conflict Management
     exercises: [
         {
             id: 's3e1',
@@ -277,59 +308,12 @@ export const MODULES: Module[] = [
     ],
   },
   {
-    id: 's4',
-    title: 'Retail',
-    description: 'Migliora l\'esperienza del cliente e gestisci situazioni complesse nel punto vendita.',
-    icon: RetailIcon,
-    category: 'Pacchetti Settoriali',
-    exercises: [
-        {
-            id: 's4e1',
-            title: 'Gestire un Reso Fuori Policy',
-            scenario: 'Un cliente vuole restituire un articolo chiaramente usato e al di fuori dei termini di reso. Insiste per avere un rimborso completo, alzando la voce in negozio.',
-            task: 'Comunica la policy aziendale in modo fermo ma gentile, mantenendo la calma e offrendo alternative valide per non perdere il cliente.',
-            difficulty: DifficultyLevel.BASE,
-        }
-    ],
-  },
-  {
-    id: 's5',
-    title: 'Banking',
-    description: 'Comunica prodotti finanziari complessi in modo semplice e costruisci fiducia con i clienti.',
-    icon: BankingIcon,
-    category: 'Pacchetti Settoriali',
-    exercises: [
-        {
-            id: 's5e1',
-            title: 'Spiegare il Rifiuto di un Prestito',
-            scenario: 'Devi comunicare a un cliente di lunga data che la sua richiesta di prestito non è stata approvata. Il cliente conta molto su quei fondi.',
-            task: 'Comunica la decisione con delicatezza ed empatia, spiegando le ragioni in modo comprensibile (senza gergo tecnico) e discutendo possibili passi futuri.',
-            difficulty: DifficultyLevel.INTERMEDIO,
-        }
-    ],
-  },
-  {
-    id: 's6',
-    title: 'HR: Colloqui',
-    description: 'Conduci colloqui di selezione e performance che rivelino il vero potenziale dei candidati e dei dipendenti.',
-    icon: HRIcon,
-    category: 'Pacchetti Settoriali',
-    exercises: [
-        {
-            id: 's6e1',
-            title: 'Colloquio di Performance Correttivo',
-            scenario: 'Devi condurre un colloquio di performance con un dipendente le cui prestazioni sono calate. L\'obiettivo è motivarlo, non demotivarlo.',
-            task: 'Struttura la conversazione usando il metodo "fatti-impatto-futuro", incoraggiando l\'auto-riflessione del dipendente e definendo insieme obiettivi chiari.',
-            difficulty: DifficultyLevel.INTERMEDIO,
-        }
-    ],
-  },
-  {
     id: 's7',
     title: 'Vendita Consulenziale',
     description: 'Passa dalla vendita di prodotti alla creazione di partnership strategiche attraverso l\'ascolto e le domande.',
     icon: SalesIcon,
     category: 'Pacchetti Settoriali',
+    prerequisites: ['m4', 'm3'], // Requires Listening and Questioning
     exercises: [
         {
             id: 's7e1',
@@ -346,6 +330,7 @@ export const MODULES: Module[] = [
     description: 'Ispira il tuo team, gestisci il cambiamento e comunica la visione con l\'impatto di un vero leader.',
     icon: LeadershipIcon,
     category: 'Pacchetti Settoriali',
+    prerequisites: ['m1', 'm2', 'm5'], // Requires Feedback, Conflict and Voice
     exercises: [
         {
             id: 's8e1',

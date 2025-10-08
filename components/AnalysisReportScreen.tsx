@@ -100,6 +100,7 @@ export const AnalysisReportScreen: React.FC<AnalysisReportScreenProps> = ({ resu
 
   useEffect(() => {
     soundService.playSuccess();
+    window.scrollTo(0, 0); // Scroll to top on mount
   }, []);
   
   const handleRetry = () => {
@@ -236,6 +237,9 @@ const styles: { [key: string]: React.CSSProperties } = {
         fontSize: '32px',
         fontWeight: 'bold',
         color: COLORS.textPrimary,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     feedbackGrid: {
         display: 'grid',

@@ -1,17 +1,49 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { COLORS } from '../constants';
 
-export const Loader = () => (
-  <div style={styles.container}>
-    <div style={styles.dotsContainer}>
-      <div style={{...styles.dot, animationDelay: '0s'}}></div>
-      <div style={{...styles.dot, animationDelay: '0.2s'}}></div>
-      <div style={{...styles.dot, animationDelay: '0.4s'}}></div>
+const ESTIMATED_TIME = 12; // Tempo stimato in secondi
+
+export const Loader = () => {
+  const [timeLeft, setTimeLeft] = useState(ESTIMATED_TIME);
+
+  useEffect(() => {
+    // Imposta l'intervallo del timer
+    const timer = setInterval(() => {
+      setTimeLeft(prevTime => {
+        // Ferma il timer quando arriva a 0
+        if (prevTime <= 1) {
+          clearInterval(timer);
+          return 0;
+        }
+        return prevTime - 1;
+      });
+    }, 1000);
+
+    // Pulisce l'intervallo quando il componente viene smontato
+    return () => clearInterval(timer);
+  }, []); // L'array vuoto assicura che l'effetto venga eseguito solo una volta al montaggio
+
+  return (
+    <div style={styles.container}>
+      <img
+        src="https://i.gifer.com/ZNeT.gif"
+        alt="Analisi in corso..."
+        style={styles.gif}
+      />
+      <p style={styles.text}>Analisi in corso...</p>
+      <p style={styles.subtext}>L'AI sta elaborando la tua risposta, attendi qualche istante.</p>
+      <div style={styles.countdownContainer}>
+        {timeLeft > 0 ? (
+          <p style={styles.countdownText}>
+            Tempo stimato: <strong style={styles.countdownNumber}>{timeLeft}s</strong>
+          </p>
+        ) : (
+          <p style={styles.countdownText}>Elaborazione quasi completata...</p>
+        )}
+      </div>
     </div>
-    <p style={styles.text}>Analisi in corso...</p>
-    <p style={styles.subtext}>L'AI sta elaborando la tua risposta.</p>
-  </div>
-);
+  );
+};
 
 const styles: { [key: string]: React.CSSProperties } = {
   container: {
@@ -23,45 +55,46 @@ const styles: { [key: string]: React.CSSProperties } = {
     textAlign: 'center',
     backgroundColor: COLORS.base,
   },
-  dotsContainer: {
-    display: 'flex',
-    gap: '12px',
-  },
-  dot: {
-    width: '16px',
-    height: '16px',
-    borderRadius: '50%',
-    backgroundColor: COLORS.primary,
-    animation: 'pulse-dot 1.4s infinite ease-in-out both',
+  gif: {
+    width: '150px',
+    height: '150px',
+    marginBottom: '16px',
   },
   text: {
-    marginTop: '32px',
+    marginTop: '16px',
     color: COLORS.textPrimary,
-    fontSize: '18px',
+    fontSize: '20px',
     fontWeight: 500,
+    margin: '16px 0 8px 0',
   },
   subtext: {
     color: COLORS.textSecondary,
-    fontSize: '14px',
-  }
+    fontSize: '16px',
+    maxWidth: '320px',
+    lineHeight: 1.5,
+    margin: 0,
+  },
+  countdownContainer: {
+    marginTop: '24px',
+    padding: '8px 24px',
+    borderRadius: '16px',
+    backgroundColor: COLORS.cardDark,
+    border: `1px solid ${COLORS.divider}`,
+    minHeight: '30px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  countdownText: {
+    color: COLORS.textSecondary,
+    fontSize: '16px',
+    margin: 0,
+  },
+  countdownNumber: {
+    color: COLORS.primary,
+    fontWeight: 700,
+    fontSize: '18px',
+    minWidth: '30px', // Evita sfarfallio quando le cifre cambiano
+    display: 'inline-block'
+  },
 };
-
-const keyframes = `
-@keyframes pulse-dot {
-  0%, 80%, 100% {
-    transform: scale(0.6);
-    opacity: 0.5;
-  }
-  40% {
-    transform: scale(1.0);
-    opacity: 1;
-  }
-}
-`;
-const styleSheet = document.getElementById('app-keyframes-loader');
-if (!styleSheet) {
-    const newStyleSheet = document.createElement("style");
-    newStyleSheet.id = 'app-keyframes-loader';
-    newStyleSheet.innerText = keyframes;
-    document.head.appendChild(newStyleSheet);
-}

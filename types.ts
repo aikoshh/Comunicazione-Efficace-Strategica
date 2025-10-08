@@ -38,6 +38,7 @@ export interface Module {
   isCustom?: boolean;
   cardImage?: string;
   category?: 'Fondamentali' | 'Pacchetti Settoriali';
+  prerequisites?: string[]; // Array of module IDs needed to unlock this one
 }
 
 export interface ImprovementArea {
@@ -65,6 +66,7 @@ export interface VoiceScore {
 export interface SuggestedDelivery {
   instructions: string;
   annotated_text: string;
+  ideal_script: string; // The new field for the "Strategic Replay" feature
 }
 
 export interface VoiceAnalysisResult {
@@ -99,5 +101,22 @@ export interface ScoreExplanation {
 
 // New type for user progress tracking
 export interface UserProgress {
-    scores: number[];
+  scores: number[];
+  hasCompletedCheckup?: boolean;
+  completedExerciseIds?: string[];
+  completedModuleIds?: string[];
+  dailyChallengeCompletedOn?: string; // e.g., "2024-07-29"
+  checkupResults?: {
+    strengths: string[];
+    areasToImprove: string[];
+    profileTitle: string;
+    profileDescription: string;
+  };
+}
+
+export interface CommunicatorProfile {
+    profileTitle: string;
+    profileDescription: string;
+    strengths: string[];
+    areasToImprove: string[];
 }

@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type } from "@google/genai";
-import type { AnalysisResult, ImprovementArea, VoiceAnalysisResult, VoiceScore } from '../types';
+import type { AnalysisResult, ImprovementArea, VoiceAnalysisResult, VoiceScore, CommunicatorProfile } from '../types';
 
 const getAI = () => {
   // Crea una nuova istanza ogni volta per garantire che venga utilizzata la configurazione 
@@ -47,7 +47,7 @@ const analysisSchema = {
                 },
                 long: {
                     type: Type.STRING,
-                    description: "Una versione più dettagliata e completa della risposta dell'utente che incarna i principi di comunicazione efficace. Le parole chiave importanti sono evidenziate con **doppi asterischi**."
+                    description: "Eine detailliertere und vollständigere Version der Benutzerantwort, die die Prinzipien effektiver Kommunikation verkörpert. Wichtige Schlüsselwörter sind mit **doppelten Sternchen** hervorgehoben."
                 }
             },
             required: ["short", "long"]
@@ -113,8 +113,6 @@ export const analyzeResponse = async (
     const rawText = response.text;
     let jsonStringToParse = rawText.trim();
 
-    // The model might wrap the JSON in ```json ... ``` or add introductory text.
-    // We need to robustly extract the JSON part.
     const jsonBlockMatch = jsonStringToParse.match(/```json\s*([\s\S]+?)\s*```/);
     if (jsonBlockMatch && jsonBlockMatch[1]) {
         jsonStringToParse = jsonBlockMatch[1];
@@ -122,7 +120,6 @@ export const analyzeResponse = async (
 
     const result: AnalysisResult = JSON.parse(jsonStringToParse);
 
-    // Validation
     const isValidImprovementArea = (item: any): item is ImprovementArea => {
         return typeof item === 'object' && item !== null && typeof item.suggestion === 'string' && typeof item.example === 'string';
     };
@@ -189,9 +186,10 @@ const paraverbalAnalysisSchema = {
             type: Type.OBJECT,
             properties: {
                 instructions: { type: Type.STRING },
-                annotated_text: { type: Type.STRING, description: "Il testo della risposta dell'utente, arricchito con simboli per indicare pause (☐) ed enfasi (△)." }
+                annotated_text: { type: Type.STRING, description: "Il testo della risposta dell'utente, arricchito con simboli per indicare pause (☐) ed enfasi (△)." },
+                ideal_script: { type: Type.STRING, description: "La versione ideale della risposta dell'utente, riscritta per essere pronunciata in modo ottimale. Questo testo verrà usato per la sintesi vocale." }
             },
-            required: ["instructions", "annotated_text"]
+            required: ["instructions", "annotated_text", "ideal_script"]
         }
     },
     required: ["scores", "strengths", "improvements", "actions", "micro_drill_60s", "suggested_delivery"]
@@ -239,6 +237,7 @@ export const analyzeParaverbalResponse = async (
             2. Evidenzia **3 punti di forza** e **3 aree da migliorare**.
             3. Suggerisci **3 azioni pratiche** e **1 micro-drill (≤60s)** immediato.
             4. Fornisci una **"consegna annotata"** del testo originale con simboli: ☐ (pausa), △ (enfasi). Ad esempio: "Capisco ☐ la tua preoccupazione. △ Possiamo lavorare insieme su un primo passo."
+            5. Scrivi un **"ideal_script"**: la versione ottimale della risposta dell'utente, scritta in modo naturale e pronta per essere letta da un motore di sintesi vocale.
             
             Genera l'output in formato JSON.
         `;
@@ -267,7 +266,8 @@ export const analyzeParaverbalResponse = async (
             !Array.isArray(result.improvements) ||
             !Array.isArray(result.actions) ||
             typeof result.micro_drill_60s !== 'string' ||
-            typeof result.suggested_delivery?.annotated_text !== 'string'
+            typeof result.suggested_delivery?.annotated_text !== 'string' ||
+            typeof result.suggested_delivery?.ideal_script !== 'string'
         ) {
             throw new Error("Formato di analisi paraverbale non valido ricevuto dall'API.");
         }
@@ -280,5 +280,91 @@ export const analyzeParaverbalResponse = async (
              throw new Error("API_KEY non valida o mancante. Controlla la configurazione del tuo ambiente.");
         }
         throw new Error("Impossibile ottenere l'analisi vocale dal servizio. Riprova più tardi.");
+    }
+};
+
+
+const communicatorProfileSchema = {
+    type: Type.OBJECT,
+    properties: {
+        profileTitle: {
+            type: Type.STRING,
+            description: "Un titolo accattivante e descrittivo per il profilo del comunicatore, ad esempio 'Il Diplomatico Pragmatico' o 'L'Analista Empatico'. Deve essere breve e d'impatto."
+        },
+        profileDescription: {
+            type: Type.STRING,
+            description: "Una breve descrizione (2-3 frasi) dello stile di comunicazione prevalente dell'utente, basata sulle sue risposte."
+        },
+        strengths: {
+            type: Type.ARRAY,
+            items: { type: Type.STRING },
+            description: "Un elenco di esattamente 2 punti di forza principali emersi dalle analisi."
+        },
+        areasToImprove: {
+            type: Type.ARRAY,
+            items: { type: Type.STRING },
+            description: "Un elenco di esattamente 2 aree di miglioramento prioritarie su cui l'utente dovrebbe concentrarsi."
+        }
+    },
+    required: ["profileTitle", "profileDescription", "strengths", "areasToImprove"]
+};
+
+
+export const generateCommunicatorProfile = async (
+    analysisResults: { exerciseId: string; analysis: AnalysisResult }[]
+): Promise<CommunicatorProfile> => {
+    try {
+        const ai = getAI();
+        const systemInstruction = `
+            Sei un esperto di profilazione della comunicazione basato sulla metodologia CES. Il tuo compito è analizzare una serie di analisi di esercizi di check-up e sintetizzarle in un profilo di comunicazione conciso, incoraggiante e strategico.
+            Identifica i pattern ricorrenti, sia positivi che negativi, attraverso le diverse risposte per delineare uno stile di comunicazione complessivo.
+            Fornisci la tua analisi esclusivamente nel formato JSON richiesto, in italiano.
+        `;
+
+        const formattedResults = analysisResults.map(r => `
+            ---
+            Esercizio ID: ${r.exerciseId}
+            Punteggio: ${r.analysis.score}
+            Punti di Forza Rilevati:
+            - ${r.analysis.strengths.join('\n- ')}
+            Aree di Miglioramento Rilevate:
+            - ${r.analysis.areasForImprovement.map(a => a.suggestion).join('\n- ')}
+            ---
+        `).join('\n');
+
+        const prompt = `
+            Ho completato un check-up di comunicazione. Ecco un riassunto delle analisi delle mie risposte:
+            
+            ${formattedResults}
+
+            Basandoti su questi dati, genera il mio "Profilo del Comunicatore" in formato JSON.
+        `;
+
+        const response = await ai.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: prompt,
+            config: {
+                systemInstruction: systemInstruction,
+                temperature: 0.8,
+                responseMimeType: "application/json",
+                responseSchema: communicatorProfileSchema,
+            },
+        });
+
+        const rawText = response.text;
+        const result: CommunicatorProfile = JSON.parse(rawText.trim());
+        
+        if (!result.profileTitle || !Array.isArray(result.strengths) || result.strengths.length === 0) {
+             throw new Error("Formato del profilo comunicatore non valido.");
+        }
+
+        return result;
+
+    } catch (error: any) {
+        console.error("Errore durante la generazione del profilo comunicatore:", error);
+        if (error.message.includes('API key')) {
+             throw new Error("API_KEY non valida o mancante.");
+        }
+        throw new Error("Impossibile generare il profilo comunicatore.");
     }
 };

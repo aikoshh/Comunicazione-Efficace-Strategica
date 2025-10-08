@@ -13,9 +13,21 @@ interface ExerciseScreenProps {
   onCompleteVerbal: (result: VoiceAnalysisResult) => void;
   onBack: () => void;
   onApiKeyError: (error: string) => void;
+  isCheckup?: boolean;
+  checkupStep?: number;
+  totalCheckupSteps?: number;
 }
 
-export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({ exercise, onCompleteWritten, onCompleteVerbal, onBack, onApiKeyError }) => {
+export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({ 
+    exercise, 
+    onCompleteWritten, 
+    onCompleteVerbal, 
+    onBack, 
+    onApiKeyError,
+    isCheckup,
+    checkupStep,
+    totalCheckupSteps
+}) => {
   const [userResponse, setUserResponse] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -66,7 +78,7 @@ export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({ exercise, onComp
         const result = await analyzeParaverbalResponse(userResponse, exercise.scenario, exercise.task);
         onCompleteVerbal(result);
       } else {
-        const result = await analyzeResponse(userResponse, exercise.scenario, exercise.task, true); // Assume verbal input for text too
+        const result = await analyzeResponse(userResponse, exercise.scenario, exercise.task, false); // For written, set verbal to false
         onCompleteWritten(result);
       }
     } catch (e: any) {
@@ -132,6 +144,11 @@ export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({ exercise, onComp
       <button onClick={handleBackClick} style={styles.backButton}>
         <BackIcon /> Indietro
       </button>
+      {isCheckup && (
+          <div style={styles.checkupHeader}>
+              Passo {checkupStep} di {totalCheckupSteps}
+          </div>
+      )}
       <div style={styles.scenarioCard}>
         <div style={styles.scenarioHeader}>
             <h1 style={styles.title}>{exercise.title}</h1>
@@ -140,10 +157,11 @@ export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({ exercise, onComp
             </button>
         </div>
         <p style={styles.scenarioText}><strong>Scenario:</strong> {exercise.scenario}</p>
-        <p style={styles.taskText}><strong>Compito:</strong> {exercise.task}</p>
+        <div style={styles.taskContainer}>
+          <p style={styles.taskText}><strong>Compito:</strong> {exercise.task}</p>
+        </div>
       </div>
 
-      {/* Hide toggle for verbal-only exercises */}
       {!isVerbalExercise && (
         <div style={styles.toggleContainer}>
             <button
@@ -165,28 +183,25 @@ export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({ exercise, onComp
 };
 
 const styles: { [key: string]: React.CSSProperties } = {
-  container: { maxWidth: '800px', margin: '0 auto', padding: '40px 20px', display: 'flex', flexDirection: 'column', gap: '32px' },
-  backButton: { 
-      display: 'flex', 
-      alignItems: 'center', 
-      gap: '8px', 
-      background: 'transparent', 
-      color: COLORS.textPrimary, 
-      border: `1px solid ${COLORS.divider}`, 
-      borderRadius: '8px', 
-      padding: '10px 16px', 
-      cursor: 'pointer', 
-      fontSize: '14px', 
-      fontWeight: '500',
-      alignSelf: 'flex-start',
-      transition: 'all 0.2s ease'
+  container: { maxWidth: '800px', margin: '0 auto', padding: '40px 20px', display: 'flex', flexDirection: 'column', gap: '24px' },
+  backButton: { display: 'flex', alignItems: 'center', gap: '8px', background: 'transparent', color: COLORS.textPrimary, border: `1px solid ${COLORS.divider}`, borderRadius: '8px', padding: '10px 16px', cursor: 'pointer', fontSize: '14px', fontWeight: '500', alignSelf: 'flex-start', transition: 'all 0.2s ease' },
+  checkupHeader: {
+      textAlign: 'center',
+      fontSize: '16px',
+      fontWeight: 'bold',
+      color: 'white',
+      backgroundColor: COLORS.secondary,
+      padding: '8px 16px',
+      borderRadius: '20px',
+      alignSelf: 'center',
   },
   scenarioCard: { backgroundColor: COLORS.card, borderRadius: '12px', padding: '24px', border: `1px solid ${COLORS.divider}`, boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)' },
   scenarioHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', gap: '16px'},
   title: { fontSize: '24px', color: COLORS.textPrimary, margin: 0, fontWeight: 'bold' },
   speakerButton: { background: 'none', border: 'none', cursor: 'pointer', padding: '8px', borderRadius: '50%', transition: 'background-color 0.2s ease' },
-  scenarioText: { fontSize: '16px', color: COLORS.textSecondary, lineHeight: '1.6', marginBottom: '12px' },
-  taskText: { fontSize: '16px', color: COLORS.textPrimary, lineHeight: '1.6', fontWeight: '500' },
+  scenarioText: { fontSize: '16px', color: COLORS.textSecondary, lineHeight: '1.6' },
+  taskContainer: { marginTop: '16px', padding: '16px', backgroundColor: 'rgba(88, 166, 166, 0.1)', borderRadius: '8px', borderLeft: `4px solid ${COLORS.secondary}` },
+  taskText: { fontSize: '16px', color: COLORS.textPrimary, lineHeight: '1.6', fontWeight: '500', margin: 0 },
   toggleContainer: { display: 'flex', gap: '8px', justifyContent: 'center', backgroundColor: COLORS.divider, padding: '6px', borderRadius: '12px' },
   toggleButton: { flex: 1, padding: '10px 16px', fontSize: '16px', border: 'none', background: 'transparent', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all 0.2s', color: COLORS.textSecondary, fontWeight: 500 },
   toggleButtonActive: { backgroundColor: COLORS.card, color: COLORS.textPrimary, fontWeight: '600', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' },

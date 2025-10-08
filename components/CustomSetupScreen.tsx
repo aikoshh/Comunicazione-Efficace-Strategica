@@ -193,7 +193,7 @@ const CustomSetupScreen: React.FC<CustomSetupScreenProps> = ({ module, onStart, 
                     disabled={!isReadyToStart}
                     className="start-button"
                 >
-                    Inizia Allenamento <NextIcon/>
+                    Inizia ora il tuo Allenamento con la Comunicazione Efficace Strategica® <NextIcon/>
                 </button>
             </main>
         </div>

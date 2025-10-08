@@ -1,7 +1,8 @@
 import React, { useEffect } from 'react';
 import { VoiceAnalysisResult, Exercise } from '../types';
 import { COLORS, VOICE_RUBRIC_CRITERIA } from '../constants';
-import { CheckCircleIcon, XCircleIcon, RetryIcon, HomeIcon, LightbulbIcon, TargetIcon } from './Icons';
+import { useSpeech } from '../hooks/useSpeech';
+import { CheckCircleIcon, XCircleIcon, RetryIcon, HomeIcon, LightbulbIcon, TargetIcon, SpeakerIcon, SpeakerOffIcon } from './Icons';
 import { soundService } from '../services/soundService';
 
 interface VoiceAnalysisReportScreenProps {
@@ -58,7 +59,6 @@ const ScoreMeter: React.FC<{ label: string; score: number }> = ({ label, score }
 };
 
 const AnnotatedText: React.FC<{ text: string }> = ({ text }) => {
-    // Replace symbols with styled components
     const parts = text.split(/(☐|△)/g).filter(part => part.length > 0);
     return (
         <p style={styles.annotatedResponseText}>
@@ -78,9 +78,13 @@ const AnnotatedText: React.FC<{ text: string }> = ({ text }) => {
 };
 
 export const VoiceAnalysisReportScreen: React.FC<VoiceAnalysisReportScreenProps> = ({ result, exercise, onRetry, onNext }) => {
+  const { speak, isSpeaking, stopSpeaking } = useSpeech();
   
   useEffect(() => {
     soundService.playSuccess();
+    return () => {
+        stopSpeaking(); // Cleanup speech synthesis on component unmount
+    }
   }, []);
   
   const handleRetry = () => {
@@ -91,6 +95,15 @@ export const VoiceAnalysisReportScreen: React.FC<VoiceAnalysisReportScreenProps>
   const handleNext = () => {
     soundService.playClick();
     onNext();
+  };
+  
+  const handleStrategicReplay = () => {
+    soundService.playClick();
+    if (isSpeaking) {
+        stopSpeaking();
+    } else {
+        speak(result.suggested_delivery.ideal_script);
+    }
   };
 
   const hoverStyle = `
@@ -167,9 +180,15 @@ export const VoiceAnalysisReportScreen: React.FC<VoiceAnalysisReportScreenProps>
         </div>
         
         <div style={{...styles.suggestedDeliveryContainer, animation: 'fadeInUp 0.5s 0.8s ease-out both'}}>
-            <h2 style={styles.sectionTitle}>Consegna Suggerita</h2>
-            <p style={styles.deliveryInstructions}><HighlightText text={result.suggested_delivery.instructions}/></p>
-            <AnnotatedText text={result.suggested_delivery.annotated_text} />
+          <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px'}}>
+              <h2 style={styles.sectionTitle}>Consegna Suggerita</h2>
+              <button onClick={handleStrategicReplay} style={styles.replayButton} className="secondary-button">
+                  {isSpeaking ? <SpeakerOffIcon/> : <SpeakerIcon/>}
+                  {isSpeaking ? 'Ferma Ascolto' : 'Ascolta Versione Ideale'}
+              </button>
+          </div>
+          <p style={styles.deliveryInstructions}><HighlightText text={result.suggested_delivery.instructions}/></p>
+          <AnnotatedText text={result.suggested_delivery.annotated_text} />
         </div>
 
         <div style={styles.buttonContainer}>
@@ -218,179 +237,42 @@ const styles: { [key: string]: React.CSSProperties } = {
         paddingBottom: '32px',
         borderBottom: `1px solid ${COLORS.divider}`,
     },
-    meterContainer: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '12px',
-    },
-    meterLabel: {
-        flex: 1,
-        fontSize: '14px',
-        color: COLORS.textSecondary,
-        fontWeight: 500,
-    },
-    meterBar: {
-        height: '8px',
-        width: '100px',
-        backgroundColor: COLORS.divider,
-        borderRadius: '4px',
-        overflow: 'hidden',
-    },
-    meterFill: {
-        height: '100%',
-        borderRadius: '4px',
-        transition: 'width 0.8s cubic-bezier(0.25, 1, 0.5, 1)',
-    },
-    meterScore: {
-        fontSize: '14px',
-        fontWeight: 'bold',
-        padding: '2px 6px',
-        borderRadius: '6px',
-        border: '1px solid',
-        minWidth: '20px',
-        textAlign: 'center',
-    },
-    feedbackGrid: {
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-        gap: '24px',
-        marginBottom: '32px',
-    },
-    feedbackCard: {
-        backgroundColor: COLORS.cardDark,
-        padding: '20px',
-        borderRadius: '12px',
-    },
-    sectionTitle: {
-        fontSize: '20px',
-        color: COLORS.textPrimary,
-        marginBottom: '16px',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '12px',
-        fontWeight: 600
-    },
-    list: {
-        listStyle: 'none',
-        paddingLeft: 0,
-        margin: 0,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '12px',
-    },
-    listItem: {
-        fontSize: '16px',
-        color: COLORS.textSecondary,
-        lineHeight: 1.6,
-        display: 'flex',
-        alignItems: 'flex-start',
-        gap: '12px',
-    },
-    listItemIcon: {
-        flexShrink: 0,
-        width: '20px',
-        height: '20px',
-        marginTop: '3px',
-    },
-    listItemText: {
-        flex: 1,
-    },
-    actionsContainer: {
-        marginBottom: '32px',
-    },
-    actionItem: {
-        padding: '12px',
-        backgroundColor: 'rgba(88, 166, 166, 0.1)',
-        borderRadius: '8px',
-        borderLeft: `3px solid ${COLORS.secondary}`,
-        color: COLORS.textPrimary,
-    },
-    microDrillContainer: {
-        backgroundColor: 'rgba(255, 193, 7, 0.15)',
-        padding: '20px',
-        borderRadius: '12px',
-        marginBottom: '32px',
-        borderLeft: `3px solid ${COLORS.warning}`,
-    },
-    microDrillText: {
-        fontSize: '16px',
-        color: COLORS.textPrimary,
-        lineHeight: 1.6,
-        margin: 0,
-    },
-    suggestedDeliveryContainer: {
-        textAlign: 'left',
-    },
-    deliveryInstructions: {
-        fontSize: '16px',
-        color: COLORS.textSecondary,
-        lineHeight: 1.6,
-        marginBottom: '12px',
-    },
-    annotatedResponseText: {
-        fontSize: '16px',
-        fontStyle: 'italic',
-        color: COLORS.textSecondary,
-        lineHeight: 1.7,
-        margin: 0,
-        padding: '20px',
-        backgroundColor: COLORS.cardDark,
-        borderRadius: '12px',
-    },
-    pauseSymbol: {
-        display: 'inline-block',
-        width: '12px',
-        height: '12px',
-        backgroundColor: COLORS.secondary,
-        borderRadius: '3px',
-        margin: '0 4px',
-        verticalAlign: 'middle',
-    },
-    emphasisSymbol: {
-        display: 'inline-block',
-        width: 0,
-        height: 0,
-        borderLeft: '6px solid transparent',
-        borderRight: '6px solid transparent',
-        borderBottom: `10px solid ${COLORS.warning}`,
-        margin: '0 4px',
-        verticalAlign: 'middle',
-    },
-    buttonContainer: {
-        display: 'flex',
-        flexWrap: 'wrap',
-        justifyContent: 'center',
-        gap: '16px',
-        marginTop: '32px',
-        borderTop: `1px solid ${COLORS.divider}`,
-        paddingTop: '32px',
-    },
-    secondaryButton: {
-        padding: '12px 24px',
-        fontSize: '16px',
-        border: `1px solid ${COLORS.secondary}`,
+    meterContainer: { display: 'flex', alignItems: 'center', gap: '12px' },
+    meterLabel: { flex: 1, fontSize: '14px', color: COLORS.textSecondary, fontWeight: 500 },
+    meterBar: { height: '8px', width: '100px', backgroundColor: COLORS.divider, borderRadius: '4px', overflow: 'hidden' },
+    meterFill: { height: '100%', borderRadius: '4px', transition: 'width 0.8s cubic-bezier(0.25, 1, 0.5, 1)' },
+    meterScore: { fontSize: '14px', fontWeight: 'bold', padding: '2px 6px', borderRadius: '6px', border: '1px solid', minWidth: '20px', textAlign: 'center' },
+    feedbackGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px', marginBottom: '32px' },
+    feedbackCard: { backgroundColor: COLORS.cardDark, padding: '20px', borderRadius: '12px' },
+    sectionTitle: { fontSize: '20px', color: COLORS.textPrimary, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '12px', fontWeight: 600, margin: 0 },
+    list: { listStyle: 'none', paddingLeft: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '12px' },
+    listItem: { fontSize: '16px', color: COLORS.textSecondary, lineHeight: 1.6, display: 'flex', alignItems: 'flex-start', gap: '12px' },
+    listItemIcon: { flexShrink: 0, width: '20px', height: '20px', marginTop: '3px' },
+    listItemText: { flex: 1 },
+    actionsContainer: { marginBottom: '32px' },
+    actionItem: { padding: '12px', backgroundColor: 'rgba(88, 166, 166, 0.1)', borderRadius: '8px', borderLeft: `3px solid ${COLORS.secondary}`, color: COLORS.textPrimary },
+    microDrillContainer: { backgroundColor: 'rgba(255, 193, 7, 0.15)', padding: '20px', borderRadius: '12px', marginBottom: '32px', borderLeft: `3px solid ${COLORS.warning}` },
+    microDrillText: { fontSize: '16px', color: COLORS.textPrimary, lineHeight: 1.6, margin: 0 },
+    suggestedDeliveryContainer: { textAlign: 'left' },
+    replayButton: {
+        padding: '10px 18px',
+        fontSize: '15px',
+        border: `1px solid ${COLORS.primary}`,
         backgroundColor: 'transparent',
-        color: COLORS.secondary,
+        color: COLORS.primary,
         borderRadius: '8px',
         cursor: 'pointer',
         display: 'flex',
         alignItems: 'center',
         gap: '8px',
-        fontWeight: 500,
+        fontWeight: 600,
         transition: 'all 0.2s ease',
     },
-    primaryButton: {
-        padding: '12px 24px',
-        fontSize: '16px',
-        fontWeight: 'bold',
-        border: 'none',
-        backgroundColor: COLORS.secondary,
-        color: 'white',
-        borderRadius: '8px',
-        cursor: 'pointer',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        transition: 'all 0.2s ease',
-    },
+    deliveryInstructions: { fontSize: '16px', color: COLORS.textSecondary, lineHeight: 1.6, marginBottom: '12px', marginTop: '16px' },
+    annotatedResponseText: { fontSize: '16px', fontStyle: 'italic', color: COLORS.textSecondary, lineHeight: 1.7, margin: 0, padding: '20px', backgroundColor: COLORS.cardDark, borderRadius: '12px' },
+    pauseSymbol: { display: 'inline-block', width: '12px', height: '12px', backgroundColor: COLORS.secondary, borderRadius: '3px', margin: '0 4px', verticalAlign: 'middle' },
+    emphasisSymbol: { display: 'inline-block', width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderBottom: `10px solid ${COLORS.warning}`, margin: '0 4px', verticalAlign: 'middle' },
+    buttonContainer: { display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '16px', marginTop: '32px', borderTop: `1px solid ${COLORS.divider}`, paddingTop: '32px' },
+    secondaryButton: { padding: '12px 24px', fontSize: '16px', border: `1px solid ${COLORS.secondary}`, backgroundColor: 'transparent', color: COLORS.secondary, borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 500, transition: 'all 0.2s ease' },
+    primaryButton: { padding: '12px 24px', fontSize: '16px', fontWeight: 'bold', border: 'none', backgroundColor: COLORS.secondary, color: 'white', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.2s ease' },
 };
