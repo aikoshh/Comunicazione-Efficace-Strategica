@@ -3,7 +3,7 @@ import { Exercise, AnalysisResult, CommunicatorProfile } from '../types';
 import { STRATEGIC_CHECKUP_EXERCISES, COLORS } from '../constants';
 import { ExerciseScreen } from './ExerciseScreen';
 import { Loader } from './Loader';
-import { generateCommunicatorProfile, analyzeResponse } from '../services/analyzeService';
+import { generateCommunicatorProfile, analyzeResponse } from '../services/geminiService';
 import { Logo } from './Logo';
 import { HomeIcon, MicIcon } from './Icons';
 import { soundService } from '../services/soundService';

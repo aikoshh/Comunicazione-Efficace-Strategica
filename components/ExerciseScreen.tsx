@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react'; 
+import React, { useState, useEffect, useRef } from 'react';
 import { Exercise, ExerciseType, AnalysisResult, VoiceAnalysisResult } from '../types';
 import { useSpeech } from '../hooks/useSpeech';
-import { analyzeText, analyzeParaverbal } from '../services/analyzeService';
+import { analyzeResponse, analyzeParaverbalResponse } from '../services/geminiService';
 import { Loader } from './Loader';
 import { COLORS } from '../constants';
 import { BackIcon, MicIcon, SendIcon, WrittenIcon, VerbalIcon, SpeakerIcon, SpeakerOffIcon } from './Icons';
@@ -54,6 +54,7 @@ export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({
     }
   }, [transcript, isListening, isVerbalExercise]);
 
+
   const handleScenarioPlayback = () => {
     soundService.playClick();
     if (isSpeaking) {
@@ -69,6 +70,7 @@ export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({
     startListening();
   }
 
+  // For dedicated verbal exercises
   const handleStopListening = () => {
     soundService.playStopRecording();
     stopListening();
@@ -100,20 +102,19 @@ export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({
     setIsLoading(true);
     setError(null);
     try {
-      if (isVerbalExercise) {
-        const result = await analyzeParaverbal(userResponse, exercise.scenario, exercise.task);
+      if(isVerbalExercise) {
+        const result = await analyzeParaverbalResponse(userResponse, exercise.scenario, exercise.task);
         onCompleteVerbal(result);
       } else {
-        const result = await analyzeText(userResponse, exercise.scenario, exercise.task, false);
+        const result = await analyzeResponse(userResponse, exercise.scenario, exercise.task, false); // For written, set verbal to false
         onCompleteWritten(result);
       }
     } catch (e: any) {
       console.error(e);
-      const errorMessage = e.message || "Si è verificato un errore sconosciuto.";
-      if (errorMessage.toUpperCase().includes('GOOGLE_API_KEY') || errorMessage.includes('Missing GOOGLE_API_KEY') || errorMessage.includes('401') || errorMessage.toLowerCase().includes('unauthorized')) {
-        onApiKeyError(errorMessage);
+      if (e.message.includes('API_KEY')) {
+        onApiKeyError(e.message);
       } else {
-        setError(errorMessage);
+        setError(e.message || "Si è verificato un errore sconosciuto.");
       }
     } finally {
       setIsLoading(false);
@@ -283,5 +284,3 @@ const styles: { [key: string]: React.CSSProperties } = {
       border: `1px solid ${COLORS.error}`,
   },
 };
-
-export default ExerciseScreen;
