@@ -1,9 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react'; 
+import React, { useState, useEffect, useRef } from 'react';
 import { Exercise, ExerciseType, AnalysisResult, VoiceAnalysisResult } from '../types';
 import { useSpeech } from '../hooks/useSpeech';
-// ⛔️ via geminiService client — rimosso
-// import { analyzeResponse, analyzeParaverbalResponse } from '../services/geminiService';
-import { analyzeText, analyzeParaverbal } from '../services/analyzeService'; // ✅ usa la route server-side
+import { analyzeText, analyzeParaverbal } from '../services/analyzeService';
 import { Loader } from './Loader';
 import { COLORS } from '../constants';
 import { BackIcon, MicIcon, SendIcon, WrittenIcon, VerbalIcon, SpeakerIcon, SpeakerOffIcon } from './Icons';
@@ -56,6 +54,7 @@ export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({
     }
   }, [transcript, isListening, isVerbalExercise]);
 
+
   const handleScenarioPlayback = () => {
     soundService.playClick();
     if (isSpeaking) {
@@ -71,6 +70,7 @@ export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({
     startListening();
   }
 
+  // For dedicated verbal exercises
   const handleStopListening = () => {
     soundService.playStopRecording();
     stopListening();
@@ -102,41 +102,21 @@ export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({
     setIsLoading(true);
     setError(null);
     try {
-      // Costruisco un prompt completo e robusto per il modello (lato server lo userai come preferisci)
-      const composedPrompt =
-        `Titolo: ${exercise.title}\n` +
-        `Scenario: ${exercise.scenario}\n` +
-        `Compito: ${exercise.task}\n\n` +
-        `Risposta utente:\n${userResponse}`;
-
-      if (isVerbalExercise) {
-        // ✅ chiama la route server-side tramite service
-        // analyzeParaverbal deve restituire un VoiceAnalysisResult (adatta se necessario alla tua logica server)
-        const voiceResult: VoiceAnalysisResult = await analyzeParaverbal({
-          transcript: userResponse,
-          scenario: exercise.scenario,
-          task: exercise.task
-        });
-        onCompleteVerbal(voiceResult);
+      if(isVerbalExercise) {
+        const result = await analyzeParaverbal(userResponse, exercise.scenario, exercise.task);
+        onCompleteVerbal(result);
       } else {
-        // ✅ chiama la route server-side tramite service
-        // analyzeText deve restituire un AnalysisResult (adatta se necessario alla tua logica server)
-        const analysis: AnalysisResult = await analyzeText(composedPrompt);
-        onCompleteWritten(analysis);
+        const result = await analyzeText(userResponse, exercise.scenario, exercise.task, false);
+        onCompleteWritten(result);
       }
     } catch (e: any) {
       console.error(e);
-      const msg = e?.message || 'Errore sconosciuto';
-      // Propaga errori “server-side not configured” alla tua schermata dedicata
-      if (
-        msg.includes('GOOGLE_API_KEY') ||
-        msg.includes('Missing GOOGLE_API_KEY') ||
-        msg.includes('401') ||
-        msg.toLowerCase().includes('unauthorized')
-      ) {
-        onApiKeyError(msg);
+      const errorMessage = e.message || "Si è verificato un errore sconosciuto.";
+      // Check for specific API key error messages from our new serverless function
+      if (errorMessage.toUpperCase().includes('GOOGLE_API_KEY')) {
+        onApiKeyError(errorMessage);
       } else {
-        setError(msg);
+        setError(errorMessage);
       }
     } finally {
       setIsLoading(false);
@@ -270,9 +250,6 @@ const styles: { [key: string]: React.CSSProperties } = {
   scenarioText: { fontSize: '16px', color: COLORS.textSecondary, lineHeight: '1.6' },
   taskContainer: { marginTop: '16px', padding: '16px', backgroundColor: 'rgba(88, 166, 166, 0.1)', borderRadius: '8px', borderLeft: `4px solid ${COLORS.secondary}` },
   taskText: { fontSize: '16px', color: COLORS.textPrimary, lineHeight: '1.6', fontWeight: '500', margin: 0 },
-  toggleContainer: { display: 'flex', gap: '8px', justifyContent: 'center', backgroundColor: COLORS.divider, padding: '6px', borderRadius: '12px' },
-  toggleButton: { flex: 1, padding: '10px 16px', fontSize: '16px', border: 'none', background: 'transparent', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all 0.2s', color: COLORS.textSecondary, fontWeight: 500 },
-  toggleButtonActive: { backgroundColor: COLORS.card, color: COLORS.textPrimary, fontWeight: '600', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' },
   responseSection: { display: 'flex', flexDirection: 'column', gap: '16px'},
   responseTitle: {fontSize: '20px', color: COLORS.textPrimary, margin: 0, fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '12px'},
   inputContainer: { display: 'flex', flexDirection: 'column', gap: '16px'},
@@ -282,7 +259,6 @@ const styles: { [key: string]: React.CSSProperties } = {
   verbalContainer: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px', padding: '20px', backgroundColor: COLORS.card, borderRadius: '12px', border: `1px solid ${COLORS.divider}` },
   transcript: { fontSize: '18px', color: COLORS.textPrimary, minHeight: '50px', textAlign: 'center', fontStyle: 'italic' },
   micButton: { width: '72px', height: '72px', borderRadius: '50%', background: COLORS.primaryGradient, border: '4px solid white', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', transition: 'all 0.2s', boxShadow: '0 4px 12px rgba(0,0,0,0.2)' },
-  micButtonListening: { backgroundColor: COLORS.error, background: COLORS.error },
   errorText: { color: COLORS.error, textAlign: 'center', fontWeight: '500' },
   dictationButton: {
       padding: '10px 20px',
@@ -306,5 +282,3 @@ const styles: { [key: string]: React.CSSProperties } = {
       border: `1px solid ${COLORS.error}`,
   },
 };
-
-export default ExerciseScreen;
