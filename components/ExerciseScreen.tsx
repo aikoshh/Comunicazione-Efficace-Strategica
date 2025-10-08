@@ -1,7 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react'; 
 import { Exercise, ExerciseType, AnalysisResult, VoiceAnalysisResult } from '../types';
 import { useSpeech } from '../hooks/useSpeech';
-import { analyzeResponse, analyzeParaverbalResponse } from '../services/geminiService';
+// ⛔️ via geminiService client — rimosso
+// import { analyzeResponse, analyzeParaverbalResponse } from '../services/geminiService';
+import { analyzeText, analyzeParaverbal } from '../services/analyzeService'; // ✅ usa la route server-side
 import { Loader } from './Loader';
 import { COLORS } from '../constants';
 import { BackIcon, MicIcon, SendIcon, WrittenIcon, VerbalIcon, SpeakerIcon, SpeakerOffIcon } from './Icons';
@@ -54,7 +56,6 @@ export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({
     }
   }, [transcript, isListening, isVerbalExercise]);
 
-
   const handleScenarioPlayback = () => {
     soundService.playClick();
     if (isSpeaking) {
@@ -70,7 +71,6 @@ export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({
     startListening();
   }
 
-  // For dedicated verbal exercises
   const handleStopListening = () => {
     soundService.playStopRecording();
     stopListening();
@@ -102,19 +102,41 @@ export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({
     setIsLoading(true);
     setError(null);
     try {
-      if(isVerbalExercise) {
-        const result = await analyzeParaverbalResponse(userResponse, exercise.scenario, exercise.task);
-        onCompleteVerbal(result);
+      // Costruisco un prompt completo e robusto per il modello (lato server lo userai come preferisci)
+      const composedPrompt =
+        `Titolo: ${exercise.title}\n` +
+        `Scenario: ${exercise.scenario}\n` +
+        `Compito: ${exercise.task}\n\n` +
+        `Risposta utente:\n${userResponse}`;
+
+      if (isVerbalExercise) {
+        // ✅ chiama la route server-side tramite service
+        // analyzeParaverbal deve restituire un VoiceAnalysisResult (adatta se necessario alla tua logica server)
+        const voiceResult: VoiceAnalysisResult = await analyzeParaverbal({
+          transcript: userResponse,
+          scenario: exercise.scenario,
+          task: exercise.task
+        });
+        onCompleteVerbal(voiceResult);
       } else {
-        const result = await analyzeResponse(userResponse, exercise.scenario, exercise.task, false); // For written, set verbal to false
-        onCompleteWritten(result);
+        // ✅ chiama la route server-side tramite service
+        // analyzeText deve restituire un AnalysisResult (adatta se necessario alla tua logica server)
+        const analysis: AnalysisResult = await analyzeText(composedPrompt);
+        onCompleteWritten(analysis);
       }
     } catch (e: any) {
       console.error(e);
-      if (e.message.includes('API_KEY')) {
-        onApiKeyError(e.message);
+      const msg = e?.message || 'Errore sconosciuto';
+      // Propaga errori “server-side not configured” alla tua schermata dedicata
+      if (
+        msg.includes('GOOGLE_API_KEY') ||
+        msg.includes('Missing GOOGLE_API_KEY') ||
+        msg.includes('401') ||
+        msg.toLowerCase().includes('unauthorized')
+      ) {
+        onApiKeyError(msg);
       } else {
-        setError(e.message || "Si è verificato un errore sconosciuto.");
+        setError(msg);
       }
     } finally {
       setIsLoading(false);
@@ -284,3 +306,5 @@ const styles: { [key: string]: React.CSSProperties } = {
       border: `1px solid ${COLORS.error}`,
   },
 };
+
+export default ExerciseScreen;
