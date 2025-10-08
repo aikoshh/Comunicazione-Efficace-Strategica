@@ -116,7 +116,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onRegister, o
     if (email && password) {
       try {
         onLogin(email, password);
-// FIX: Added curly braces to the catch block to fix syntax error.
       } catch (err: any) {
         setError(err.message || "Errore sconosciuto.");
       }
