@@ -52,9 +52,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectModule, currentU
       <style>{hoverStyle}</style>
       <header style={styles.header}>
         <Logo />
-        <h1 style={styles.title}>
-            Comunicazione Efficace Strategica®
-        </h1>
+        <h1 style={styles.title}>Comunicazione Efficace Strategica®</h1>
          <p style={styles.subtitle}>
             Inizia ora il tuo allenamento personalizzato per migliorare rapidamente e in modo concreto la tua comunicazione.
         </p>
@@ -64,7 +62,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectModule, currentU
       
       <main style={currentUser ? {marginTop: '48px'} : {}}>
         <section>
-          <h2 style={styles.sectionTitle}>Scegli l'allenamento e inizia subito!</h2>
+          <h2 style={styles.sectionTitle}>Scegli l'allenamento e inizia subito…!</h2>
           {renderModuleGrid(foundationalModules)}
         </section>
 
@@ -113,10 +111,10 @@ const styles: { [key: string]: React.CSSProperties } = {
         gap: '8px'
     },
     title: {
-        fontSize: '28px',
+        fontSize: '32px',
         fontWeight: 'bold',
         color: COLORS.textPrimary,
-        margin: '8px 0 0 0',
+        margin: '16px 0 0 0',
     },
     subtitle: {
         fontSize: '16px',
@@ -134,9 +132,9 @@ const styles: { [key: string]: React.CSSProperties } = {
         borderBottom: `2px solid ${COLORS.divider}`,
     },
     sectionTitle: {
-        fontSize: '24px',
+        fontSize: '20px',
         fontWeight: 'bold',
-        color: COLORS.textPrimary,
+        color: '#306A6A',
         margin: 0,
         padding: 0,
         border: 'none',
@@ -151,6 +149,7 @@ const styles: { [key: string]: React.CSSProperties } = {
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
         gap: '24px',
+        marginTop: '24px',
     },
     moduleCard: {
         borderRadius: '12px',

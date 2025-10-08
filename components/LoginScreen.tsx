@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { COLORS } from '../constants';
-import { Logo } from './Logo';
+import { cesLogoUrl } from '../assets';
 import type { User } from '../types';
 
 interface LoginScreenProps {
@@ -130,11 +130,12 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onRegister, o
     <div style={styles.container}>
       <style>{placeholderStyle}</style>
       <div style={styles.loginBox}>
-        <div style={styles.logoContainer}><Logo /></div>
+        <div style={styles.logoContainer}>
+            <img src={cesLogoUrl} alt="Comunicazione Efficace Strategica Logo" style={styles.logoImage} />
+        </div>
         {view === 'login' ? (
            <>
             <h1 style={styles.title}>Benvenuto in<br /><strong>CES Coach</strong></h1>
-            <p style={styles.subtitle}>Allena la tua mente strategica con la Comunicazione Efficace Strategica®.</p>
              {error && <p style={styles.errorText}>{error}</p>}
             <form onSubmit={handleLoginSubmit} style={styles.form}>
               <div style={styles.inputGroup}>
@@ -165,8 +166,13 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onRegister, o
 const styles: { [key: string]: React.CSSProperties } = {
     container: { display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', backgroundColor: COLORS.base, padding: '20px' },
     loginBox: { backgroundColor: COLORS.card, padding: '40px', borderRadius: '12px', border: `1px solid ${COLORS.divider}`, width: '100%', maxWidth: '450px', textAlign: 'center', boxShadow: '0 8px 30px rgba(0,0,0,0.12)' },
-    logoContainer: { marginBottom: '16px', display: 'flex', justifyContent: 'center' },
-    title: { fontSize: '24px', color: COLORS.textAccent, marginBottom: '8px', fontWeight: 400, lineHeight: 1.4 },
+    logoContainer: { marginBottom: '24px', display: 'flex', justifyContent: 'center' },
+    logoImage: {
+        width: '100%',
+        maxWidth: '250px',
+        height: 'auto',
+    },
+    title: { fontSize: '24px', color: COLORS.textAccent, marginBottom: '32px', fontWeight: 400, lineHeight: 1.4 },
     subtitle: { fontSize: '16px', color: COLORS.textAccent, margin: '0 auto 32px', lineHeight: 1.6 },
     form: { display: 'flex', flexDirection: 'column', gap: '20px', textAlign: 'left' },
     inputGroup: { display: 'flex', flexDirection: 'column', flex: 1 },
