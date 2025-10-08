@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Exercise, ExerciseType, AnalysisResult, VoiceAnalysisResult } from '../types';
 import { useSpeech } from '../hooks/useSpeech';
-import { analyzeText, analyzeParaverbal } from '../services/analyzeService';
+import { analyzeResponse, analyzeParaverbalResponse } from '../services/analyzeService';
 import { Loader } from './Loader';
 import { COLORS } from '../constants';
 import { BackIcon, MicIcon, SendIcon, WrittenIcon, VerbalIcon, SpeakerIcon, SpeakerOffIcon } from './Icons';
@@ -103,20 +103,18 @@ export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({
     setError(null);
     try {
       if(isVerbalExercise) {
-        const result = await analyzeParaverbal(userResponse, exercise.scenario, exercise.task);
+        const result = await analyzeParaverbalResponse(userResponse, exercise.scenario, exercise.task);
         onCompleteVerbal(result);
       } else {
-        const result = await analyzeText(userResponse, exercise.scenario, exercise.task, false);
+        const result = await analyzeResponse(userResponse, exercise.scenario, exercise.task, false); // For written, set verbal to false
         onCompleteWritten(result);
       }
     } catch (e: any) {
       console.error(e);
-      const errorMessage = e.message || "Si è verificato un errore sconosciuto.";
-      // Check for specific API key error messages from our new serverless function
-      if (errorMessage.toUpperCase().includes('GOOGLE_API_KEY')) {
-        onApiKeyError(errorMessage);
+      if (e.message.includes('API_KEY')) {
+        onApiKeyError(e.message);
       } else {
-        setError(errorMessage);
+        setError(e.message || "Si è verificato un errore sconosciuto.");
       }
     } finally {
       setIsLoading(false);
@@ -250,6 +248,9 @@ const styles: { [key: string]: React.CSSProperties } = {
   scenarioText: { fontSize: '16px', color: COLORS.textSecondary, lineHeight: '1.6' },
   taskContainer: { marginTop: '16px', padding: '16px', backgroundColor: 'rgba(88, 166, 166, 0.1)', borderRadius: '8px', borderLeft: `4px solid ${COLORS.secondary}` },
   taskText: { fontSize: '16px', color: COLORS.textPrimary, lineHeight: '1.6', fontWeight: '500', margin: 0 },
+  toggleContainer: { display: 'flex', gap: '8px', justifyContent: 'center', backgroundColor: COLORS.divider, padding: '6px', borderRadius: '12px' },
+  toggleButton: { flex: 1, padding: '10px 16px', fontSize: '16px', border: 'none', background: 'transparent', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all 0.2s', color: COLORS.textSecondary, fontWeight: 500 },
+  toggleButtonActive: { backgroundColor: COLORS.card, color: COLORS.textPrimary, fontWeight: '600', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' },
   responseSection: { display: 'flex', flexDirection: 'column', gap: '16px'},
   responseTitle: {fontSize: '20px', color: COLORS.textPrimary, margin: 0, fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '12px'},
   inputContainer: { display: 'flex', flexDirection: 'column', gap: '16px'},
@@ -259,6 +260,7 @@ const styles: { [key: string]: React.CSSProperties } = {
   verbalContainer: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px', padding: '20px', backgroundColor: COLORS.card, borderRadius: '12px', border: `1px solid ${COLORS.divider}` },
   transcript: { fontSize: '18px', color: COLORS.textPrimary, minHeight: '50px', textAlign: 'center', fontStyle: 'italic' },
   micButton: { width: '72px', height: '72px', borderRadius: '50%', background: COLORS.primaryGradient, border: '4px solid white', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', transition: 'all 0.2s', boxShadow: '0 4px 12px rgba(0,0,0,0.2)' },
+  micButtonListening: { backgroundColor: COLORS.error, background: COLORS.error },
   errorText: { color: COLORS.error, textAlign: 'center', fontWeight: '500' },
   dictationButton: {
       padding: '10px 20px',

@@ -1,45 +1,28 @@
 import type { AnalysisResult, VoiceAnalysisResult, CommunicatorProfile } from '../types';
 
-// Helper function to get the base URL for the API
 function getBaseUrl(): string {
-  if (typeof window !== 'undefined') {
-    return window.location.origin;
-  }
-  // Fallback for non-browser environments
+  if (typeof window !== 'undefined' && window.location?.origin) return window.location.origin;
   return 'http://localhost:3000';
 }
 
-// Centralized fetch wrapper for API calls
 async function callApi<T>(endpoint: string, body: object): Promise<T> {
   const url = `${getBaseUrl()}${endpoint}`;
-  try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(body),
-    });
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    cache: 'no-store',
+    body: JSON.stringify(body),
+  });
 
-    const json = await response.json();
-
-    if (!response.ok) {
-      // The server should return a JSON object with an 'error' key
-      throw new Error(json.error || 'Errore sconosciuto dal server.');
-    }
-
-    // The server returns { data: ... } on success
-    return json.data;
-  } catch (error: any) {
-    // Re-throw network errors or errors from the API response
-    console.error(`API call to ${endpoint} failed:`, error);
-    throw new Error(error.message || `Impossibile connettersi al servizio di analisi.`);
+  const text = await res.text();
+  let json: any = {};
+  try { json = text ? JSON.parse(text) : {}; } catch {
+    throw new Error(`Invalid JSON from API: ${text?.slice(0, 200) || '<empty>'}`);
   }
+  if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
+  return json.data as T;
 }
 
-/**
- * Analyzes a written user response.
- */
 export const analyzeText = async (
   userResponse: string,
   scenario: string,
@@ -52,28 +35,22 @@ export const analyzeText = async (
   });
 };
 
-/**
- * Analyzes a verbal user response (transcript).
- */
 export const analyzeParaverbal = async (
   transcript: string,
   scenario: string,
   task: string
 ): Promise<VoiceAnalysisResult> => {
-    return callApi<VoiceAnalysisResult>('/api/analyze', {
-        analysisType: 'paraverbal',
-        payload: { transcript, scenario, task },
-    });
-}
+  return callApi<VoiceAnalysisResult>('/api/analyze', {
+    analysisType: 'paraverbal',
+    payload: { transcript, scenario, task },
+  });
+};
 
-/**
- * Generates a communicator profile based on check-up results.
- */
 export const generateCommunicatorProfile = async (
-    analysisResults: { exerciseId: string; analysis: AnalysisResult }[]
+  analysisResults: { exerciseId: string; analysis: AnalysisResult }[]
 ): Promise<CommunicatorProfile> => {
-    return callApi<CommunicatorProfile>('/api/analyze', {
-        analysisType: 'profile',
-        payload: { analysisResults },
-    });
-}
+  return callApi<CommunicatorProfile>('/api/analyze', {
+    analysisType: 'profile',
+    payload: { analysisResults },
+  });
+};
