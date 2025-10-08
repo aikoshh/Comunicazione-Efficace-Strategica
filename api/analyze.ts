@@ -1,8 +1,9 @@
+// /api/analyze.ts
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 export const config = { runtime: 'nodejs', maxDuration: 60 };
 
-function json(res: VercelResponse, status: number, body: any) {
+function send(res: VercelResponse, status: number, body: any) {
   return res.status(status).json(body);
 }
 function readBody(req: VercelRequest) {
@@ -12,6 +13,7 @@ function readBody(req: VercelRequest) {
   return {};
 }
 
+// Prompt builders
 const buildTextPrompt = (payload: any) => {
   const { userResponse, scenario, task, isVerbalContext } = payload;
   const verbalContext = isVerbalContext
@@ -66,58 +68,63 @@ const buildProfilePrompt = (payload: any) => {
 };
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // CORS preflight
   if (req.method === 'OPTIONS') {
-    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Origin', '*'); // restringi in prod
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
     return res.status(204).end();
   }
-  if (req.method !== 'POST') return json(res, 405, { error: 'Method Not Allowed' });
+  if (req.method !== 'POST') return send(res, 405, { error: 'Method Not Allowed' });
 
   try {
     const body = readBody(req);
     const { analysisType, payload } = body || {};
-    if (!analysisType || !payload) return json(res, 400, { error: 'analysisType/payload mancanti' });
+    if (!analysisType || !payload) return send(res, 400, { error: 'analysisType/payload mancanti' });
 
     const apiKey = process.env.GOOGLE_API_KEY;
-    if (!apiKey) return json(res, 500, { error: 'Missing GOOGLE_API_KEY on the server.' });
+    if (!apiKey) return send(res, 500, { error: 'Missing GOOGLE_API_KEY on the server.' });
 
     let promptData: { prompt: string; systemInstruction: string };
     if (analysisType === 'text') promptData = buildTextPrompt(payload);
     else if (analysisType === 'paraverbal') promptData = buildParaverbalPrompt(payload);
     else if (analysisType === 'profile') promptData = buildProfilePrompt(payload);
-    else return json(res, 400, { error: 'Invalid analysisType' });
+    else return send(res, 400, { error: 'Invalid analysisType' });
 
-    // ESM-safe dynamic import
+    // ESM-safe: dynamic import evita crash CJS/ESM
     let GoogleGenerativeAI: any;
     try {
       ({ GoogleGenerativeAI } = await import('@google/generative-ai'));
     } catch (e: any) {
       console.error('IMPORT_ERROR @google/generative-ai:', e?.message || e);
-      return json(res, 500, { error: 'Import failed: @google/generative-ai non disponibile. Installa la dipendenza nella root usata da Vercel.' });
+      return send(res, 500, { error: 'Import failed: @google/generative-ai non disponibile. Installa la dipendenza nella root usata da Vercel.' });
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash', systemInstruction: promptData.systemInstruction });
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-1.5-flash', // usa 'gemini-1.5-pro' se preferisci più qualità
+      systemInstruction: promptData.systemInstruction,
+    });
 
     const result = await model.generateContent({
       contents: [{ role: 'user', parts: [{ text: promptData.prompt }]}],
+      // generationConfig: { responseMimeType: 'application/json' }, // opzionale
     });
 
     const text = result?.response?.text?.();
-    if (!text) return json(res, 502, { error: 'L’API non ha restituito testo.' });
+    if (!text) return send(res, 502, { error: 'L’API non ha restituito testo.' });
 
     let data: any;
     try { data = JSON.parse(text.trim()); }
     catch (e) {
       console.error('JSON Parsing Error. Raw response:', text);
-      return json(res, 500, { error: 'Formato risposta AI non valido (atteso JSON).' });
+      return send(res, 500, { error: 'Formato risposta AI non valido (atteso JSON).' });
     }
 
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    return json(res, 200, { data });
+    res.setHeader('Access-Control-Allow-Origin', '*'); // restringi in prod
+    return send(res, 200, { data });
   } catch (err: any) {
     console.error('ANALYZE_CRASH:', err?.stack || err);
-    return json(res, 500, { error: err?.message || 'Errore interno.' });
+    return send(res, 500, { error: err?.message || 'Errore interno.' });
   }
 }
