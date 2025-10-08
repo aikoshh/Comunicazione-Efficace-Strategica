@@ -6,6 +6,8 @@ import { Loader } from './Loader';
 import { COLORS } from '../constants';
 import { BackIcon, MicIcon, SendIcon, WrittenIcon, VerbalIcon, SpeakerIcon, SpeakerOffIcon } from './Icons';
 import { soundService } from '../services/soundService';
+import { analyzeText, analyzeParaverbal } from '../services/analyzeService';
+
 
 interface ExerciseScreenProps {
   exercise: Exercise;
@@ -33,6 +35,9 @@ export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({
   const [error, setError] = useState<string | null>(null);
   const { isListening, transcript, startListening, stopListening, isSupported, speak, isSpeaking, stopSpeaking } = useSpeech();
   const textBeforeListening = useRef('');
+  const result = await analyzeParaverbal(userResponse, exercise.scenario, exercise.task);
+  const result = await analyzeText(userResponse, exercise.scenario, exercise.task, false);
+
 
   useEffect(() => {
     window.scrollTo(0, 0);
