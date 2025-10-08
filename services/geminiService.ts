@@ -47,7 +47,7 @@ const analysisSchema = {
                 },
                 long: {
                     type: Type.STRING,
-                    description: "Eine detailliertere und vollständigere Version der Benutzerantwort, die die Prinzipien effektiver Kommunikation verkörpert. Wichtige Schlüsselwörter sind mit **doppelten Sternchen** hervorgehoben."
+                    description: "Una versione più dettagliata e completa della risposta dell'utente, che incarna i principi della comunicazione efficace. Le parole chiave importanti sono evidenziate con **doppi asterischi**."
                 }
             },
             required: ["short", "long"]
@@ -111,14 +111,26 @@ export const analyzeResponse = async (
     });
     
     const rawText = response.text;
-    let jsonStringToParse = rawText.trim();
+    if (!rawText || typeof rawText !== 'string' || rawText.trim() === '') {
+        throw new Error("L'API non ha restituito una risposta valida. Potrebbe essere un problema temporaneo del servizio.");
+    }
 
+    let jsonStringToParse = rawText.trim();
+    
+    // Fallback in case the model wraps the response in markdown despite schema definition
     const jsonBlockMatch = jsonStringToParse.match(/```json\s*([\s\S]+?)\s*```/);
     if (jsonBlockMatch && jsonBlockMatch[1]) {
         jsonStringToParse = jsonBlockMatch[1];
     }
 
-    const result: AnalysisResult = JSON.parse(jsonStringToParse);
+    let result: AnalysisResult;
+    try {
+        result = JSON.parse(jsonStringToParse);
+    } catch (jsonError) {
+        console.error("Errore durante il parsing del JSON:", jsonError);
+        console.error("Stringa JSON ricevuta:", jsonStringToParse);
+        throw new Error("L'API ha restituito una risposta in un formato non valido (non JSON).");
+    }
 
     const isValidImprovementArea = (item: any): item is ImprovementArea => {
         return typeof item === 'object' && item !== null && typeof item.suggestion === 'string' && typeof item.example === 'string';
@@ -141,6 +153,10 @@ export const analyzeResponse = async (
     console.error("Errore durante l'analisi della risposta con Gemini:", error);
     if (error.message.includes('API key') || error.message.includes('API_KEY')) {
          throw new Error("API_KEY non valida o mancante. Controlla la configurazione del tuo ambiente.");
+    }
+    // Re-throw specific errors for better frontend handling
+    if (error.message.includes("L'API") || error.message.includes("Formato di analisi")) {
+        throw error;
     }
     throw new Error("Impossibile ottenere l'analisi dal servizio. Riprova più tardi.");
   }
@@ -256,7 +272,18 @@ export const analyzeParaverbalResponse = async (
         });
         
         const rawText = response.text;
-        const result: VoiceAnalysisResult = JSON.parse(rawText.trim());
+        if (!rawText || typeof rawText !== 'string' || rawText.trim() === '') {
+            throw new Error("L'API non ha restituito una risposta vocale valida.");
+        }
+
+        let result: VoiceAnalysisResult;
+        try {
+            result = JSON.parse(rawText.trim());
+        } catch (jsonError) {
+            console.error("Errore durante il parsing del JSON vocale:", jsonError);
+            console.error("Stringa JSON ricevuta:", rawText);
+            throw new Error("L'API ha restituito una risposta vocale in un formato non valido.");
+        }
 
         // Basic validation
         if (
@@ -278,6 +305,9 @@ export const analyzeParaverbalResponse = async (
         console.error("Errore durante l'analisi paraverbale con Gemini:", error);
         if (error.message.includes('API key') || error.message.includes('API_KEY')) {
              throw new Error("API_KEY non valida o mancante. Controlla la configurazione del tuo ambiente.");
+        }
+        if (error.message.includes("L'API") || error.message.includes("Formato di analisi")) {
+            throw error;
         }
         throw new Error("Impossibile ottenere l'analisi vocale dal servizio. Riprova più tardi.");
     }
@@ -352,7 +382,18 @@ export const generateCommunicatorProfile = async (
         });
 
         const rawText = response.text;
-        const result: CommunicatorProfile = JSON.parse(rawText.trim());
+        if (!rawText || typeof rawText !== 'string' || rawText.trim() === '') {
+            throw new Error("L'API non ha restituito un profilo valido.");
+        }
+
+        let result: CommunicatorProfile;
+        try {
+            result = JSON.parse(rawText.trim());
+        } catch (jsonError) {
+            console.error("Errore durante il parsing del JSON del profilo:", jsonError);
+            console.error("Stringa JSON ricevuta:", rawText);
+            throw new Error("L'API ha restituito un profilo in un formato non valido.");
+        }
         
         if (!result.profileTitle || !Array.isArray(result.strengths) || result.strengths.length === 0) {
              throw new Error("Formato del profilo comunicatore non valido.");
@@ -364,6 +405,9 @@ export const generateCommunicatorProfile = async (
         console.error("Errore durante la generazione del profilo comunicatore:", error);
         if (error.message.includes('API key')) {
              throw new Error("API_KEY non valida o mancante.");
+        }
+        if (error.message.includes("L'API") || error.message.includes("Formato del profilo")) {
+            throw error;
         }
         throw new Error("Impossibile generare il profilo comunicatore.");
     }
