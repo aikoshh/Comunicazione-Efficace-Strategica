@@ -71,7 +71,7 @@ const ScoreCircle: React.FC<{ score: number }> = ({ score }) => {
           style={{ transition: 'stroke-dashoffset 1s cubic-bezier(0.25, 1, 0.5, 1)' }}
         />
       </svg>
-      <div style={{...styles.scoreText, animation: 'popIn 0.5s 0.8s ease-out both'}}>{score}<span style={{fontSize: '20px'}}>%</span></div>
+      <div style={{...styles.scoreText, color: strokeColor, animation: 'popIn 0.5s 0.8s ease-out both'}}>{score}<span style={{fontSize: '20px'}}>%</span></div>
     </div>
   );
 };
@@ -99,9 +99,9 @@ export const AnalysisReportScreen: React.FC<AnalysisReportScreenProps> = ({ resu
   const [activeTab, setActiveTab] = useState<'short' | 'long'>('short');
 
   useEffect(() => {
-    soundService.playSuccess();
+    soundService.playScoreSound(result.score);
     window.scrollTo(0, 0); // Scroll to top on mount
-  }, []);
+  }, [result.score]);
   
   const handleRetry = () => {
     soundService.playClick();
@@ -238,7 +238,7 @@ const styles: { [key: string]: React.CSSProperties } = {
         fontWeight: 'bold',
         color: COLORS.textPrimary,
         display: 'flex',
-        alignItems: 'center',
+        alignItems: 'baseline',
         justifyContent: 'center',
     },
     feedbackGrid: {

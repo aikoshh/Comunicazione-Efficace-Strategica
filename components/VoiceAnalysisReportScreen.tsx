@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { VoiceAnalysisResult, Exercise } from '../types';
 import { COLORS, VOICE_RUBRIC_CRITERIA } from '../constants';
 import { useSpeech } from '../hooks/useSpeech';
@@ -38,6 +38,42 @@ const HighlightText: React.FC<{ text: string }> = ({ text }) => {
     );
 };
 
+const ScoreCircle: React.FC<{ score: number }> = ({ score }) => {
+  const [displayScore, setDisplayScore] = useState(0);
+  const circumference = 2 * Math.PI * 52; // 2 * pi * radius
+  
+  let strokeColor = COLORS.success;
+  if (score < 70) strokeColor = COLORS.warning;
+  if (score < 40) strokeColor = COLORS.error;
+
+  useEffect(() => {
+    const animation = requestAnimationFrame(() => {
+        setDisplayScore(score);
+    });
+    return () => cancelAnimationFrame(animation);
+  }, [score]);
+
+  return (
+    <div style={styles.scoreContainer}>
+      <svg width="120" height="120" viewBox="0 0 120 120" style={{ transform: 'rotate(-90deg)' }}>
+        <circle cx="60" cy="60" r="52" fill="none" stroke={COLORS.divider} strokeWidth="8" />
+        <circle
+          cx="60"
+          cy="60"
+          r="52"
+          fill="none"
+          stroke={strokeColor}
+          strokeWidth="8"
+          strokeDasharray={circumference}
+          strokeDashoffset={circumference - (displayScore / 100) * circumference}
+          strokeLinecap="round"
+          style={{ transition: 'stroke-dashoffset 1s cubic-bezier(0.25, 1, 0.5, 1)' }}
+        />
+      </svg>
+      <div style={{...styles.scoreText, color: strokeColor, animation: 'popIn 0.5s 0.8s ease-out both'}}>{score}<span style={{fontSize: '20px'}}>%</span></div>
+    </div>
+  );
+};
 
 const getScoreColor = (score: number): string => {
   if (score < 6) return COLORS.error;
@@ -80,12 +116,16 @@ const AnnotatedText: React.FC<{ text: string }> = ({ text }) => {
 export const VoiceAnalysisReportScreen: React.FC<VoiceAnalysisReportScreenProps> = ({ result, exercise, onRetry, onNext }) => {
   const { speak, isSpeaking, stopSpeaking } = useSpeech();
   
+  const averageScore = Math.round(result.scores.reduce((acc, s) => acc + s.score, 0) / result.scores.length * 10);
+
   useEffect(() => {
-    soundService.playSuccess();
+    window.scrollTo(0, 0);
+    soundService.playScoreSound(averageScore);
+    
     return () => {
         stopSpeaking(); // Cleanup speech synthesis on component unmount
     }
-  }, []);
+  }, [averageScore, stopSpeaking]);
   
   const handleRetry = () => {
     soundService.playClick();
@@ -122,6 +162,8 @@ export const VoiceAnalysisReportScreen: React.FC<VoiceAnalysisReportScreenProps>
       <style>{hoverStyle}</style>
       <div style={styles.card}>
         <h1 style={styles.title}>Report Voce & Paraverbale</h1>
+        
+        <ScoreCircle score={averageScore} />
         
         <div style={{...styles.scoresGrid, animation: 'fadeInUp 0.5s 0.2s ease-out both'}}>
             {VOICE_RUBRIC_CRITERIA.map(criterion => {
@@ -181,7 +223,7 @@ export const VoiceAnalysisReportScreen: React.FC<VoiceAnalysisReportScreenProps>
         
         <div style={{...styles.suggestedDeliveryContainer, animation: 'fadeInUp 0.5s 0.8s ease-out both'}}>
           <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px'}}>
-              <h2 style={styles.sectionTitle}>Consegna Suggerita</h2>
+              <h2 style={styles.sectionTitle}>Risposta Consigliata</h2>
               <button onClick={handleStrategicReplay} style={styles.replayButton} className="secondary-button">
                   {isSpeaking ? <SpeakerOffIcon/> : <SpeakerIcon/>}
                   {isSpeaking ? 'Ferma Ascolto' : 'Ascolta Versione Ideale'}
@@ -226,8 +268,26 @@ const styles: { [key: string]: React.CSSProperties } = {
         fontSize: '28px',
         fontWeight: 'bold',
         color: COLORS.textPrimary,
-        marginBottom: '32px',
+        marginBottom: '24px',
         textAlign: 'center',
+    },
+    scoreContainer: {
+        position: 'relative',
+        width: '120px',
+        height: '120px',
+        margin: '16px auto 32px',
+    },
+    scoreText: {
+        position: 'absolute',
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
+        fontSize: '32px',
+        fontWeight: 'bold',
+        color: COLORS.textPrimary,
+        display: 'flex',
+        alignItems: 'baseline',
+        justifyContent: 'center',
     },
     scoresGrid: {
         display: 'grid',

@@ -4,12 +4,13 @@ import { MODULES, COLORS, SAGE_PALETTE } from '../constants';
 import { Logo } from './Logo';
 import { ProgressOverview } from './ProgressOverview';
 import { getDailyChallenge } from '../services/progressionService';
-import { CheckCircleIcon } from './Icons';
+import { CheckCircleIcon, TargetIcon } from './Icons';
 import { soundService } from '../services/soundService';
 
 interface HomeScreenProps {
   onSelectModule: (module: Module) => void;
   onSelectExercise: (exercise: Exercise) => void;
+  onStartCheckup: () => void;
   currentUser: User | null;
   userProgress: UserProgress | undefined;
 }
@@ -26,9 +27,13 @@ const hoverStyle = `
     transform: translateY(-5px);
     box-shadow: 0 8px 20px rgba(14, 58, 93, 0.2);
   }
+  .checkup-prompt:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(88, 166, 166, 0.25);
+  }
 `;
 
-export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectModule, onSelectExercise, currentUser, userProgress }) => {
+export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectModule, onSelectExercise, onStartCheckup, currentUser, userProgress }) => {
   const [dailyChallenge, setDailyChallenge] = useState<Exercise | null>(null);
 
   useEffect(() => {
@@ -109,7 +114,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectModule, onSelect
       <style>{hoverStyle}</style>
       <header style={styles.header}>
         <Logo />
-        <h1 style={styles.title}>Centro di Allenamento</h1>
+        <h1 style={styles.title}>Inizia ora il tuo Allenamento con la Comunicazione Efficace Strategica®</h1>
          <p style={styles.subtitle}>
             Seleziona la tua prossima sessione dalla Mappa delle Competenze o affronta la Sfida del Giorno.
         </p>
@@ -118,6 +123,22 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectModule, onSelect
       {currentUser && <ProgressOverview user={currentUser} progress={userProgress} />}
       
       <main style={currentUser ? {marginTop: '48px'} : {}}>
+        
+        {currentUser && !userProgress?.hasCompletedCheckup && (
+          <section style={styles.checkupPrompt} className="checkup-prompt" onClick={onStartCheckup}>
+            <div>
+              <h3 style={styles.checkupTitle}>Valuta il tuo Livello Iniziale</h3>
+              <p style={styles.checkupText}>
+                Completa il test di analisi per scoprire il tuo profilo di comunicatore e ricevere un percorso di allenamento personalizzato.
+              </p>
+            </div>
+            <button style={styles.checkupButton}>
+              <TargetIcon />
+              <span>Inizia il Test</span>
+            </button>
+          </section>
+        )}
+
         {dailyChallenge && (
             <section style={{marginBottom: '48px'}}>
                  <h2 style={styles.sectionTitle}>Sfida del Giorno</h2>
@@ -157,10 +178,39 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectModule, onSelect
 const styles: { [key: string]: React.CSSProperties } = {
     container: { maxWidth: '1200px', margin: '0 auto', padding: '40px 20px', backgroundColor: COLORS.base, minHeight: '100vh' },
     header: { textAlign: 'center', marginBottom: '48px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' },
-    title: { fontSize: '32px', fontWeight: 'bold', color: COLORS.textPrimary, margin: '16px 0 0 0' },
+    title: { fontSize: '26px', fontWeight: 'bold', color: COLORS.textPrimary, margin: '16px 0 0 0', lineHeight: 1.3 },
     subtitle: { fontSize: '16px', color: COLORS.textSecondary, maxWidth: '600px', margin: '0 auto', lineHeight: 1.6 },
     sectionTitle: { fontSize: '24px', fontWeight: 'bold', color: COLORS.primary, marginBottom: '24px', borderBottom: `3px solid ${COLORS.secondary}`, paddingBottom: '8px' },
     categoryTitle: { fontSize: '20px', fontWeight: 'bold', color: COLORS.textSecondary, marginTop: '24px', marginBottom: '16px' },
+    checkupPrompt: {
+        background: `linear-gradient(135deg, ${COLORS.secondary} 0%, #73B5B5 100%)`,
+        color: 'white',
+        padding: '24px',
+        borderRadius: '12px',
+        cursor: 'pointer',
+        transition: 'all 0.3s ease',
+        boxShadow: '0 4px 15px rgba(88, 166, 166, 0.2)',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        gap: '20px',
+        marginBottom: '48px',
+        animation: 'fadeInUp 0.5s ease-out'
+    },
+    checkupTitle: { margin: '0 0 8px 0', fontSize: '18px', fontWeight: 600 },
+    checkupText: { margin: 0, fontSize: '15px', opacity: 0.9, lineHeight: 1.5 },
+    checkupButton: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        backgroundColor: '#FFFBEA',
+        color: COLORS.textAccent,
+        padding: '10px 18px',
+        borderRadius: '20px',
+        fontWeight: 600,
+        flexShrink: 0,
+        border: 'none',
+    },
     dailyChallenge: {
         background: COLORS.primaryGradient,
         color: 'white',

@@ -104,12 +104,8 @@ const App: React.FC = () => {
     if (user && user.password === pass) {
       setCurrentUser(user);
       setIsAuthenticated(true);
-      const progress = userProgress[user.email];
-      if (!progress || !progress.hasCompletedCheckup) {
-          setAppState({ screen: 'strategic_checkup' });
-      } else {
-          setAppState({ screen: 'home' });
-      }
+      // Always go to home screen after login. The checkup is now optional from the home screen.
+      setAppState({ screen: 'home' });
     } else {
       throw new Error("Email o password non validi.");
     }
@@ -138,6 +134,7 @@ const App: React.FC = () => {
   };
   
   const handleStartCheckup = () => {
+      soundService.playClick();
       setAppState({ screen: 'strategic_checkup' });
   };
   
@@ -236,7 +233,7 @@ const App: React.FC = () => {
   };
   
   const handleBack = () => {
-    if (appState.screen === 'module' || appState.screen === 'custom_setup' || appState.screen === 'communicator_profile') {
+    if (appState.screen === 'module' || appState.screen === 'custom_setup' || appState.screen === 'communicator_profile' || appState.screen === 'strategic_checkup') {
       setAppState({ screen: 'home' });
     }
     if (appState.screen === 'exercise') {
@@ -281,6 +278,7 @@ const App: React.FC = () => {
                 onSelectExercise={handleSelectExercise}
                 currentUser={currentUser}
                 userProgress={currentUser ? userProgress[currentUser.email] : undefined}
+                onStartCheckup={handleStartCheckup}
              />;
       break;
     case 'module':
@@ -318,7 +316,7 @@ const App: React.FC = () => {
         break;
     case 'strategic_checkup':
         screenKey = 'strategic_checkup';
-        screenContent = <StrategicCheckupScreen onSelectExercise={handleSelectExercise} onCompleteCheckup={handleCompleteCheckup} onApiKeyError={handleApiKeyError} />;
+        screenContent = <StrategicCheckupScreen onSelectExercise={handleSelectExercise} onCompleteCheckup={handleCompleteCheckup} onApiKeyError={handleApiKeyError} onBack={handleBack} />;
         break;
     case 'communicator_profile':
         screenKey = 'communicator_profile';
@@ -331,6 +329,7 @@ const App: React.FC = () => {
                  onSelectExercise={handleSelectExercise}
                  currentUser={currentUser}
                  userProgress={currentUser ? userProgress[currentUser.email] : undefined}
+                 onStartCheckup={handleStartCheckup}
                />;
   }
 

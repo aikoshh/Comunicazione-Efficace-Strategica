@@ -1,16 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { COLORS } from '../constants';
 
-const ESTIMATED_TIME = 12; // Tempo stimato in secondi
+const DEFAULT_ESTIMATED_TIME = 15; // Default time in seconds
 
-export const Loader = () => {
-  const [timeLeft, setTimeLeft] = useState(ESTIMATED_TIME);
+interface LoaderProps {
+  estimatedTime?: number;
+}
+
+export const Loader: React.FC<LoaderProps> = ({ estimatedTime = DEFAULT_ESTIMATED_TIME }) => {
+  const [timeLeft, setTimeLeft] = useState(estimatedTime);
 
   useEffect(() => {
-    // Imposta l'intervallo del timer
+    // Resetta il timer se il componente viene ri-renderizzato con un nuovo tempo
+    setTimeLeft(estimatedTime);
+    
     const timer = setInterval(() => {
       setTimeLeft(prevTime => {
-        // Ferma il timer quando arriva a 0
         if (prevTime <= 1) {
           clearInterval(timer);
           return 0;
@@ -19,9 +24,8 @@ export const Loader = () => {
       });
     }, 1000);
 
-    // Pulisce l'intervallo quando il componente viene smontato
     return () => clearInterval(timer);
-  }, []); // L'array vuoto assicura che l'effetto venga eseguito solo una volta al montaggio
+  }, [estimatedTime]); // L'effetto si riattiva se la prop `estimatedTime` cambia
 
   return (
     <div style={styles.container}>

@@ -1,18 +1,22 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Exercise, AnalysisResult, CommunicatorProfile } from '../types';
 import { STRATEGIC_CHECKUP_EXERCISES, COLORS } from '../constants';
 import { ExerciseScreen } from './ExerciseScreen';
 import { Loader } from './Loader';
 import { generateCommunicatorProfile, analyzeResponse } from '../services/geminiService';
 import { Logo } from './Logo';
+import { HomeIcon, MicIcon } from './Icons';
+import { soundService } from '../services/soundService';
+import { useSpeech } from '../hooks/useSpeech';
 
 interface StrategicCheckupScreenProps {
   onSelectExercise: (exercise: Exercise, isCheckup: boolean, checkupStep: number, totalCheckupSteps: number) => void;
   onCompleteCheckup: (profile: CommunicatorProfile) => void;
   onApiKeyError: (error: string) => void;
+  onBack: () => void;
 }
 
-export const StrategicCheckupScreen: React.FC<StrategicCheckupScreenProps> = ({ onSelectExercise, onCompleteCheckup, onApiKeyError }) => {
+export const StrategicCheckupScreen: React.FC<StrategicCheckupScreenProps> = ({ onSelectExercise, onCompleteCheckup, onApiKeyError, onBack }) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [analysisResults, setAnalysisResults] = useState<{ exerciseId: string; analysis: AnalysisResult }[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -47,6 +51,11 @@ export const StrategicCheckupScreen: React.FC<StrategicCheckupScreenProps> = ({ 
     }
   };
 
+  const handleBackClick = () => {
+    soundService.playClick();
+    onBack();
+  };
+
   if (isLoading) {
     return <Loader />;
   }
@@ -57,14 +66,34 @@ export const StrategicCheckupScreen: React.FC<StrategicCheckupScreenProps> = ({ 
   // We'll wrap it or create a simplified version for the checkup.
   const StandaloneExercise: React.FC = () => {
     const [userResponse, setUserResponse] = useState('');
+    const { isListening, transcript, startListening, stopListening, isSupported } = useSpeech();
+    const textBeforeListening = useRef('');
+
+    useEffect(() => {
+      if (isListening) {
+        setUserResponse(textBeforeListening.current + transcript);
+      }
+    }, [transcript, isListening]);
     
     const handleSubmit = () => {
+        soundService.playClick();
         if (!userResponse.trim()) {
             setError("La risposta non può essere vuota.");
             return;
         }
         handleCompleteExercise(userResponse);
     }
+
+    const handleToggleDictation = () => {
+        if (isListening) {
+            soundService.playStopRecording();
+            stopListening();
+        } else {
+            soundService.playStartRecording();
+            textBeforeListening.current = userResponse ? userResponse + ' ' : '';
+            startListening();
+        }
+    };
 
     return (
         <div style={styles.exerciseContainer}>
@@ -76,13 +105,25 @@ export const StrategicCheckupScreen: React.FC<StrategicCheckupScreenProps> = ({ 
                 style={styles.textarea}
                 value={userResponse}
                 onChange={(e) => setUserResponse(e.target.value)}
-                placeholder="Scrivi qui la tua risposta..."
+                placeholder="Scrivi qui la tua risposta migliore..."
                 rows={6}
             />
+            {isSupported && (
+                <button
+                    onClick={handleToggleDictation}
+                    style={{...styles.dictationButton, ...(isListening ? styles.dictationButtonListening : {})}}
+                >
+                    <MicIcon />
+                    {isListening ? 'Ferma Dettatura' : 'Rispondi a Voce'}
+                </button>
+            )}
             <button onClick={handleSubmit} style={styles.button}>
-                {currentStep < totalSteps - 1 ? 'Prossimo Passo' : 'Completa e Genera Profilo'}
+                {currentStep < totalSteps - 1 ? 'Avanti e Conferma' : 'Completa e Genera Profilo'}
             </button>
             {error && <p style={{color: COLORS.error, marginTop: '12px'}}>{error}</p>}
+            <button onClick={handleBackClick} style={styles.exitButton}>
+                Esci dal Check Up
+            </button>
         </div>
     );
   }
@@ -129,7 +170,8 @@ const styles: { [key: string]: React.CSSProperties } = {
     width: '100%',
     maxWidth: '800px',
     boxShadow: '0 8px 30px rgba(0,0,0,0.1)',
-    animation: 'fadeInUp 0.5s ease-out'
+    animation: 'fadeInUp 0.5s ease-out',
+    position: 'relative',
   },
   header: {
     textAlign: 'center',
@@ -181,6 +223,8 @@ const styles: { [key: string]: React.CSSProperties } = {
       backgroundColor: COLORS.cardDark,
       padding: '24px',
       borderRadius: '12px',
+      display: 'flex',
+      flexDirection: 'column',
   },
   scenarioText: { fontSize: '16px', color: COLORS.textSecondary, lineHeight: '1.6' },
   taskContainer: {
@@ -212,6 +256,43 @@ const styles: { [key: string]: React.CSSProperties } = {
     border: 'none',
     borderRadius: '8px',
     cursor: 'pointer',
-    transition: 'transform 0.2s ease, filter 0.2s ease'
+    transition: 'transform 0.2s ease, filter 0.2s ease',
+  },
+  dictationButton: {
+      padding: '10px 20px',
+      fontSize: '16px',
+      fontWeight: '500',
+      borderRadius: '8px',
+      border: `1px solid ${COLORS.warning}`,
+      background: '#FFFBEA',
+      color: COLORS.textAccent,
+      cursor: 'pointer',
+      transition: 'all 0.2s ease',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: '8px',
+      alignSelf: 'center',
+      marginTop: '16px'
+  },
+  dictationButtonListening: {
+      background: COLORS.error,
+      color: 'white',
+      border: `1px solid ${COLORS.error}`,
+  },
+  exitButton: {
+    marginTop: '24px',
+    backgroundColor: '#E67E22',
+    color: 'white',
+    border: 'none',
+    borderRadius: '8px',
+    padding: '10px 20px',
+    cursor: 'pointer',
+    fontSize: '15px',
+    fontWeight: 'bold',
+    alignSelf: 'center',
+    textDecoration: 'none',
+    boxShadow: '0 4px 12px rgba(230, 126, 34, 0.3)',
+    transition: 'all 0.2s ease',
   },
 };

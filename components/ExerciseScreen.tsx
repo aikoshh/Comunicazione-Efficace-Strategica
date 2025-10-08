@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Exercise, ExerciseType, AnalysisResult, VoiceAnalysisResult } from '../types';
 import { useSpeech } from '../hooks/useSpeech';
 import { analyzeResponse, analyzeParaverbalResponse } from '../services/geminiService';
@@ -32,14 +32,28 @@ export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { isListening, transcript, startListening, stopListening, isSupported, speak, isSpeaking, stopSpeaking } = useSpeech();
+  const textBeforeListening = useRef('');
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
 
   const isVerbalExercise = exercise.exerciseType === ExerciseType.VERBAL;
 
+  // Effect for VERBAL exercises (transcript replaces everything)
   useEffect(() => {
-    if (transcript) {
+    if (isVerbalExercise && transcript) {
       setUserResponse(transcript);
     }
-  }, [transcript]);
+  }, [transcript, isVerbalExercise]);
+  
+  // Effect for DICTATION in written exercises (transcript appends)
+  useEffect(() => {
+    if (!isVerbalExercise && isListening) {
+      setUserResponse(textBeforeListening.current + transcript);
+    }
+  }, [transcript, isListening, isVerbalExercise]);
+
 
   const handleScenarioPlayback = () => {
     soundService.playClick();
@@ -50,15 +64,29 @@ export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({
     }
   };
   
+  // For dedicated verbal exercises
   const handleStartListening = () => {
     soundService.playStartRecording();
     startListening();
   }
 
+  // For dedicated verbal exercises
   const handleStopListening = () => {
     soundService.playStopRecording();
     stopListening();
   }
+  
+  // For dictation button in written exercises
+  const handleToggleDictation = () => {
+      if (isListening) {
+          soundService.playStopRecording();
+          stopListening();
+      } else {
+          soundService.playStartRecording();
+          textBeforeListening.current = userResponse ? userResponse + ' ' : '';
+          startListening();
+      }
+  };
   
   const handleBackClick = () => {
     soundService.playClick();
@@ -124,10 +152,20 @@ export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({
           style={styles.textarea}
           value={userResponse}
           onChange={(e) => setUserResponse(e.target.value)}
-          placeholder="Scrivi qui la tua risposta..."
+          placeholder="Scrivi qui la tua risposta migliore..."
           rows={6}
           disabled={isLoading}
         />
+        {isSupported && (
+            <button
+                onClick={handleToggleDictation}
+                style={{...styles.dictationButton, ...(isListening ? styles.dictationButtonListening : {})}}
+                disabled={isLoading}
+            >
+                <MicIcon />
+                {isListening ? 'Ferma Dettatura' : 'Rispondi a Voce'}
+            </button>
+        )}
         <button onClick={handleSubmit} style={{...styles.mainButton, ...(!userResponse.trim() || isLoading ? styles.mainButtonDisabled : {})}} disabled={isLoading || !userResponse.trim()}>
           Invia Risposta <SendIcon color="white" />
         </button>
@@ -136,7 +174,7 @@ export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({
   };
 
   if (isLoading) {
-    return <Loader />;
+    return <Loader estimatedTime={isVerbalExercise ? 20 : 15} />;
   }
 
   return (
@@ -161,19 +199,12 @@ export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({
           <p style={styles.taskText}><strong>Compito:</strong> {exercise.task}</p>
         </div>
       </div>
-
-      {!isVerbalExercise && (
-        <div style={styles.toggleContainer}>
-            <button
-                style={{ ...styles.toggleButton, ...styles.toggleButtonActive }}
-            >
-                <WrittenIcon /> Risposta Scritta
-            </button>
-        </div>
-      )}
       
       <div style={styles.responseSection}>
-        <h2 style={styles.responseTitle}>La tua risposta</h2>
+        <h2 style={styles.responseTitle}>
+            <WrittenIcon />
+            Risposta
+        </h2>
         {error && <p style={styles.errorText}>{error}</p>}
         {renderInputArea()}
       </div>
@@ -184,7 +215,22 @@ export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({
 
 const styles: { [key: string]: React.CSSProperties } = {
   container: { maxWidth: '800px', margin: '0 auto', padding: '40px 20px', display: 'flex', flexDirection: 'column', gap: '24px' },
-  backButton: { display: 'flex', alignItems: 'center', gap: '8px', background: 'transparent', color: COLORS.textPrimary, border: `1px solid ${COLORS.divider}`, borderRadius: '8px', padding: '10px 16px', cursor: 'pointer', fontSize: '14px', fontWeight: '500', alignSelf: 'flex-start', transition: 'all 0.2s ease' },
+  backButton: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    backgroundColor: COLORS.secondary,
+    color: 'white',
+    border: 'none',
+    borderRadius: '8px',
+    padding: '10px 16px',
+    cursor: 'pointer',
+    fontSize: '14px',
+    fontWeight: '500',
+    alignSelf: 'flex-start',
+    transition: 'all 0.2s ease',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+  },
   checkupHeader: {
       textAlign: 'center',
       fontSize: '16px',
@@ -206,7 +252,7 @@ const styles: { [key: string]: React.CSSProperties } = {
   toggleButton: { flex: 1, padding: '10px 16px', fontSize: '16px', border: 'none', background: 'transparent', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all 0.2s', color: COLORS.textSecondary, fontWeight: 500 },
   toggleButtonActive: { backgroundColor: COLORS.card, color: COLORS.textPrimary, fontWeight: '600', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' },
   responseSection: { display: 'flex', flexDirection: 'column', gap: '16px'},
-  responseTitle: {fontSize: '20px', color: COLORS.textPrimary, margin: 0, fontWeight: 'bold'},
+  responseTitle: {fontSize: '20px', color: COLORS.textPrimary, margin: 0, fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '12px'},
   inputContainer: { display: 'flex', flexDirection: 'column', gap: '16px'},
   textarea: { width: '100%', padding: '16px', fontSize: '16px', borderRadius: '12px', border: `1px solid ${COLORS.divider}`, resize: 'vertical', fontFamily: 'inherit', backgroundColor: COLORS.card, color: COLORS.textPrimary, transition: 'border-color 0.2s, box-shadow 0.2s' },
   mainButton: { padding: '12px 24px', fontSize: '16px', fontWeight: 'bold', borderRadius: '8px', border: 'none', background: COLORS.primaryGradient, color: 'white', cursor: 'pointer', transition: 'all 0.2s ease', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', alignSelf: 'center', boxShadow: '0 4px 15px rgba(14, 58, 93, 0.3)' },
@@ -216,4 +262,25 @@ const styles: { [key: string]: React.CSSProperties } = {
   micButton: { width: '72px', height: '72px', borderRadius: '50%', background: COLORS.primaryGradient, border: '4px solid white', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', transition: 'all 0.2s', boxShadow: '0 4px 12px rgba(0,0,0,0.2)' },
   micButtonListening: { backgroundColor: COLORS.error, background: COLORS.error },
   errorText: { color: COLORS.error, textAlign: 'center', fontWeight: '500' },
+  dictationButton: {
+      padding: '10px 20px',
+      fontSize: '16px',
+      fontWeight: '500',
+      borderRadius: '8px',
+      border: `1px solid ${COLORS.warning}`,
+      background: '#FFFBEA',
+      color: COLORS.textAccent,
+      cursor: 'pointer',
+      transition: 'all 0.2s ease',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: '8px',
+      alignSelf: 'center',
+  },
+  dictationButtonListening: {
+      background: COLORS.error,
+      color: 'white',
+      border: `1px solid ${COLORS.error}`,
+  },
 };
