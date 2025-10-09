@@ -93,7 +93,6 @@ const ResponseText: React.FC<{ text: string }> = ({ text }) => {
 };
 
 export const AnalysisReportScreen: React.FC<AnalysisReportScreenProps> = ({ result, exercise, onRetry, onNext }) => {
-  console.log("DEBUG result:", result);
 
   const safeResult = {
     ...(result ?? {}),
