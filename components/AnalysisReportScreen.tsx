@@ -148,9 +148,9 @@ export const AnalysisReportScreen: React.FC<AnalysisReportScreenProps> = ({ resu
             <div style={{...styles.feedbackCard, animation: 'fadeInUp 0.5s 0.4s ease-out both'}}>
                 <h2 style={styles.sectionTitle}><LightbulbIcon style={{color: COLORS.warning}}/> Aree di Miglioramento</h2>
                 <ul style={styles.list}>
-                  {result.areasForImprovement.map((item, index) => (
-                    <li key={index} style={styles.listItem}>
-                      <LightbulbIcon style={{...styles.listItemIcon, color: COLORS.warning}} />
+                  {(result?.areasForImprovement ?? []).map((item, index) => (
+  <li key={index} style={styles.listItem}>
+    <LightbulbIcon style={{ ...styles.listItemIcon, color: COLORS.warning }} />
                       <div style={styles.listItemText}>
                         <span><HighlightText text={item.suggestion} /></span>
                         <span style={styles.exampleText}>
