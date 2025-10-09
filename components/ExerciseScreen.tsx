@@ -102,19 +102,26 @@ export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({
     setIsLoading(true);
     setError(null);
     try {
-      if(isVerbalExercise) {
+      // piccolo log utile per capire dove stiamo chiamando
+      // (in produzione non dà fastidio, ma aiuta a debug)
+      // @ts-ignore
+      console.log('DEBUG VITE_AI_PROXY_URL =', (import.meta as any)?.env?.VITE_AI_PROXY_URL);
+
+      if (isVerbalExercise) {
         const result = await analyzeParaverbalResponse(userResponse, exercise.scenario, exercise.task);
+        console.log('DEBUG analyzeParaverbalResponse ->', result); // 👈 LOG risultato verbale
         onCompleteVerbal(result);
       } else {
-        const result = await analyzeResponse(userResponse, exercise.scenario, exercise.task, false); // For written, set verbal to false
+        const result = await analyzeResponse(userResponse, exercise.scenario, exercise.task, false);
+        console.log('DEBUG analyzeResponse ->', result); // 👈 LOG risultato scritto
         onCompleteWritten(result);
       }
     } catch (e: any) {
       console.error(e);
-      if (e.message.includes('API_KEY')) {
+      if (e?.message?.includes?.('API_KEY')) {
         onApiKeyError(e.message);
       } else {
-        setError(e.message || "Si è verificato un errore sconosciuto.");
+        setError(e?.message || "Si è verificato un errore sconosciuto.");
       }
     } finally {
       setIsLoading(false);
