@@ -11,27 +11,32 @@ interface AnalysisReportScreenProps {
   onNext: () => void;
 }
 
+// ✅ normalizza i dati per evitare undefined
+const normalizeResult = (r: Partial<AnalysisResult> | undefined): AnalysisResult => ({
+  score: typeof r?.score === 'number' ? r!.score : 0,
+  strengths: r?.strengths ?? [],
+  areasForImprovement: r?.areasForImprovement ?? [],
+  suggestedResponse: r?.suggestedResponse ?? { short: '', long: '' },
+});
+
 const KEYWORDS = [
-  'efficace', 'chiaro', 'empatico', 'tono', 'ritmo', 'pause', 'volume', 'assertività', 'costruttivo',
-  'soluzione', 'obiettivo', 'strategico', 'ottimo', 'eccellente', 'ben', 'buon', 'correttamente',
-  'giusto', 'prova a', 'cerca di', 'evita di', 'potresti', 'considera', 'concentrati su',
-  'ricorda di', 'lavora su', 'registra', 'ascolta', 'leggi', 'parla', 'esercitati',
-  'identifica', 'scrivi', 'comunica', 'gestisci', 'usa', 'mantieni', 'assicurati'
+  'efficace','chiaro','empatico','tono','ritmo','pause','volume','assertività','costruttivo',
+  'soluzione','obiettivo','strategico','ottimo','eccellente','ben','buon','correttamente',
+  'giusto','prova a','cerca di','evita di','potresti','considera','concentrati su',
+  'ricorda di','lavora su','registra','ascolta','leggi','parla','esercitati',
+  'identifica','scrivi','comunica','gestisci','usa','mantieni','assicurati'
 ];
 
 const HighlightText: React.FC<{ text: string }> = ({ text }) => {
   if (!text) return null;
   const regex = new RegExp(`\\b(${KEYWORDS.join('|')})\\b`, 'gi');
   const parts = text.split(regex);
-
   return (
     <>
-      {parts.map((part, index) =>
-        KEYWORDS.some(keyword => new RegExp(`^${keyword}$`, 'i').test(part)) ? (
-          <strong key={index} style={{ color: COLORS.primary, fontWeight: '700' }}>{part}</strong>
-        ) : (
-          part
-        )
+      {parts.map((part, i) =>
+        KEYWORDS.some(k => new RegExp(`^${k}$`, 'i').test(part))
+          ? <strong key={i} style={{ color: COLORS.primary, fontWeight: 700 }}>{part}</strong>
+          : part
       )}
     </>
   );
@@ -45,8 +50,8 @@ const ScoreCircle: React.FC<{ score: number }> = ({ score }) => {
   if (score < 40) strokeColor = COLORS.error;
 
   useEffect(() => {
-    const animation = requestAnimationFrame(() => setDisplayScore(score));
-    return () => cancelAnimationFrame(animation);
+    const anim = requestAnimationFrame(() => setDisplayScore(score));
+    return () => cancelAnimationFrame(anim);
   }, [score]);
 
   return (
@@ -54,38 +59,27 @@ const ScoreCircle: React.FC<{ score: number }> = ({ score }) => {
       <svg width="120" height="120" viewBox="0 0 120 120" style={{ transform: 'rotate(-90deg)' }}>
         <circle cx="60" cy="60" r="52" fill="none" stroke={COLORS.divider} strokeWidth="8" />
         <circle
-          cx="60"
-          cy="60"
-          r="52"
-          fill="none"
-          stroke={strokeColor}
-          strokeWidth="8"
+          cx="60" cy="60" r="52" fill="none" stroke={strokeColor} strokeWidth="8"
           strokeDasharray={circumference}
           strokeDashoffset={circumference - (displayScore / 100) * circumference}
           strokeLinecap="round"
           style={{ transition: 'stroke-dashoffset 1s cubic-bezier(0.25, 1, 0.5, 1)' }}
         />
       </svg>
-      <div style={{ ...styles.scoreText, color: strokeColor }}>
-        {score}
-        <span style={{ fontSize: '20px' }}>%</span>
-      </div>
+      <div style={{ ...styles.scoreText, color: strokeColor }}>{score}<span style={{ fontSize: 20 }}>%</span></div>
     </div>
   );
 };
 
 const ResponseText: React.FC<{ text: string }> = ({ text }) => {
-  if (!text) return null;
-  const parts = text.split(/(\*\*.*?\*\*)/g).filter(part => part.length > 0);
+  const parts = (text || '').split(/(\*\*.*?\*\*)/g).filter(Boolean);
   return (
     <p style={styles.suggestedResponseText}>
       "
       {parts.map((part, i) =>
-        part.startsWith('**') && part.endsWith('**') ? (
-          <strong style={{ color: COLORS.secondary }} key={i}>{part.slice(2, -2)}</strong>
-        ) : (
-          part
-        )
+        part.startsWith('**') && part.endsWith('**')
+          ? <strong style={{ color: COLORS.secondary }} key={i}>{part.slice(2, -2)}</strong>
+          : part
       )}
       "
     </p>
@@ -93,81 +87,45 @@ const ResponseText: React.FC<{ text: string }> = ({ text }) => {
 };
 
 export const AnalysisReportScreen: React.FC<AnalysisReportScreenProps> = ({ result, exercise, onRetry, onNext }) => {
-
-  const safeResult = {
-    ...(result ?? {}),
-    score: result?.score ?? 0,
-    strengths: Array.isArray(result?.strengths) ? result.strengths : [],
-    improvements: Array.isArray(result?.improvements) ? result.improvements : [],
-    actions: Array.isArray(result?.actions) ? result.actions : [],
-    areasForImprovement: Array.isArray(result?.areasForImprovement) ? result.areasForImprovement : [],
-    scores: Array.isArray(result?.scores) ? result.scores : [],
-    suggestedResponse: result?.suggestedResponse ?? { short: '', long: '' },
-  };
-
+  const safe = normalizeResult(result);
   const [activeTab, setActiveTab] = useState<'short' | 'long'>('short');
 
   useEffect(() => {
-    soundService.playScoreSound(safeResult.score);
+    soundService.playScoreSound(safe.score);
     window.scrollTo(0, 0);
-  }, [safeResult.score]);
+  }, [safe.score]);
 
-  const handleRetry = () => {
-    soundService.playClick();
-    onRetry();
-  };
-
-  const handleNext = () => {
-    soundService.playClick();
-    onNext();
-  };
-
-  const hoverStyle = `
-    .primary-button:hover, .secondary-button:hover {
-      transform: translateY(-2px);
-      filter: brightness(1.1);
-    }
-     .primary-button:active, .secondary-button:active {
-      transform: translateY(0);
-      filter: brightness(0.95);
-    }
-  `;
+  const handleRetry = () => { soundService.playClick(); onRetry(); };
+  const handleNext  = () => { soundService.playClick(); onNext(); };
 
   return (
     <div style={styles.container}>
-      <style>{hoverStyle}</style>
       <div style={styles.card}>
         <h1 style={styles.title}>Report dell'Analisi</h1>
 
-        <ScoreCircle score={safeResult.score} />
+        <ScoreCircle score={safe.score} />
 
         <div style={styles.feedbackGrid}>
-          <div style={{ ...styles.feedbackCard }}>
-            <h2 style={styles.sectionTitle}>
-              <CheckCircleIcon style={{ color: COLORS.success }} /> Punti di Forza
-            </h2>
+          <div style={styles.feedbackCard}>
+            <h2 style={styles.sectionTitle}><CheckCircleIcon style={{ color: COLORS.success }} /> Punti di Forza</h2>
             <ul style={styles.list}>
-              {(safeResult.strengths ?? []).map((item, index) => (
-                <li key={index} style={styles.listItem}>
+              {safe.strengths.length > 0 ? safe.strengths.map((item, i) => (
+                <li key={i} style={styles.listItem}>
                   <CheckCircleIcon style={{ ...styles.listItemIcon, color: COLORS.success }} />
-                  <span style={styles.listItemText}>
-                    <HighlightText text={item} />
-                  </span>
+                  <span style={styles.listItemText}><HighlightText text={item} /></span>
                 </li>
-              ))}
+              )) : <p>Nessun punto di forza disponibile.</p>}
             </ul>
           </div>
 
-          <div style={{ ...styles.feedbackCard }}>
-            <h2 style={styles.sectionTitle}>
-              <LightbulbIcon style={{ color: COLORS.warning }} /> Aree di Miglioramento
-            </h2>
+          <div style={styles.feedbackCard}>
+            <h2 style={styles.sectionTitle}><LightbulbIcon style={{ color: COLORS.warning }} /> Aree di Miglioramento</h2>
             <ul style={styles.list}>
-              {(safeResult.areasForImprovement ?? []).map((item, index) => (
-                <li key={index} style={styles.listItem}>
+              {(safe.areasForImprovement ?? []).length > 0 ? safe.areasForImprovement.map((item: any, i) => (
+                <li key={i} style={styles.listItem}>
                   <LightbulbIcon style={{ ...styles.listItemIcon, color: COLORS.warning }} />
                   <div style={styles.listItemText}>
-                    <span><HighlightText text={item?.suggestion ?? ''} /></span>
+                    <span><HighlightText text={item?.suggestion || ''} /></span>
                     {item?.example && (
                       <span style={styles.exampleText}>
                         <strong>Esempio:</strong> <em>"{item.example}"</em>
@@ -175,7 +133,7 @@ export const AnalysisReportScreen: React.FC<AnalysisReportScreenProps> = ({ resu
                     )}
                   </div>
                 </li>
-              ))}
+              )) : <p>Nessuna area di miglioramento trovata.</p>}
             </ul>
           </div>
         </div>
@@ -198,18 +156,15 @@ export const AnalysisReportScreen: React.FC<AnalysisReportScreenProps> = ({ resu
           </div>
           <div style={styles.tabContent}>
             {activeTab === 'short'
-              ? <ResponseText text={safeResult.suggestedResponse.short} />
-              : <ResponseText text={safeResult.suggestedResponse.long} />}
+              ? <ResponseText text={safe.suggestedResponse.short} />
+              : <ResponseText text={safe.suggestedResponse.long} />
+            }
           </div>
         </div>
 
         <div style={styles.buttonContainer}>
-          <button onClick={handleRetry} style={styles.secondaryButton} className="secondary-button">
-            <RetryIcon /> Riprova Esercizio
-          </button>
-          <button onClick={handleNext} style={styles.primaryButton} className="primary-button">
-            Menu Principale <HomeIcon />
-          </button>
+          <button onClick={handleRetry} style={styles.secondaryButton}><RetryIcon /> Riprova Esercizio</button>
+          <button onClick={handleNext} style={styles.primaryButton}>Menu Principale <HomeIcon /></button>
         </div>
       </div>
     </div>
@@ -221,7 +176,7 @@ const styles: { [key: string]: React.CSSProperties } = {
   card: { backgroundColor: COLORS.card, borderRadius: '12px', border: `1px solid ${COLORS.divider}`, padding: '32px', maxWidth: '800px', width: '100%', boxShadow: '0 8px 30px rgba(0,0,0,0.08)' },
   title: { fontSize: '28px', fontWeight: 'bold', color: COLORS.textPrimary, marginBottom: '24px', textAlign: 'center' },
   scoreContainer: { position: 'relative', width: '120px', height: '120px', margin: '16px auto 32px' },
-  scoreText: { position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', fontSize: '32px', fontWeight: 'bold' },
+  scoreText: { position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', fontSize: '32px', fontWeight: 'bold', color: COLORS.textPrimary, display: 'flex', alignItems: 'baseline', justifyContent: 'center' },
   feedbackGrid: { display: 'grid', gridTemplateColumns: '1fr', gap: '24px', marginBottom: '32px' },
   feedbackCard: { backgroundColor: COLORS.cardDark, padding: '20px', borderRadius: '12px' },
   sectionTitle: { fontSize: '20px', color: COLORS.textPrimary, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '12px', fontWeight: 600 },
@@ -232,11 +187,11 @@ const styles: { [key: string]: React.CSSProperties } = {
   exampleText: { display: 'block', marginTop: '8px', padding: '10px 12px', backgroundColor: '#EAECEE', borderRadius: '8px', color: COLORS.textSecondary, fontSize: '15px', borderLeft: `3px solid ${COLORS.secondary}` },
   suggestedResponseContainer: { textAlign: 'left' },
   tabs: { display: 'flex', gap: '8px', marginBottom: '16px' },
-  tabButton: { padding: '8px 16px', fontSize: '14px', fontWeight: '500', border: `1px solid ${COLORS.divider}`, backgroundColor: COLORS.divider, color: COLORS.textSecondary, borderRadius: '8px', cursor: 'pointer' },
+  tabButton: { padding: '8px 16px', fontSize: '14px', fontWeight: 500, border: `1px solid ${COLORS.divider}`, backgroundColor: COLORS.divider, color: COLORS.textSecondary, borderRadius: '8px', cursor: 'pointer', transition: 'all 0.2s' },
   tabButtonActive: { backgroundColor: COLORS.secondary, color: 'white', borderColor: COLORS.secondary },
   tabContent: { backgroundColor: COLORS.cardDark, padding: '20px', borderRadius: '12px', minHeight: '100px' },
   suggestedResponseText: { fontSize: '16px', fontStyle: 'italic', color: COLORS.textSecondary, lineHeight: 1.7, margin: 0 },
   buttonContainer: { display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '16px', marginTop: '32px', borderTop: `1px solid ${COLORS.divider}`, paddingTop: '32px' },
-  secondaryButton: { padding: '12px 24px', fontSize: '16px', border: `1px solid ${COLORS.secondary}`, backgroundColor: 'transparent', color: COLORS.secondary, borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 500 },
-  primaryButton: { padding: '12px 24px', fontSize: '16px', fontWeight: 'bold', border: 'none', backgroundColor: COLORS.secondary, color: 'white', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' },
+  secondaryButton: { padding: '12px 24px', fontSize: '16px', border: `1px solid ${COLORS.secondary}`, backgroundColor: 'transparent', color: COLORS.secondary, borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 500, transition: 'all 0.2s ease' },
+  primaryButton: { padding: '12px 24px', fontSize: '16px', fontWeight: 'bold', border: 'none', backgroundColor: COLORS.secondary, color: 'white', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.2s ease' },
 };
