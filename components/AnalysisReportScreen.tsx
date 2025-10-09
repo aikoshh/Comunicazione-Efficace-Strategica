@@ -52,6 +52,18 @@ const HighlightText: React.FC<{ text: string }> = ({ text }) => {
   );
 };
 
+{window.location.search.includes('debug=1') && (
+  <pre style={{
+    background: '#0b1020',
+    color: '#9feaf9',
+    padding: 12,
+    borderRadius: 8,
+    overflow: 'auto',
+    fontSize: 12
+  }}>
+    {JSON.stringify(result, null, 2)}
+  </pre>
+)}
 const ScoreCircle: React.FC<{ score: number }> = ({ score }) => {
   const [displayScore, setDisplayScore] = useState(0);
   const circumference = 2 * Math.PI * 52;
