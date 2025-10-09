@@ -194,9 +194,9 @@ export const VoiceAnalysisReportScreen: React.FC<VoiceAnalysisReportScreenProps>
             <div style={{...styles.feedbackCard, animation: 'fadeInUp 0.5s 0.5s ease-out both'}}>
                 <h2 style={styles.sectionTitle}><XCircleIcon style={{color: COLORS.error}}/> Aree di Miglioramento</h2>
                 <ul style={styles.list}>
-                  {result.improvements.map((item, index) => 
-                    <li key={index} style={styles.listItem}>
-                        <LightbulbIcon style={{...styles.listItemIcon, color: COLORS.warning}}/>
+                  {(result?.improvements ?? []).map((item, index) => (
+  <li key={index} style={styles.listItem}>
+    <LightbulbIcon style={{ ...styles.listItemIcon, color: COLORS.warning }} />
                         <span style={styles.listItemText}><HighlightText text={item}/></span>
                     </li>
                   )}
