@@ -8,6 +8,17 @@ import { MicIcon } from './Icons';
 import { soundService } from '../services/soundService';
 import { useSpeech } from '../hooks/useSpeech';
 
+const safeResult = {
+  ...result,
+  strengths: result?.strengths ?? [],
+  improvements: result?.improvements ?? [],
+  actions: result?.actions ?? [],
+  areasForImprovement: result?.areasForImprovement ?? [],
+  scores: result?.scores ?? [],
+  suggestedResponse: result?.suggestedResponse ?? { short: '', long: '' },
+};
+
+
 interface StrategicCheckupScreenProps {
   onSelectExercise: (exercise: Exercise, isCheckup: boolean, checkupStep: number, totalCheckupSteps: number) => void;
   onCompleteCheckup: (profile: CommunicatorProfile) => void;
