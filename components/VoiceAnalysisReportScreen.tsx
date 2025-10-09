@@ -11,7 +11,7 @@ interface VoiceAnalysisReportScreenProps {
   onRetry: () => void;
   onNext: () => void;
 }
-
+ 
 const KEYWORDS = [
   'efficace', 'chiaro', 'empatico', 'tono', 'ritmo', 'pause', 'volume', 'assertività', 'costruttivo',
   'soluzione', 'obiettivo', 'strategico', 'ottimo', 'eccellente', 'ben', 'buon', 'correttamente',
