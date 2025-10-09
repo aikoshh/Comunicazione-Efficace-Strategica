@@ -162,7 +162,13 @@ export const VoiceAnalysisReportScreen: React.FC<VoiceAnalysisReportScreenProps>
       <style>{hoverStyle}</style>
       <div style={styles.card}>
         <h1 style={styles.title}>Report Voce & Paraverbale</h1>
-        
+
+        {window.location.search.includes('debug=1') && (
+  <pre style={{background:'#0b1020', color:'#9feaf9', padding:12, borderRadius:8, overflow:'auto', fontSize:12}}>
+    {JSON.stringify(result, null, 2)}
+  </pre>
+)}
+       
         <ScoreCircle score={averageScore} />
         
         <div style={{...styles.scoresGrid, animation: 'fadeInUp 0.5s 0.2s ease-out both'}}>
