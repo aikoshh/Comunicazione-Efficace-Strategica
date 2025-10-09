@@ -4,13 +4,21 @@ import { COLORS, VOICE_RUBRIC_CRITERIA } from '../constants';
 import { useSpeech } from '../hooks/useSpeech';
 import { CheckCircleIcon, XCircleIcon, RetryIcon, HomeIcon, LightbulbIcon, TargetIcon, SpeakerIcon, SpeakerOffIcon } from './Icons';
 import { soundService } from '../services/soundService';
-
 interface VoiceAnalysisReportScreenProps {
   result: VoiceAnalysisResult;
   exercise: Exercise;
   onRetry: () => void;
   onNext: () => void;
 }
+const safeResult = {
+  ...result,
+  strengths: result?.strengths ?? [],
+  improvements: result?.improvements ?? [],
+  actions: result?.actions ?? [],
+  areasForImprovement: result?.areasForImprovement ?? [],
+  scores: result?.scores ?? [],
+  suggestedResponse: result?.suggestedResponse ?? { short: '', long: '' },
+};
 
 const KEYWORDS = [
     'efficace', 'chiaro', 'empatico', 'tono', 'ritmo', 'pause', 'volume', 'assertività', 'costruttivo', 
