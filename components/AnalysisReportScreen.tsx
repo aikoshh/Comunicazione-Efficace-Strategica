@@ -1,197 +1,164 @@
-import React, { useState, useEffect } from 'react';
-import { AnalysisResult, Exercise } from '../types';
-import { COLORS } from '../constants';
-import { CheckCircleIcon, XCircleIcon, RetryIcon, HomeIcon, LightbulbIcon } from './Icons';
-import { soundService } from '../services/soundService';
+import React, { useState, useEffect } from "react";
+import { AnalysisResult, Exercise } from "../types";
+import { COLORS } from "../constants";
+import { CheckCircleIcon, RetryIcon, HomeIcon, LightbulbIcon } from "./Icons";
+import { soundService } from "../services/soundService";
 
 interface AnalysisReportScreenProps {
-  result: AnalysisResult;
-  exercise: Exercise;
+  result?: AnalysisResult;
+  exercise?: Exercise;
   onRetry: () => void;
   onNext: () => void;
 }
 
-// ✅ normalizza i dati per evitare undefined
-const normalizeResult = (r: Partial<AnalysisResult> | undefined): AnalysisResult => ({
-  score: typeof r?.score === 'number' ? r!.score : 0,
-  strengths: r?.strengths ?? [],
-  areasForImprovement: r?.areasForImprovement ?? [],
-  suggestedResponse: r?.suggestedResponse ?? { short: '', long: '' },
-});
+export const AnalysisReportScreen: React.FC<AnalysisReportScreenProps> = ({
+  result,
+  exercise,
+  onRetry,
+  onNext,
+}) => {
+  // ✅ se non arriva nulla, mostriamo un messaggio invece di crashare
+  if (!result) {
+    return (
+      <div
+        style={{
+          minHeight: "100vh",
+          background: COLORS.base,
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          flexDirection: "column",
+          color: COLORS.textPrimary,
+          fontSize: "20px",
+          textAlign: "center",
+        }}
+      >
+        <h2>⚠️ Nessun risultato disponibile</h2>
+        <p>
+          Non è stato possibile caricare il report dell’analisi. Torna al menu
+          principale o ripeti l’esercizio.
+        </p>
+        <button
+          onClick={onNext}
+          style={{
+            marginTop: "20px",
+            padding: "12px 24px",
+            backgroundColor: COLORS.secondary,
+            color: "white",
+            border: "none",
+            borderRadius: "8px",
+            cursor: "pointer",
+          }}
+        >
+          Torna al Menu
+        </button>
+      </div>
+    );
+  }
 
-const KEYWORDS = [
-  'efficace','chiaro','empatico','tono','ritmo','pause','volume','assertività','costruttivo',
-  'soluzione','obiettivo','strategico','ottimo','eccellente','ben','buon','correttamente',
-  'giusto','prova a','cerca di','evita di','potresti','considera','concentrati su',
-  'ricorda di','lavora su','registra','ascolta','leggi','parla','esercitati',
-  'identifica','scrivi','comunica','gestisci','usa','mantieni','assicurati'
-];
+  // ✅ normalizzazione sicura
+  const safe = {
+    score: result.score ?? 0,
+    strengths: result.strengths ?? [],
+    areasForImprovement: result.areasForImprovement ?? [],
+    suggestedResponse: result.suggestedResponse ?? { short: "", long: "" },
+  };
 
-const HighlightText: React.FC<{ text: string }> = ({ text }) => {
-  if (!text) return null;
-  const regex = new RegExp(`\\b(${KEYWORDS.join('|')})\\b`, 'gi');
-  const parts = text.split(regex);
-  return (
-    <>
-      {parts.map((part, i) =>
-        KEYWORDS.some(k => new RegExp(`^${k}$`, 'i').test(part))
-          ? <strong key={i} style={{ color: COLORS.primary, fontWeight: 700 }}>{part}</strong>
-          : part
-      )}
-    </>
-  );
-};
-
-const ScoreCircle: React.FC<{ score: number }> = ({ score }) => {
-  const [displayScore, setDisplayScore] = useState(0);
-  const circumference = 2 * Math.PI * 52;
-  let strokeColor = COLORS.success;
-  if (score < 70) strokeColor = COLORS.warning;
-  if (score < 40) strokeColor = COLORS.error;
-
-  useEffect(() => {
-    const anim = requestAnimationFrame(() => setDisplayScore(score));
-    return () => cancelAnimationFrame(anim);
-  }, [score]);
-
-  return (
-    <div style={styles.scoreContainer}>
-      <svg width="120" height="120" viewBox="0 0 120 120" style={{ transform: 'rotate(-90deg)' }}>
-        <circle cx="60" cy="60" r="52" fill="none" stroke={COLORS.divider} strokeWidth="8" />
-        <circle
-          cx="60" cy="60" r="52" fill="none" stroke={strokeColor} strokeWidth="8"
-          strokeDasharray={circumference}
-          strokeDashoffset={circumference - (displayScore / 100) * circumference}
-          strokeLinecap="round"
-          style={{ transition: 'stroke-dashoffset 1s cubic-bezier(0.25, 1, 0.5, 1)' }}
-        />
-      </svg>
-      <div style={{ ...styles.scoreText, color: strokeColor }}>{score}<span style={{ fontSize: 20 }}>%</span></div>
-    </div>
-  );
-};
-
-const ResponseText: React.FC<{ text: string }> = ({ text }) => {
-  const parts = (text || '').split(/(\*\*.*?\*\*)/g).filter(Boolean);
-  return (
-    <p style={styles.suggestedResponseText}>
-      "
-      {parts.map((part, i) =>
-        part.startsWith('**') && part.endsWith('**')
-          ? <strong style={{ color: COLORS.secondary }} key={i}>{part.slice(2, -2)}</strong>
-          : part
-      )}
-      "
-    </p>
-  );
-};
-
-export const AnalysisReportScreen: React.FC<AnalysisReportScreenProps> = ({ result, exercise, onRetry, onNext }) => {
-  const safe = normalizeResult(result);
-  const [activeTab, setActiveTab] = useState<'short' | 'long'>('short');
+  const [activeTab, setActiveTab] = useState<"short" | "long">("short");
 
   useEffect(() => {
     soundService.playScoreSound(safe.score);
     window.scrollTo(0, 0);
   }, [safe.score]);
 
-  const handleRetry = () => { soundService.playClick(); onRetry(); };
-  const handleNext  = () => { soundService.playClick(); onNext(); };
-
   return (
-    <div style={styles.container}>
-      <div style={styles.card}>
-        <h1 style={styles.title}>Report dell'Analisi</h1>
+    <div
+      style={{
+        backgroundColor: COLORS.base,
+        minHeight: "100vh",
+        padding: "40px 20px",
+        display: "flex",
+        justifyContent: "center",
+      }}
+    >
+      <div
+        style={{
+          backgroundColor: COLORS.card,
+          borderRadius: "12px",
+          border: `1px solid ${COLORS.divider}`,
+          padding: "32px",
+          maxWidth: "800px",
+          width: "100%",
+          boxShadow: "0 8px 30px rgba(0,0,0,0.08)",
+        }}
+      >
+        <h1 style={{ textAlign: "center", color: COLORS.textPrimary }}>
+          Report dell'Analisi
+        </h1>
 
-        <ScoreCircle score={safe.score} />
+        <h2 style={{ color: COLORS.success }}>Punti di Forza</h2>
+        <ul>
+          {safe.strengths.length > 0 ? (
+            safe.strengths.map((s, i) => <li key={i}>{s}</li>)
+          ) : (
+            <li>Nessun punto di forza disponibile</li>
+          )}
+        </ul>
 
-        <div style={styles.feedbackGrid}>
-          <div style={styles.feedbackCard}>
-            <h2 style={styles.sectionTitle}><CheckCircleIcon style={{ color: COLORS.success }} /> Punti di Forza</h2>
-            <ul style={styles.list}>
-              {safe.strengths.length > 0 ? safe.strengths.map((item, i) => (
-                <li key={i} style={styles.listItem}>
-                  <CheckCircleIcon style={{ ...styles.listItemIcon, color: COLORS.success }} />
-                  <span style={styles.listItemText}><HighlightText text={item} /></span>
-                </li>
-              )) : <p>Nessun punto di forza disponibile.</p>}
-            </ul>
-          </div>
+        <h2 style={{ color: COLORS.warning }}>Aree di Miglioramento</h2>
+        <ul>
+          {safe.areasForImprovement.length > 0 ? (
+            safe.areasForImprovement.map((a, i) => (
+              <li key={i}>{a?.suggestion || a}</li>
+            ))
+          ) : (
+            <li>Nessuna area di miglioramento</li>
+          )}
+        </ul>
 
-          <div style={styles.feedbackCard}>
-            <h2 style={styles.sectionTitle}><LightbulbIcon style={{ color: COLORS.warning }} /> Aree di Miglioramento</h2>
-            <ul style={styles.list}>
-              {(safe.areasForImprovement ?? []).length > 0 ? safe.areasForImprovement.map((item: any, i) => (
-                <li key={i} style={styles.listItem}>
-                  <LightbulbIcon style={{ ...styles.listItemIcon, color: COLORS.warning }} />
-                  <div style={styles.listItemText}>
-                    <span><HighlightText text={item?.suggestion || ''} /></span>
-                    {item?.example && (
-                      <span style={styles.exampleText}>
-                        <strong>Esempio:</strong> <em>"{item.example}"</em>
-                      </span>
-                    )}
-                  </div>
-                </li>
-              )) : <p>Nessuna area di miglioramento trovata.</p>}
-            </ul>
-          </div>
-        </div>
+        <h2>Risposta Suggerita</h2>
+        <p>
+          {activeTab === "short"
+            ? safe.suggestedResponse.short
+            : safe.suggestedResponse.long}
+        </p>
 
-        <div style={styles.suggestedResponseContainer}>
-          <h2 style={styles.sectionTitle}>Risposta Suggerita</h2>
-          <div style={styles.tabs}>
-            <button
-              style={{ ...styles.tabButton, ...(activeTab === 'short' ? styles.tabButtonActive : {}) }}
-              onClick={() => setActiveTab('short')}
-            >
-              Versione Breve
-            </button>
-            <button
-              style={{ ...styles.tabButton, ...(activeTab === 'long' ? styles.tabButtonActive : {}) }}
-              onClick={() => setActiveTab('long')}
-            >
-              Versione Lunga
-            </button>
-          </div>
-          <div style={styles.tabContent}>
-            {activeTab === 'short'
-              ? <ResponseText text={safe.suggestedResponse.short} />
-              : <ResponseText text={safe.suggestedResponse.long} />
-            }
-          </div>
-        </div>
-
-        <div style={styles.buttonContainer}>
-          <button onClick={handleRetry} style={styles.secondaryButton}><RetryIcon /> Riprova Esercizio</button>
-          <button onClick={handleNext} style={styles.primaryButton}>Menu Principale <HomeIcon /></button>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            gap: "10px",
+            marginTop: "24px",
+          }}
+        >
+          <button
+            onClick={onRetry}
+            style={{
+              padding: "10px 20px",
+              border: `1px solid ${COLORS.secondary}`,
+              color: COLORS.secondary,
+              background: "transparent",
+              borderRadius: "8px",
+              cursor: "pointer",
+            }}
+          >
+            <RetryIcon /> Riprova
+          </button>
+          <button
+            onClick={onNext}
+            style={{
+              padding: "10px 20px",
+              backgroundColor: COLORS.secondary,
+              color: "white",
+              border: "none",
+              borderRadius: "8px",
+              cursor: "pointer",
+            }}
+          >
+            <HomeIcon /> Menu
+          </button>
         </div>
       </div>
     </div>
   );
-};
-
-const styles: { [key: string]: React.CSSProperties } = {
-  container: { backgroundColor: COLORS.base, minHeight: '100vh', padding: '40px 20px', display: 'flex', justifyContent: 'center', alignItems: 'flex-start' },
-  card: { backgroundColor: COLORS.card, borderRadius: '12px', border: `1px solid ${COLORS.divider}`, padding: '32px', maxWidth: '800px', width: '100%', boxShadow: '0 8px 30px rgba(0,0,0,0.08)' },
-  title: { fontSize: '28px', fontWeight: 'bold', color: COLORS.textPrimary, marginBottom: '24px', textAlign: 'center' },
-  scoreContainer: { position: 'relative', width: '120px', height: '120px', margin: '16px auto 32px' },
-  scoreText: { position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', fontSize: '32px', fontWeight: 'bold', color: COLORS.textPrimary, display: 'flex', alignItems: 'baseline', justifyContent: 'center' },
-  feedbackGrid: { display: 'grid', gridTemplateColumns: '1fr', gap: '24px', marginBottom: '32px' },
-  feedbackCard: { backgroundColor: COLORS.cardDark, padding: '20px', borderRadius: '12px' },
-  sectionTitle: { fontSize: '20px', color: COLORS.textPrimary, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '12px', fontWeight: 600 },
-  list: { listStyle: 'none', paddingLeft: 0, margin: 0 },
-  listItem: { fontSize: '16px', color: COLORS.textSecondary, lineHeight: 1.6, marginBottom: '18px', display: 'flex', alignItems: 'flex-start', gap: '12px' },
-  listItemIcon: { flexShrink: 0, width: '20px', height: '20px', marginTop: '3px' },
-  listItemText: { flex: 1 },
-  exampleText: { display: 'block', marginTop: '8px', padding: '10px 12px', backgroundColor: '#EAECEE', borderRadius: '8px', color: COLORS.textSecondary, fontSize: '15px', borderLeft: `3px solid ${COLORS.secondary}` },
-  suggestedResponseContainer: { textAlign: 'left' },
-  tabs: { display: 'flex', gap: '8px', marginBottom: '16px' },
-  tabButton: { padding: '8px 16px', fontSize: '14px', fontWeight: 500, border: `1px solid ${COLORS.divider}`, backgroundColor: COLORS.divider, color: COLORS.textSecondary, borderRadius: '8px', cursor: 'pointer', transition: 'all 0.2s' },
-  tabButtonActive: { backgroundColor: COLORS.secondary, color: 'white', borderColor: COLORS.secondary },
-  tabContent: { backgroundColor: COLORS.cardDark, padding: '20px', borderRadius: '12px', minHeight: '100px' },
-  suggestedResponseText: { fontSize: '16px', fontStyle: 'italic', color: COLORS.textSecondary, lineHeight: 1.7, margin: 0 },
-  buttonContainer: { display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '16px', marginTop: '32px', borderTop: `1px solid ${COLORS.divider}`, paddingTop: '32px' },
-  secondaryButton: { padding: '12px 24px', fontSize: '16px', border: `1px solid ${COLORS.secondary}`, backgroundColor: 'transparent', color: COLORS.secondary, borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 500, transition: 'all 0.2s ease' },
-  primaryButton: { padding: '12px 24px', fontSize: '16px', fontWeight: 'bold', border: 'none', backgroundColor: COLORS.secondary, color: 'white', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.2s ease' },
 };
