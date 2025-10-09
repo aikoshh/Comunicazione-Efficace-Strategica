@@ -3,11 +3,12 @@ import { Exercise, AnalysisResult, CommunicatorProfile } from '../types';
 import { STRATEGIC_CHECKUP_EXERCISES, COLORS } from '../constants';
 import { ExerciseScreen } from './ExerciseScreen';
 import { Loader } from './Loader';
-import { generateCommunicatorProfile, analyzeResponse } from '../services/geminiService';
+import { generateCommunicatorProfile, analyzeText } from '../services/analyzeService';
 import { Logo } from './Logo';
 import { HomeIcon, MicIcon } from './Icons';
 import { soundService } from '../services/soundService';
 import { useSpeech } from '../hooks/useSpeech';
+
 
 interface StrategicCheckupScreenProps {
   onSelectExercise: (exercise: Exercise, isCheckup: boolean, checkupStep: number, totalCheckupSteps: number) => void;
