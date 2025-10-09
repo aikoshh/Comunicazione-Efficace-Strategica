@@ -1,20 +1,37 @@
 import type { AnalysisResult, VoiceAnalysisResult, CommunicatorProfile } from '../types';
 
-const BASE = (import.meta as any).env?.VITE_AI_PROXY_URL || '';
+const RAW_BASE = (import.meta as any)?.env?.VITE_AI_PROXY_URL || '';
+// normalizza BASE: senza slash finale
+const BASE = String(RAW_BASE).replace(/\/+$/, '');
 
 async function callApi<T>(path: string, body: object): Promise<T> {
-  const url = `${BASE}${path}`;
+  // assicura che il path inizi con "/"
+  const p = path.startsWith('/') ? path : `/${path}`;
+  const url = `${BASE}${p}`;
+
   const resp = await fetch(url, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(body),
   });
-  const json = await resp.json().catch(() => ({}));
+
+  // prova a leggere JSON; se fallisce crea un oggetto vuoto
+  const raw = await resp.text();
+  let json: any = {};
+  try { json = JSON.parse(raw); } catch { json = {}; }
+
+  // debug leggero (utile adesso per capire cosa arriva)
+  console.log('[geminiService] POST', url, { body }, { status: resp.status, json });
+
   if (!resp.ok) {
     const msg = json?.error || `Errore HTTP ${resp.status}`;
     throw new Error(msg);
   }
-  return json.data as T;
+
+  // Alcuni backend tornano direttamente l’oggetto, altri { data: ... }.
+  const data = (json && json.data !== undefined) ? json.data : json;
+
+  return data as T;
 }
 
 export const analyzeResponse = async (
