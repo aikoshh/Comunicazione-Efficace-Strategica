@@ -1,7 +1,7 @@
 // services/analyzeService.ts
 import type { AnalysisResult, VoiceAnalysisResult, CommunicatorProfile } from '../types';
 
-// 👇 Usa il tuo Worker, NON /api su Vercel
+// Usa il Cloudflare Worker (NON /api su Vercel)
 const API_BASE = "https://ces-ai-proxy.cescoach.workers.dev";
 
 async function callApi<T>(endpoint: string, body: object): Promise<T> {
@@ -13,8 +13,8 @@ async function callApi<T>(endpoint: string, body: object): Promise<T> {
   });
 
   const json = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
-  return json.data as T;
+  if (!res.ok) throw new Error((json as any)?.error || `HTTP ${res.status}`);
+  return (json as any).data as T;
 }
 
 export const analyzeText = async (

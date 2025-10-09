@@ -1,13 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react'; 
 import { Exercise, ExerciseType, AnalysisResult, VoiceAnalysisResult } from '../types';
 import { useSpeech } from '../hooks/useSpeech';
-import { analyzeResponse, analyzeParaverbalResponse } from '../services/geminiService';
+import { analyzeText, analyzeParaverbal } from '../services/analyzeService';
 import { Loader } from './Loader';
 import { COLORS } from '../constants';
-import { BackIcon, MicIcon, SendIcon, WrittenIcon, VerbalIcon, SpeakerIcon, SpeakerOffIcon } from './Icons';
+import { BackIcon, MicIcon, SendIcon, WrittenIcon, SpeakerIcon, SpeakerOffIcon } from './Icons';
 import { soundService } from '../services/soundService';
-import { analyzeText, analyzeParaverbal } from '../services/analyzeService';
-
 
 interface ExerciseScreenProps {
   exercise: Exercise;
@@ -35,9 +33,6 @@ export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({
   const [error, setError] = useState<string | null>(null);
   const { isListening, transcript, startListening, stopListening, isSupported, speak, isSpeaking, stopSpeaking } = useSpeech();
   const textBeforeListening = useRef('');
-  const result = await analyzeParaverbal(userResponse, exercise.scenario, exercise.task);
-  const result = await analyzeText(userResponse, exercise.scenario, exercise.task, false);
-
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -45,20 +40,17 @@ export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({
 
   const isVerbalExercise = exercise.exerciseType === ExerciseType.VERBAL;
 
-  // Effect for VERBAL exercises (transcript replaces everything)
   useEffect(() => {
     if (isVerbalExercise && transcript) {
       setUserResponse(transcript);
     }
   }, [transcript, isVerbalExercise]);
   
-  // Effect for DICTATION in written exercises (transcript appends)
   useEffect(() => {
     if (!isVerbalExercise && isListening) {
-      setUserResponse(textBeforeListening.current + transcript);
+      setUserResponse((textBeforeListening.current || '') + transcript);
     }
   }, [transcript, isListening, isVerbalExercise]);
-
 
   const handleScenarioPlayback = () => {
     soundService.playClick();
@@ -69,19 +61,16 @@ export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({
     }
   };
   
-  // For dedicated verbal exercises
   const handleStartListening = () => {
     soundService.playStartRecording();
     startListening();
-  }
+  };
 
-  // For dedicated verbal exercises
   const handleStopListening = () => {
     soundService.playStopRecording();
     stopListening();
-  }
+  };
   
-  // For dictation button in written exercises
   const handleToggleDictation = () => {
       if (isListening) {
           soundService.playStopRecording();
@@ -96,7 +85,7 @@ export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({
   const handleBackClick = () => {
     soundService.playClick();
     onBack();
-  }
+  };
 
   const handleSubmit = async () => {
     soundService.playClick();
@@ -107,19 +96,20 @@ export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({
     setIsLoading(true);
     setError(null);
     try {
-      if(isVerbalExercise) {
-        const result = await analyzeParaverbalResponse(userResponse, exercise.scenario, exercise.task);
+      if (isVerbalExercise) {
+        const result = await analyzeParaverbal(userResponse, exercise.scenario, exercise.task);
         onCompleteVerbal(result);
       } else {
-        const result = await analyzeResponse(userResponse, exercise.scenario, exercise.task, false); // For written, set verbal to false
+        const result = await analyzeText(userResponse, exercise.scenario, exercise.task, false);
         onCompleteWritten(result);
       }
     } catch (e: any) {
       console.error(e);
-      if (e.message.includes('API_KEY')) {
-        onApiKeyError(e.message);
+      const errorMessage = e.message || "Si è verificato un errore sconosciuto.";
+      if (errorMessage.toUpperCase().includes('GOOGLE_API_KEY') || errorMessage.includes('Missing GOOGLE_API_KEY') || errorMessage.includes('401') || errorMessage.toLowerCase().includes('unauthorized')) {
+        onApiKeyError(errorMessage);
       } else {
-        setError(e.message || "Si è verificato un errore sconosciuto.");
+        setError(errorMessage);
       }
     } finally {
       setIsLoading(false);
@@ -150,7 +140,6 @@ export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({
         );
     }
     
-    // Default to written input for standard exercises
     return (
       <div style={styles.inputContainer}>
         <textarea
@@ -289,3 +278,5 @@ const styles: { [key: string]: React.CSSProperties } = {
       border: `1px solid ${COLORS.error}`,
   },
 };
+
+export default ExerciseScreen;
