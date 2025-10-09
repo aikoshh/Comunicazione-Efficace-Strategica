@@ -1,23 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Exercise, AnalysisResult, CommunicatorProfile } from '../types';
 import { STRATEGIC_CHECKUP_EXERCISES, COLORS } from '../constants';
+import { ExerciseScreen } from './ExerciseScreen';
 import { Loader } from './Loader';
-import { generateCommunicatorProfile, analyzeText } from '../services/analyzeService';
+import { generateCommunicatorProfile, analyzeResponse } from '../services/geminiService';
 import { Logo } from './Logo';
-import { MicIcon } from './Icons';
+import { HomeIcon, MicIcon } from './Icons';
 import { soundService } from '../services/soundService';
 import { useSpeech } from '../hooks/useSpeech';
-
-const safeResult = {
-  ...result,
-  strengths: result?.strengths ?? [],
-  improvements: result?.improvements ?? [],
-  actions: result?.actions ?? [],
-  areasForImprovement: result?.areasForImprovement ?? [],
-  scores: result?.scores ?? [],
-  suggestedResponse: result?.suggestedResponse ?? { short: '', long: '' },
-};
-
 
 interface StrategicCheckupScreenProps {
   onSelectExercise: (exercise: Exercise, isCheckup: boolean, checkupStep: number, totalCheckupSteps: number) => void;
@@ -39,22 +29,22 @@ export const StrategicCheckupScreen: React.FC<StrategicCheckupScreenProps> = ({ 
     setError(null);
     try {
       const exercise = STRATEGIC_CHECKUP_EXERCISES[currentStep];
-      const result = await analyzeText(response, exercise.scenario, exercise.task, false);
+      const result = await analyzeResponse(response, exercise.scenario, exercise.task, false);
       const newResults = [...analysisResults, { exerciseId: exercise.id, analysis: result }];
       setAnalysisResults(newResults);
 
       if (currentStep < totalSteps - 1) {
         setCurrentStep(currentStep + 1);
       } else {
+        // Last step completed, generate profile
         const profile = await generateCommunicatorProfile(newResults);
         onCompleteCheckup(profile);
       }
     } catch (e: any) {
-      const errorMessage = e.message || "Si è verificato un errore sconosciuto.";
-      if (errorMessage.toUpperCase().includes('GOOGLE_API_KEY')) {
-        onApiKeyError(errorMessage);
+      if (e.message.includes('API_KEY')) {
+        onApiKeyError(e.message);
       } else {
-        setError(errorMessage);
+        setError(e.message || "An unknown error occurred.");
       }
     } finally {
       setIsLoading(false);
@@ -67,11 +57,13 @@ export const StrategicCheckupScreen: React.FC<StrategicCheckupScreenProps> = ({ 
   };
 
   if (isLoading) {
-    return <Loader estimatedTime={30} />;
+    return <Loader />;
   }
   
   const currentExercise = STRATEGIC_CHECKUP_EXERCISES[currentStep];
 
+  // Since ExerciseScreen is complex, we re-use it in a simplified form.
+  // We'll wrap it or create a simplified version for the checkup.
   const StandaloneExercise: React.FC = () => {
     const [userResponse, setUserResponse] = useState('');
     const { isListening, transcript, startListening, stopListening, isSupported } = useSpeech();
@@ -79,7 +71,7 @@ export const StrategicCheckupScreen: React.FC<StrategicCheckupScreenProps> = ({ 
 
     useEffect(() => {
       if (isListening) {
-        setUserResponse((textBeforeListening.current || '') + transcript);
+        setUserResponse(textBeforeListening.current + transcript);
       }
     }, [transcript, isListening]);
     
@@ -90,7 +82,7 @@ export const StrategicCheckupScreen: React.FC<StrategicCheckupScreenProps> = ({ 
             return;
         }
         handleCompleteExercise(userResponse);
-    };
+    }
 
     const handleToggleDictation = () => {
         if (isListening) {
@@ -117,7 +109,7 @@ export const StrategicCheckupScreen: React.FC<StrategicCheckupScreenProps> = ({ 
                 rows={6}
             />
             {isSupported && (
-                 <button
+                <button
                     onClick={handleToggleDictation}
                     style={{...styles.dictationButton, ...(isListening ? styles.dictationButtonListening : {})}}
                 >
@@ -134,7 +126,7 @@ export const StrategicCheckupScreen: React.FC<StrategicCheckupScreenProps> = ({ 
             </button>
         </div>
     );
-  };
+  }
 
   return (
     <div style={styles.container}>
