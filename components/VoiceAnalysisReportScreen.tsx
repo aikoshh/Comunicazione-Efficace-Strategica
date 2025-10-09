@@ -1,3 +1,4 @@
+console.log("DEBUG result:", result);
 import React, { useEffect, useState } from 'react';
 import { VoiceAnalysisResult, Exercise } from '../types';
 import { COLORS, VOICE_RUBRIC_CRITERIA } from '../constants';
