@@ -1,3 +1,5 @@
+console.log("DEBUG result:", result);
+
 import React, { useState, useEffect } from 'react';
 import { AnalysisResult, Exercise } from '../types';
 import { COLORS } from '../constants';
