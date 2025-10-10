@@ -1,74 +1,35 @@
-<!DOCTYPE html>
-
+<!doctype html>
 <html lang="it">
-<head>
-<meta charset="utf-8"/>
-<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>CES Coach: Comunicatore Strategico</title>
-<link href="https://fonts.googleapis.com" rel="preconnect"/>
-<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
-<style>
-      body {
-        margin: 0;
-        font-family: 'Poppins', sans-serif;
-        -webkit-font-smoothing: antialiased;
-        -moz-osx-font-smoothing: grayscale;
-        background-color: #F5F2EF;
-      }
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
 
-      /* Global Animations */
-      @keyframes fadeInUp {
-        from {
-          opacity: 0;
-          transform: translateY(20px);
-        }
-        to {
-          opacity: 1;
-          transform: translateY(0);
-        }
-      }
+    <!-- Endpoint del proxy (es. Google Apps Script /exec). 
+         Inserisci qui l'URL se non usi la variabile VITE_PROXY_URL. -->
+    <meta name="ces-proxy-url" content="">
 
-      @keyframes popIn {
-        from {
-          opacity: 0;
-          transform: scale(0.8);
-        }
-        to {
-          opacity: 1;
-          transform: scale(1);
-        }
-      }
-      
-      @keyframes pulse {
-        0% {
-          transform: scale(1);
-          box-shadow: 0 0 0 0 rgba(14, 58, 93, 0.7);
-        }
-        70% {
-          transform: scale(1.05);
-          box-shadow: 0 0 0 15px rgba(14, 58, 93, 0);
-        }
-        100% {
-          transform: scale(1);
-          box-shadow: 0 0 0 0 rgba(14, 58, 93, 0);
-        }
-      }
-    </style>
-<script type="importmap">
-    {
-      "imports": {
-        "react": "https://aistudiocdn.com/react@^19.2.0",
-        "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
-        "react/": "https://aistudiocdn.com/react@^19.2.0/",
-        "@google/genai": "https://aistudiocdn.com/@google/genai@^1.22.0"
-      }
-    }
-    </script>
-<link href="/index.css" rel="stylesheet"/>
-<meta content="" name="ces-proxy-url"/></head>
-<body>
-<noscript>You need to enable JavaScript to run this app.</noscript>
+    <title>CES Coach – Comunicatore Strategico</title>
+
+    <!-- Favicon opzionale (metti il file in /public/favicon.ico) -->
+    <link rel="icon" href="/favicon.ico" />
+    <!-- NIENTE <link href="/index.css">: con Vite importa il CSS in index.tsx
+         es:  import './index.css' -->
+  </head>
+  <body>
+    <noscript>
+      Abilita JavaScript per utilizzare questa applicazione.
+    </noscript>
+
+    <div id="root"></div>
+
+    <!-- Entry Vite -->
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>
+
 <div id="root"></div>
 <script src="/index.tsx" type="module"></script>
 </body>
