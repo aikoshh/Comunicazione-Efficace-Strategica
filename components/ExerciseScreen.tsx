@@ -106,7 +106,7 @@ export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({
         const result = await analyzeParaverbalResponse(userResponse, exercise.scenario, exercise.task);
         onCompleteVerbal(result);
       } else {
-        const result = await analyzeResponse(userResponse, exercise.scenario, exercise.task, false); // For written, set verbal to false
+        const result = await analyzeResponse(userResponse, exercise.scenario, exercise.task, false, exercise.customObjective);
         onCompleteWritten(result);
       }
     } catch (e: any) {
@@ -198,6 +198,11 @@ export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({
         <div style={styles.taskContainer}>
           <p style={styles.taskText}><strong>Compito:</strong> {exercise.task}</p>
         </div>
+        {exercise.customObjective && (
+             <div style={styles.customObjectiveContainer}>
+                <p style={styles.taskText}><strong>Tuo Obiettivo:</strong> {exercise.customObjective}</p>
+            </div>
+        )}
       </div>
       
       <div style={styles.responseSection}>
@@ -247,6 +252,7 @@ const styles: { [key: string]: React.CSSProperties } = {
   speakerButton: { background: 'none', border: 'none', cursor: 'pointer', padding: '8px', borderRadius: '50%', transition: 'background-color 0.2s ease' },
   scenarioText: { fontSize: '16px', color: COLORS.textSecondary, lineHeight: '1.6' },
   taskContainer: { marginTop: '16px', padding: '16px', backgroundColor: 'rgba(88, 166, 166, 0.1)', borderRadius: '8px', borderLeft: `4px solid ${COLORS.secondary}` },
+  customObjectiveContainer: { marginTop: '16px', padding: '16px', backgroundColor: 'rgba(255, 193, 7, 0.15)', borderRadius: '8px', borderLeft: `4px solid ${COLORS.warning}` },
   taskText: { fontSize: '16px', color: COLORS.textPrimary, lineHeight: '1.6', fontWeight: '500', margin: 0 },
   toggleContainer: { display: 'flex', gap: '8px', justifyContent: 'center', backgroundColor: COLORS.divider, padding: '6px', borderRadius: '12px' },
   toggleButton: { flex: 1, padding: '10px 16px', fontSize: '16px', border: 'none', background: 'transparent', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all 0.2s', color: COLORS.textSecondary, fontWeight: 500 },
