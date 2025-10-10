@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { COLORS } from '../constants';
 import { cesLogoUrl } from '../assets';
 import type { User } from '../types';
@@ -103,6 +103,8 @@ const RegistrationForm: React.FC<{
     );
 };
 
+const API_KEY_STORAGE_KEY = 'ces_coach_gemini_api_key';
+
 export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onRegister, onGuestAccess }) => {
   const [view, setView] = useState<'login' | 'register'>('login');
   const [email, setEmail] = useState('');
@@ -110,30 +112,32 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onRegister, o
   const [apiKey, setApiKey] = useState('');
   const [error, setError] = useState('');
 
-  const getApiKeyToUse = async (): Promise<string> => {
-    let keyToUse = apiKey.trim();
-    if (!keyToUse) {
-        try {
-            const response = await fetch('/apiKey.txt');
-            if (response.ok) {
-                const fetchedKey = await response.text();
-                keyToUse = fetchedKey.trim();
-                setApiKey(keyToUse);
-            }
-        } catch (fetchError) {
-            console.warn("Could not fetch apiKey.txt:", fetchError);
+  useEffect(() => {
+    // All'avvio, prova a caricare la chiave API dal localStorage
+    try {
+        const savedApiKey = localStorage.getItem(API_KEY_STORAGE_KEY);
+        if (savedApiKey) {
+            setApiKey(savedApiKey);
         }
+    } catch (e) {
+        console.warn("Impossibile leggere la chiave API dal localStorage", e);
     }
-    return keyToUse;
-  };
+  }, []);
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     soundService.playClick();
     setError('');
+    const keyToUse = apiKey.trim();
+    if (!keyToUse) {
+        setError("Per favore, inserisci una API Key per continuare.");
+        return;
+    }
+
     try {
-      const keyToUse = await getApiKeyToUse();
       onLogin(email, password, keyToUse);
+      // Se onLogin non solleva un'eccezione (credenziali valide), salva la chiave API
+      localStorage.setItem(API_KEY_STORAGE_KEY, keyToUse);
     } catch (err: any) {
       setError(err.message || "Errore sconosciuto.");
     }
@@ -141,8 +145,15 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onRegister, o
 
   const handleGuestAccessClick = async () => {
       soundService.playClick();
-      const keyToUse = await getApiKeyToUse();
+      setError('');
+      const keyToUse = apiKey.trim();
+      if (!keyToUse) {
+        setError("Per favore, inserisci una API Key per continuare come ospite.");
+        return;
+    }
       onGuestAccess(keyToUse);
+      // Salva la chiave API per le future sessioni come ospite
+      localStorage.setItem(API_KEY_STORAGE_KEY, keyToUse);
   };
   
   const dynamicStyles = `
@@ -185,8 +196,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onRegister, o
               </div>
               <div style={styles.inputGroup}>
                 <label htmlFor="apiKey" style={styles.label}>Google AI API Key</label>
-                <input type="password" id="apiKey" value={apiKey} onChange={(e) => setApiKey(e.target.value)} style={styles.input} className="login-input" placeholder="Incolla la tua API Key qui" />
-                 <p style={styles.apiKeyInfo}>Lascia vuoto per usare la chiave da 'apiKey.txt', se disponibile. La chiave viene salvata solo per questa sessione.</p>
+                <input type="password" id="apiKey" value={apiKey} onChange={(e) => setApiKey(e.target.value)} style={styles.input} className="login-input" placeholder="Incolla la tua API Key qui" required />
+                 <p style={styles.apiKeyInfo}>La tua chiave API viene salvata nel browser per gli accessi futuri.</p>
               </div>
               <button type="submit" style={styles.loginButton} className="login-button">Accedi</button>
             </form>
