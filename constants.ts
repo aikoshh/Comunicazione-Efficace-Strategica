@@ -203,6 +203,27 @@ export const MODULES: Module[] = [
         difficulty: DifficultyLevel.INTERMEDIO,
       },
       {
+        id: 'e13',
+        title: 'Disaccordo con il Partner',
+        scenario: 'Il tuo partner è infastidito perché hai passato molto tempo al lavoro di recente. Ti dice: "Non ci sei mai!". Vuoi affrontare la sua frustrazione senza iniziare una discussione.',
+        task: 'Inizia una conversazione per riconoscere i suoi sentimenti, spiegare la tua prospettiva e trovare insieme un modo per bilanciare meglio le cose.',
+        difficulty: DifficultyLevel.INTERMEDIO,
+      },
+      {
+        id: 'e14',
+        title: 'Affrontare un Comportamento di un Figlio',
+        scenario: 'Tuo figlio adolescente ha violato una regola importante della casa (es. orario di rientro). È arrabbiato e sulla difensiva. Vuoi affrontare l\'accaduto in modo fermo ma mantenendo un canale di comunicazione aperto.',
+        task: 'Parla con tuo figlio per discutere della regola infranta, ascoltare le sue ragioni e stabilire le conseguenze in modo calmo e costruttivo.',
+        difficulty: DifficultyLevel.AVANZATO,
+      },
+      {
+        id: 'e15',
+        title: 'Commento da un Parente',
+        scenario: 'Durante una riunione di famiglia, un parente fa un commento passivo-aggressivo su una tua scelta di vita (lavoro, relazioni, ecc.). Il commento ti ferisce e crea imbarazzo.',
+        task: 'Rispondi al parente in modo assertivo ma educato, stabilendo un confine chiaro senza rovinare l\'atmosfera della riunione.',
+        difficulty: DifficultyLevel.INTERMEDIO,
+      },
+      {
         id: 'e4',
         title: 'Comunicare una Decisione Impopolare al Team',
         scenario: 'Come team leader, devi comunicare alla tua squadra che, a causa di un taglio di budget, il progetto a cui tenevano molto è stato cancellato. C\'è il rischio di un forte malcontento.',
