@@ -99,14 +99,9 @@ const App: React.FC = () => {
       });
   };
 
-  const handleLogin = (email: string, pass: string, apiKey: string) => {
+  const handleLogin = (email: string, pass: string) => {
     const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
     if (user && user.password === pass) {
-      if (apiKey) {
-          sessionStorage.setItem('gemini_api_key', apiKey);
-      } else {
-          sessionStorage.removeItem('gemini_api_key');
-      }
       setCurrentUser(user);
       setIsAuthenticated(true);
       // Always go to home screen after login. The checkup is now optional from the home screen.
@@ -125,12 +120,7 @@ const App: React.FC = () => {
     setUsers(prevUsers => [...prevUsers, userToSave]);
   };
   
-  const handleGuestAccess = (apiKey: string) => {
-    if (apiKey) {
-        sessionStorage.setItem('gemini_api_key', apiKey);
-    } else {
-        sessionStorage.removeItem('gemini_api_key');
-    }
+  const handleGuestAccess = () => {
     setCurrentUser(null);
     setIsAuthenticated(true);
     setAppState({ screen: 'home' }); // Guests skip checkup
@@ -140,7 +130,6 @@ const App: React.FC = () => {
     soundService.playClick();
     setIsAuthenticated(false);
     setCurrentUser(null);
-    sessionStorage.removeItem('gemini_api_key'); // Clear API key on logout
     setAppState({ screen: 'home' });
   };
   
@@ -175,13 +164,14 @@ const App: React.FC = () => {
     setAppState({ screen: 'exercise', exercise, isCheckup, checkupStep, totalCheckupSteps });
   };
 
-  const handleStartCustomExercise = (scenario: string, task: string) => {
+  const handleStartCustomExercise = (scenario: string, task: string, customObjective?: string) => {
     const customExercise: Exercise = {
         id: 'custom-' + Date.now(),
         title: 'Esercizio Personalizzato',
         scenario: scenario,
         task: task,
         difficulty: 'Base' as DifficultyLevel,
+        customObjective: customObjective,
     };
     setAppState({ screen: 'exercise', exercise: customExercise });
   };
@@ -355,9 +345,14 @@ const App: React.FC = () => {
                 <button onClick={handleLogout} style={styles.logoutButton} className="logout-button">
                     Logout
                 </button>
-                <p style={styles.copyrightText}>
-                    CES Coach © Copyright 2025 email: cfs@centrocfs.it
-                </p>
+                <div style={styles.copyrightContainer}>
+                    <p style={styles.copyrightText}>
+                        CES Coach © Copyright 2025
+                    </p>
+                    <p style={styles.copyrightText}>
+                        cfs@centrocfs.it
+                    </p>
+                </div>
             </footer>
         )}
     </div>
@@ -382,8 +377,11 @@ const styles: { [key: string]: React.CSSProperties } = {
         transition: 'all 0.2s ease',
         boxShadow: '0 4px 12px rgba(220, 53, 69, 0.3)',
     },
-    copyrightText: {
+    copyrightContainer: {
         marginTop: '24px',
+    },
+    copyrightText: {
+        margin: 0,
         fontSize: '12px',
         color: COLORS.textSecondary,
         lineHeight: '1.4',
