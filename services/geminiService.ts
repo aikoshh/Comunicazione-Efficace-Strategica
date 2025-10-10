@@ -66,6 +66,7 @@ export const analyzeResponse = async (
   scenario: string,
   task: string,
   isVerbal: boolean,
+  customObjective?: string,
 ): Promise<AnalysisResult> => {
   try {
     const ai = getAI();
@@ -88,11 +89,17 @@ export const analyzeResponse = async (
       
       Le tue analisi devono essere incoraggianti e mirate ad aiutare l'utente a migliorare concretamente. Fornisci la tua analisi esclusivamente nel formato JSON richiesto.
     `;
+    
+    let objectivePrompt = '';
+    if (customObjective && customObjective.trim() !== '') {
+        objectivePrompt = `\n**Obiettivo Personale dell'Utente:** Oltre al compito principale, l'utente voleva specificamente raggiungere questo obiettivo: "${customObjective}". Valuta la sua risposta anche in base a questo, includendo un commento su questo punto nei tuoi feedback (punti di forza o aree di miglioramento).`
+    }
 
     const prompt = `
       **Scenario:** ${scenario}
       
       **Compito dell'utente:** ${task}
+      ${objectivePrompt}
 
       **Risposta dell'utente:** "${userResponse}"
 
