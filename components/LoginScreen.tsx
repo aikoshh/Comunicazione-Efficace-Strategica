@@ -107,47 +107,23 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onRegister, o
   const [view, setView] = useState<'login' | 'register'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [apiKey, setApiKey] = useState('');
   const [error, setError] = useState('');
 
-  const fetchApiKey = async (): Promise<string> => {
-    try {
-        const response = await fetch('/apiKey.txt');
-        if (!response.ok) {
-            throw new Error("File 'apiKey.txt' non trovato. Crealo nella directory principale e inserisci la tua chiave.");
-        }
-        const key = await response.text();
-        if (!key.trim()) {
-            throw new Error("Il file 'apiKey.txt' è vuoto. Inserisci la tua chiave API.");
-        }
-        return key.trim();
-    } catch (e: any) {
-        throw new Error(e.message || "Impossibile leggere la API Key dal file.");
-    }
-  };
-
-  const handleLoginSubmit = async (e: React.FormEvent) => {
+  const handleLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     soundService.playClick();
     setError('');
-    
     try {
-      const apiKey = await fetchApiKey();
       onLogin(email, password, apiKey);
     } catch (err: any) {
       setError(err.message || "Errore sconosciuto.");
     }
   };
 
-  const handleGuestAccess = async () => {
-    soundService.playClick();
-    setError('');
-    
-    try {
-      const apiKey = await fetchApiKey();
+  const handleGuestAccessClick = () => {
+      soundService.playClick();
       onGuestAccess(apiKey);
-    } catch (err: any) {
-        setError(err.message);
-    }
   };
   
   const dynamicStyles = `
@@ -188,12 +164,17 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onRegister, o
                 <label htmlFor="password" style={styles.label}>Password</label>
                 <input type="password" id="password" value={password} onChange={(e) => setPassword(e.target.value)} style={styles.input} className="login-input" placeholder="••••••••" required />
               </div>
+              <div style={styles.inputGroup}>
+                <label htmlFor="apiKey" style={styles.label}>Google AI API Key</label>
+                <input type="password" id="apiKey" value={apiKey} onChange={(e) => setApiKey(e.target.value)} style={styles.input} className="login-input" placeholder="Incolla la tua API Key qui" />
+                 <p style={styles.apiKeyInfo}>La chiave è necessaria per l'analisi AI e viene salvata solo per questa sessione.</p>
+              </div>
               <button type="submit" style={styles.loginButton} className="login-button">Accedi</button>
             </form>
             <button onClick={() => { soundService.playClick(); setView('register'); }} style={styles.switchLink}>
                 Non hai un account? Registrati adesso
             </button>
-            <button onClick={handleGuestAccess} style={styles.guestLink}>
+            <button onClick={handleGuestAccessClick} style={styles.guestLink}>
                 Accedi senza essere registrato
             </button>
           </>
@@ -223,6 +204,12 @@ const styles: { [key: string]: React.CSSProperties } = {
     inputGroup: { display: 'flex', flexDirection: 'column', flex: 1 },
     label: { marginBottom: '8px', fontSize: '14px', fontWeight: '500', color: COLORS.textAccent },
     input: { padding: '12px 16px', fontSize: '16px', borderRadius: '8px', border: `1px solid ${COLORS.divider}`, fontFamily: 'inherit', backgroundColor: COLORS.base, color: COLORS.textPrimary, outline: 'none', transition: 'border-color 0.2s, box-shadow 0.2s' },
+    apiKeyInfo: {
+        fontSize: '12px',
+        color: COLORS.textSecondary,
+        marginTop: '8px',
+        lineHeight: 1.4,
+    },
     loginButton: { padding: '14px', fontSize: '16px', fontWeight: 'bold', color: 'white', background: COLORS.primaryGradient, border: 'none', borderRadius: '8px', cursor: 'pointer', marginTop: '8px', transition: 'transform 0.2s ease, filter 0.2s ease' },
     guestLink: { marginTop: '16px', background: 'none', border: 'none', color: COLORS.textAccent, textDecoration: 'underline', cursor: 'pointer', fontSize: '14px' },
     switchLink: { marginTop: '24px', background: 'none', border: 'none', color: COLORS.textAccent, cursor: 'pointer', fontSize: '14px', fontWeight: 'bold' },
