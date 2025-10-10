@@ -10,13 +10,15 @@ export const ApiKeyErrorScreen: React.FC<ApiKeyErrorScreenProps> = ({ error }) =
   return (
     <div style={styles.container}>
       <WarningIcon width={48} height={48} color={COLORS.error} />
-      <h1 style={styles.title}>Errore di Configurazione</h1>
+      <h1 style={styles.title}>Errore di Autenticazione API</h1>
       <p style={styles.message}>
-        L'applicazione non è configurata correttamente. Impossibile comunicare con i servizi di analisi.
+        Si è verificato un problema con la tua API Key di Google AI Studio.
       </p>
       <p style={styles.errorMessage}>Dettaglio: {error}</p>
       <p style={styles.message}>
-        Assicurati che la chiave API sia stata impostata correttamente nell'ambiente di esecuzione come variabile d'ambiente `API_KEY`.
+        Assicurati che la chiave API inserita sia corretta e non sia scaduta.
+        Per risolvere, effettua il logout e accedi nuovamente con una API Key valida.
+        Se il problema persiste, genera una nuova chiave dal sito di Google AI Studio.
       </p>
     </div>
   );
