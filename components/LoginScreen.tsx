@@ -110,20 +110,39 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onRegister, o
   const [apiKey, setApiKey] = useState('');
   const [error, setError] = useState('');
 
-  const handleLoginSubmit = (e: React.FormEvent) => {
+  const getApiKeyToUse = async (): Promise<string> => {
+    let keyToUse = apiKey.trim();
+    if (!keyToUse) {
+        try {
+            const response = await fetch('/apiKey.txt');
+            if (response.ok) {
+                const fetchedKey = await response.text();
+                keyToUse = fetchedKey.trim();
+                setApiKey(keyToUse);
+            }
+        } catch (fetchError) {
+            console.warn("Could not fetch apiKey.txt:", fetchError);
+        }
+    }
+    return keyToUse;
+  };
+
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     soundService.playClick();
     setError('');
     try {
-      onLogin(email, password, apiKey);
+      const keyToUse = await getApiKeyToUse();
+      onLogin(email, password, keyToUse);
     } catch (err: any) {
       setError(err.message || "Errore sconosciuto.");
     }
   };
 
-  const handleGuestAccessClick = () => {
+  const handleGuestAccessClick = async () => {
       soundService.playClick();
-      onGuestAccess(apiKey);
+      const keyToUse = await getApiKeyToUse();
+      onGuestAccess(keyToUse);
   };
   
   const dynamicStyles = `
@@ -167,7 +186,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onRegister, o
               <div style={styles.inputGroup}>
                 <label htmlFor="apiKey" style={styles.label}>Google AI API Key</label>
                 <input type="password" id="apiKey" value={apiKey} onChange={(e) => setApiKey(e.target.value)} style={styles.input} className="login-input" placeholder="Incolla la tua API Key qui" />
-                 <p style={styles.apiKeyInfo}>La chiave è necessaria per l'analisi AI e viene salvata solo per questa sessione.</p>
+                 <p style={styles.apiKeyInfo}>Lascia vuoto per usare la chiave da 'apiKey.txt', se disponibile. La chiave viene salvata solo per questa sessione.</p>
               </div>
               <button type="submit" style={styles.loginButton} className="login-button">Accedi</button>
             </form>
