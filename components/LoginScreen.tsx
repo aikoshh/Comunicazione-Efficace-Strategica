@@ -5,9 +5,9 @@ import type { User } from '../types';
 import { soundService } from '../services/soundService';
 
 interface LoginScreenProps {
-  onLogin: (email: string, pass: string) => void;
+  onLogin: (email: string, pass: string, apiKey: string) => void;
   onRegister: (newUser: Omit<User, 'password'> & { password: string }) => void;
-  onGuestAccess: () => void;
+  onGuestAccess: (apiKey: string) => void;
 }
 
 const RegistrationForm: React.FC<{
@@ -107,20 +107,33 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onRegister, o
   const [view, setView] = useState<'login' | 'register'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [apiKey, setApiKey] = useState('');
   const [error, setError] = useState('');
 
   const handleLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     soundService.playClick();
     setError('');
+     if (!apiKey.trim()) {
+        setError("La API Key di Google AI Studio è obbligatoria.");
+        return;
+    }
     if (email && password) {
       try {
-        onLogin(email, password);
-// FIX: Added curly braces to the catch block to fix syntax error.
+        onLogin(email, password, apiKey);
       } catch (err: any) {
         setError(err.message || "Errore sconosciuto.");
       }
     }
+  };
+
+  const handleGuestAccess = () => {
+    soundService.playClick();
+    if (!apiKey.trim()) {
+        setError("La API Key di Google AI Studio è obbligatoria per procedere.");
+        return;
+    }
+    onGuestAccess(apiKey);
   };
   
   const dynamicStyles = `
@@ -161,12 +174,24 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onRegister, o
                 <label htmlFor="password" style={styles.label}>Password</label>
                 <input type="password" id="password" value={password} onChange={(e) => setPassword(e.target.value)} style={styles.input} className="login-input" placeholder="••••••••" required />
               </div>
+               <div style={styles.inputGroup}>
+                <label htmlFor="apiKey" style={styles.label}>La tua API Key di Google AI Studio</label>
+                <input 
+                  type="password" 
+                  id="apiKey" 
+                  value={apiKey} 
+                  onChange={(e) => setApiKey(e.target.value)} 
+                  style={styles.input} 
+                  className="login-input" 
+                  placeholder="Incolla qui la tua API Key" required 
+                />
+              </div>
               <button type="submit" style={styles.loginButton} className="login-button">Accedi</button>
             </form>
             <button onClick={() => { soundService.playClick(); setView('register'); }} style={styles.switchLink}>
                 Non hai un account? Registrati adesso
             </button>
-            <button onClick={onGuestAccess} style={styles.guestLink}>
+            <button onClick={handleGuestAccess} style={styles.guestLink}>
                 Accedi senza essere registrato
             </button>
           </>
