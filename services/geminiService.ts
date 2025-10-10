@@ -1,20 +1,15 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import type { AnalysisResult, ImprovementArea, VoiceAnalysisResult, VoiceScore, CommunicatorProfile } from '../types';
 
-const getApiKey = (): string | undefined => {
-    const apiKeyFromSession = sessionStorage.getItem('gemini_api_key');
-    if (apiKeyFromSession) {
-        return apiKeyFromSession;
-    }
-    return process.env.API_KEY;
-};
+// ATTENZIONE: Inserire le chiavi API direttamente nel codice client-side è un grave rischio per la sicurezza.
+// Questa chiave è visibile a chiunque ispezioni il codice sorgente dell'applicazione.
+const API_KEY = "AIzaSyCPKmoJbTg3jhxo9oJIcY7DKPYXKj1kA_c";
 
 const getAI = () => {
-    const apiKey = getApiKey();
-    if (!apiKey) {
-        throw new Error("API_KEY non trovata. Inseriscila nella schermata di login.");
+    if (!API_KEY) {
+        throw new Error("API_KEY non configurata nel codice sorgente.");
     }
-    return new GoogleGenAI({ apiKey });
+    return new GoogleGenAI({ apiKey: API_KEY });
 };
 
 const analysisSchema = {
@@ -148,8 +143,8 @@ export const analyzeResponse = async (
 
   } catch (error: any) {
     console.error("Errore durante l'analisi della risposta con Gemini:", error);
-    if (error.message.includes('API key') || error.message.includes('API_KEY') || error.message.includes('API_KEY non trovata')) {
-         throw new Error("API_KEY non valida, mancante o non configurata. Per favore, inseriscila nella pagina di login e riprova.");
+    if (error.message.includes('API key') || error.message.includes('API_KEY')) {
+         throw new Error("La chiave API fornita nel codice non è valida o è scaduta. Controlla il file geminiService.ts.");
     }
     throw new Error("Impossibile ottenere l'analisi dal servizio. Riprova più tardi.");
   }
@@ -285,8 +280,8 @@ export const analyzeParaverbalResponse = async (
 
     } catch (error: any) {
         console.error("Errore durante l'analisi paraverbale con Gemini:", error);
-        if (error.message.includes('API key') || error.message.includes('API_KEY') || error.message.includes('API_KEY non trovata')) {
-             throw new Error("API_KEY non valida, mancante o non configurata. Per favore, inseriscila nella pagina di login e riprova.");
+        if (error.message.includes('API key') || error.message.includes('API_KEY')) {
+             throw new Error("La chiave API fornita nel codice non è valida o è scaduta. Controlla il file geminiService.ts.");
         }
         throw new Error("Impossibile ottenere l'analisi vocale dal servizio. Riprova più tardi.");
     }
@@ -371,8 +366,8 @@ export const generateCommunicatorProfile = async (
 
     } catch (error: any) {
         console.error("Errore durante la generazione del profilo comunicatore:", error);
-        if (error.message.includes('API key') || error.message.includes('API_KEY') || error.message.includes('API_KEY non trovata')) {
-             throw new Error("API_KEY non valida, mancante o non configurata. Per favore, inseriscila nella pagina di login e riprova.");
+        if (error.message.includes('API key') || error.message.includes('API_KEY')) {
+             throw new Error("La chiave API fornita nel codice non è valida o è scaduta. Controlla il file geminiService.ts.");
         }
         throw new Error("Impossibile generare il profilo comunicatore.");
     }
