@@ -107,33 +107,47 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onRegister, o
   const [view, setView] = useState<'login' | 'register'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [apiKey, setApiKey] = useState('');
   const [error, setError] = useState('');
 
-  const handleLoginSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    soundService.playClick();
-    setError('');
-     if (!apiKey.trim()) {
-        setError("La API Key di Google AI Studio è obbligatoria.");
-        return;
-    }
-    if (email && password) {
-      try {
-        onLogin(email, password, apiKey);
-      } catch (err: any) {
-        setError(err.message || "Errore sconosciuto.");
-      }
+  const fetchApiKey = async (): Promise<string> => {
+    try {
+        const response = await fetch('/apiKey.txt');
+        if (!response.ok) {
+            throw new Error("File 'apiKey.txt' non trovato. Crealo nella directory principale e inserisci la tua chiave.");
+        }
+        const key = await response.text();
+        if (!key.trim()) {
+            throw new Error("Il file 'apiKey.txt' è vuoto. Inserisci la tua chiave API.");
+        }
+        return key.trim();
+    } catch (e: any) {
+        throw new Error(e.message || "Impossibile leggere la API Key dal file.");
     }
   };
 
-  const handleGuestAccess = () => {
+  const handleLoginSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     soundService.playClick();
-    if (!apiKey.trim()) {
-        setError("La API Key di Google AI Studio è obbligatoria per procedere.");
-        return;
+    setError('');
+    
+    try {
+      const apiKey = await fetchApiKey();
+      onLogin(email, password, apiKey);
+    } catch (err: any) {
+      setError(err.message || "Errore sconosciuto.");
     }
-    onGuestAccess(apiKey);
+  };
+
+  const handleGuestAccess = async () => {
+    soundService.playClick();
+    setError('');
+    
+    try {
+      const apiKey = await fetchApiKey();
+      onGuestAccess(apiKey);
+    } catch (err: any) {
+        setError(err.message);
+    }
   };
   
   const dynamicStyles = `
@@ -173,18 +187,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onRegister, o
               <div style={styles.inputGroup}>
                 <label htmlFor="password" style={styles.label}>Password</label>
                 <input type="password" id="password" value={password} onChange={(e) => setPassword(e.target.value)} style={styles.input} className="login-input" placeholder="••••••••" required />
-              </div>
-               <div style={styles.inputGroup}>
-                <label htmlFor="apiKey" style={styles.label}>La tua API Key di Google AI Studio</label>
-                <input 
-                  type="password" 
-                  id="apiKey" 
-                  value={apiKey} 
-                  onChange={(e) => setApiKey(e.target.value)} 
-                  style={styles.input} 
-                  className="login-input" 
-                  placeholder="Incolla qui la tua API Key" required 
-                />
               </div>
               <button type="submit" style={styles.loginButton} className="login-button">Accedi</button>
             </form>
