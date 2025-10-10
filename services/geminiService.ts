@@ -1,19 +1,18 @@
+// Gemini Service (testato)
 import type { AnalysisResult, VoiceAnalysisResult, CommunicatorProfile } from '../types';
 
-// Prendi l'env (se c'è) e normalizza senza slash finale
 const RAW_BASE = (import.meta as any)?.env?.VITE_AI_PROXY_URL;
 const BASE = (RAW_BASE && String(RAW_BASE).trim() !== '')
   ? String(RAW_BASE).replace(/\/+$/, '')
-  : '/api'; // <-- FALLBACK sicuro
+  : '/api'; // FALLBACK: usa sempre /api se la variabile non c’è
 
 async function callApi<T>(path: string, body: object): Promise<T> {
-  // assicura che il path inizi con "/"
   const p = path.startsWith('/') ? path : `/${path}`;
   const url = `${BASE}${p}`;
 
   const resp = await fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' }, // C maiuscola ok
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
 
@@ -27,7 +26,6 @@ async function callApi<T>(path: string, body: object): Promise<T> {
     const msg = json?.error || `Errore HTTP ${resp.status}`;
     throw new Error(msg);
   }
-
   const data = (json && json.data !== undefined) ? json.data : json;
   return data as T;
 }
