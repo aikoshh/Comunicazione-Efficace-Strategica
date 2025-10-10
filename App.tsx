@@ -27,6 +27,8 @@ type AppState =
 
 const USERS_STORAGE_KEY = 'ces_coach_users';
 const PROGRESS_STORAGE_KEY = 'ces_coach_progress';
+const API_KEY_STORAGE_KEY = 'ces_coach_api_key';
+
 
 const parseDatabase = (dbString: string): User[] => {
     if (!dbString.trim()) return [];
@@ -99,9 +101,10 @@ const App: React.FC = () => {
       });
   };
 
-  const handleLogin = (email: string, pass: string) => {
+  const handleLogin = (email: string, pass: string, apiKey: string) => {
     const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
     if (user && user.password === pass) {
+      localStorage.setItem(API_KEY_STORAGE_KEY, apiKey);
       setCurrentUser(user);
       setIsAuthenticated(true);
       // Always go to home screen after login. The checkup is now optional from the home screen.
@@ -120,7 +123,8 @@ const App: React.FC = () => {
     setUsers(prevUsers => [...prevUsers, userToSave]);
   };
   
-  const handleGuestAccess = () => {
+  const handleGuestAccess = (apiKey: string) => {
+    localStorage.setItem(API_KEY_STORAGE_KEY, apiKey);
     setCurrentUser(null);
     setIsAuthenticated(true);
     setAppState({ screen: 'home' }); // Guests skip checkup
@@ -128,6 +132,7 @@ const App: React.FC = () => {
 
   const handleLogout = () => {
     soundService.playClick();
+    localStorage.removeItem(API_KEY_STORAGE_KEY);
     setIsAuthenticated(false);
     setCurrentUser(null);
     setAppState({ screen: 'home' });
