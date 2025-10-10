@@ -71,6 +71,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectModule, onSelect
       {modules.map((module, index) => {
         const prerequisites = module.prerequisites || [];
         const isLocked = prerequisites.length > 0 && !prerequisites.every(id => completedModuleIds.includes(id));
+        const isCompleted = !isLocked && completedModuleIds.includes(module.id);
         
         const cardStyle = {
           ...styles.moduleCard,
@@ -91,6 +92,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectModule, onSelect
                 <div style={styles.lockOverlay}>
                     <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
                     <span style={styles.lockText}>Completa i moduli propedeutici per sbloccare</span>
+                </div>
+            )}
+             {isCompleted && (
+                <div style={styles.completedOverlay}>
+                    <CheckCircleIcon color="white" width={48} height={48}/>
+                    <span style={styles.completedText}>Completato</span>
                 </div>
             )}
             <div style={{ ...styles.cardImageContainer, filter: isLocked ? 'grayscale(80%)' : 'none' }}>
@@ -262,6 +269,24 @@ const styles: { [key: string]: React.CSSProperties } = {
         marginTop: '12px',
         fontSize: '14px',
         fontWeight: 500,
+    },
+    completedOverlay: {
+        position: 'absolute',
+        top: 0, left: 0, right: 0, bottom: 0,
+        backgroundColor: 'rgba(40, 167, 69, 0.8)',
+        zIndex: 2,
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        alignItems: 'center',
+        color: 'white',
+        textAlign: 'center',
+        padding: '20px',
+    },
+    completedText: {
+        marginTop: '12px',
+        fontSize: '18px',
+        fontWeight: 'bold',
     },
     cardImageContainer: { width: '100%', height: '180px', overflow: 'hidden' },
     cardImage: { width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.4s ease' },
