@@ -1,0 +1,7 @@
+{
+  "name": "CES Coach: Comunicatore Strategico",
+  "description": "Un'applicazione per allenare le abilità di Comunicazione Efficace Strategica (CES) attraverso esercizi pratici, scritti e verbali, con feedback personalizzato basato su AI.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
