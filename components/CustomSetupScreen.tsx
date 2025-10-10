@@ -1,12 +1,12 @@
 import React, { useState, useRef } from 'react';
 import { Module, IconComponent } from '../types';
 import { COLORS } from '../constants';
-import { HomeIcon, UploadIcon, ConflictIcon, FeedbackIcon, ListeningIcon, QuestionIcon, NextIcon } from './Icons';
+import { HomeIcon, UploadIcon, ConflictIcon, FeedbackIcon, ListeningIcon, QuestionIcon, NextIcon, LightbulbIcon } from './Icons';
 import { soundService } from '../services/soundService';
 
 interface CustomSetupScreenProps {
   module: Module;
-  onStart: (scenario: string, task: string) => void;
+  onStart: (scenario: string, task: string, customObjective?: string) => void;
   onBack: () => void;
 }
 
@@ -48,6 +48,7 @@ const trainingObjectives: TrainingObjective[] = [
 const CustomSetupScreen: React.FC<CustomSetupScreenProps> = ({ module, onStart, onBack }) => {
     const [scenario, setScenario] = useState('');
     const [selectedObjective, setSelectedObjective] = useState<TrainingObjective | null>(null);
+    const [customObjective, setCustomObjective] = useState('');
     const [fileMessage, setFileMessage] = useState('');
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -87,7 +88,7 @@ const CustomSetupScreen: React.FC<CustomSetupScreenProps> = ({ module, onStart, 
     const handleStartClick = () => {
         if(selectedObjective) {
             soundService.playClick();
-            onStart(scenario, selectedObjective.label)
+            onStart(scenario, selectedObjective.label, customObjective)
         }
     };
     
@@ -110,11 +111,11 @@ const CustomSetupScreen: React.FC<CustomSetupScreenProps> = ({ module, onStart, 
       .start-button:active {
         transform: translateY(0px);
       }
-      #scenario-input::placeholder {
+      #scenario-input::placeholder, #custom-objective-input::placeholder {
         color: ${COLORS.textSecondary};
         opacity: 1;
       }
-       #scenario-input:focus {
+       #scenario-input:focus, #custom-objective-input:focus {
         border-color: ${COLORS.secondary};
         box-shadow: 0 0 0 3px rgba(88, 166, 166, 0.2);
     }
@@ -187,9 +188,24 @@ const CustomSetupScreen: React.FC<CustomSetupScreenProps> = ({ module, onStart, 
                     </div>
                 </div>
 
+                 <div style={{...styles.step, animation: 'fadeInUp 0.3s 0.2s ease-out both'}}>
+                    <label style={styles.label} htmlFor="custom-objective-input">
+                        <LightbulbIcon style={{width: 20, height: 20, marginRight: 8, verticalAlign: 'middle'}}/>
+                        3. (Opzionale) Qual è il tuo obiettivo personale?
+                    </label>
+                    <input
+                        id="custom-objective-input"
+                        type="text"
+                        style={styles.input}
+                        value={customObjective}
+                        onChange={(e) => setCustomObjective(e.target.value)}
+                        placeholder="Es: 'Voglio apparire più sicuro di me' oppure 'Voglio evitare di scusarmi'..."
+                    />
+                </div>
+
                 <button
                     onClick={handleStartClick}
-                    style={{...styles.startButton, ...(!isReadyToStart ? styles.startButtonDisabled : {}), animation: 'fadeInUp 0.3s 0.2s ease-out both'}}
+                    style={{...styles.startButton, ...(!isReadyToStart ? styles.startButtonDisabled : {}), animation: 'fadeInUp 0.3s 0.3s ease-out both'}}
                     disabled={!isReadyToStart}
                     className="start-button"
                 >
@@ -227,8 +243,9 @@ const styles: { [key: string]: React.CSSProperties } = {
   description: { fontSize: '18px', color: COLORS.textSecondary, lineHeight: 1.6 },
   setupForm: { display: 'flex', flexDirection: 'column', gap: '32px', backgroundColor: COLORS.accentBeige, padding: '24px', borderRadius: '12px' },
   step: { display: 'flex', flexDirection: 'column', gap: '12px' },
-  label: { fontSize: '18px', fontWeight: '600', color: COLORS.textPrimary, textAlign: 'left' },
+  label: { fontSize: '18px', fontWeight: '600', color: COLORS.textPrimary, textAlign: 'left', display: 'flex', alignItems: 'center' },
   textarea: { width: '100%', padding: '12px 16px', fontSize: '16px', borderRadius: '12px', border: `1px solid ${COLORS.divider}`, resize: 'vertical', fontFamily: 'inherit', backgroundColor: 'white', color: COLORS.textPrimary, outline: 'none', transition: 'border-color 0.2s, box-shadow 0.2s' },
+  input: { width: '100%', padding: '12px 16px', fontSize: '16px', borderRadius: '12px', border: `1px solid ${COLORS.divider}`, fontFamily: 'inherit', backgroundColor: 'white', color: COLORS.textPrimary, outline: 'none', transition: 'border-color 0.2s, box-shadow 0.2s' },
   uploadSection: {
     display: 'flex',
     alignItems: 'center',
