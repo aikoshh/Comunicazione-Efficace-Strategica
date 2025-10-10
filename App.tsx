@@ -27,8 +27,6 @@ type AppState =
 
 const USERS_STORAGE_KEY = 'ces_coach_users';
 const PROGRESS_STORAGE_KEY = 'ces_coach_progress';
-const API_KEY_STORAGE_KEY = 'ces_coach_api_key';
-
 
 const parseDatabase = (dbString: string): User[] => {
     if (!dbString.trim()) return [];
@@ -104,7 +102,11 @@ const App: React.FC = () => {
   const handleLogin = (email: string, pass: string, apiKey: string) => {
     const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
     if (user && user.password === pass) {
-      localStorage.setItem(API_KEY_STORAGE_KEY, apiKey);
+      if (apiKey) {
+          sessionStorage.setItem('gemini_api_key', apiKey);
+      } else {
+          sessionStorage.removeItem('gemini_api_key');
+      }
       setCurrentUser(user);
       setIsAuthenticated(true);
       // Always go to home screen after login. The checkup is now optional from the home screen.
@@ -124,7 +126,11 @@ const App: React.FC = () => {
   };
   
   const handleGuestAccess = (apiKey: string) => {
-    localStorage.setItem(API_KEY_STORAGE_KEY, apiKey);
+    if (apiKey) {
+        sessionStorage.setItem('gemini_api_key', apiKey);
+    } else {
+        sessionStorage.removeItem('gemini_api_key');
+    }
     setCurrentUser(null);
     setIsAuthenticated(true);
     setAppState({ screen: 'home' }); // Guests skip checkup
@@ -132,9 +138,9 @@ const App: React.FC = () => {
 
   const handleLogout = () => {
     soundService.playClick();
-    localStorage.removeItem(API_KEY_STORAGE_KEY);
     setIsAuthenticated(false);
     setCurrentUser(null);
+    sessionStorage.removeItem('gemini_api_key'); // Clear API key on logout
     setAppState({ screen: 'home' });
   };
   
