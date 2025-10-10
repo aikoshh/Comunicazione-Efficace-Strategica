@@ -1,8 +1,10 @@
 import type { AnalysisResult, VoiceAnalysisResult, CommunicatorProfile } from '../types';
 
-const RAW_BASE = (import.meta as any)?.env?.VITE_AI_PROXY_URL || '';
-// normalizza BASE: senza slash finale
-const BASE = String(RAW_BASE).replace(/\/+$/, '');
+// Prendi l'env (se c'è) e normalizza senza slash finale
+const RAW_BASE = (import.meta as any)?.env?.VITE_AI_PROXY_URL;
+const BASE = (RAW_BASE && String(RAW_BASE).trim() !== '')
+  ? String(RAW_BASE).replace(/\/+$/, '')
+  : '/api'; // <-- FALLBACK sicuro
 
 async function callApi<T>(path: string, body: object): Promise<T> {
   // assicura che il path inizi con "/"
@@ -11,16 +13,14 @@ async function callApi<T>(path: string, body: object): Promise<T> {
 
   const resp = await fetch(url, {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: { 'Content-Type': 'application/json' }, // C maiuscola ok
     body: JSON.stringify(body),
   });
 
-  // prova a leggere JSON; se fallisce crea un oggetto vuoto
   const raw = await resp.text();
   let json: any = {};
   try { json = JSON.parse(raw); } catch { json = {}; }
 
-  // debug leggero (utile adesso per capire cosa arriva)
   console.log('[geminiService] POST', url, { body }, { status: resp.status, json });
 
   if (!resp.ok) {
@@ -28,9 +28,7 @@ async function callApi<T>(path: string, body: object): Promise<T> {
     throw new Error(msg);
   }
 
-  // Alcuni backend tornano direttamente l’oggetto, altri { data: ... }.
   const data = (json && json.data !== undefined) ? json.data : json;
-
   return data as T;
 }
 
