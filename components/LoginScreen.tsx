@@ -3,6 +3,8 @@ import { COLORS } from '../constants';
 import { cesLogoUrl } from '../assets';
 import type { User } from '../types';
 import { soundService } from '../services/soundService';
+import { Spinner } from './Loader';
+import { useToast } from '../hooks/useToast';
 
 interface LoginScreenProps {
   onLogin: (email: string, pass: string) => void;
@@ -20,8 +22,8 @@ const RegistrationForm: React.FC<{
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [captchaAnswer, setCaptchaAnswer] = useState('');
-    const [error, setError] = useState('');
-    const [success, setSuccess] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    const { addToast } = useToast();
 
     const captcha = useMemo(() => {
         const num1 = Math.floor(Math.random() * 10) + 1;
@@ -36,67 +38,71 @@ const RegistrationForm: React.FC<{
     const handleRegisterSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         soundService.playClick();
-        setError('');
-        setSuccess('');
 
         if (!firstName || !lastName || !email || !password) {
-            setError("Tutti i campi sono obbligatori.");
+            addToast("Tutti i campi sono obbligatori.", 'error');
             return;
         }
         if (password !== confirmPassword) {
-            setError("Le password non coincidono.");
+            addToast("Le password non coincidono.", 'error');
             return;
         }
         if (parseInt(captchaAnswer, 10) !== captcha.sum) {
-            setError("La verifica non è corretta. Riprova.");
+            addToast("La verifica non è corretta. Riprova.", 'error');
             return;
         }
-
-        try {
-            onRegister({ firstName, lastName, email, password });
-            setSuccess("Registrazione completata! Ora puoi accedere.");
-            setTimeout(() => {
-                setView('login');
-            }, 2000);
-        } catch (err: any) {
-            setError(err.message || "Si è verificato un errore durante la registrazione.");
-        }
+        
+        setIsLoading(true);
+        // Simulate network delay
+        setTimeout(() => {
+            try {
+                onRegister({ firstName, lastName, email, password });
+                addToast("Registrazione completata! Ora puoi accedere.", 'success');
+                setTimeout(() => {
+                    setView('login');
+                }, 2000);
+            } catch (err: any) {
+                addToast(err.message || "Si è verificato un errore durante la registrazione.", 'error');
+            } finally {
+                setIsLoading(false);
+            }
+        }, 1500);
     };
 
     return (
         <>
             <h1 style={styles.title}>Crea il tuo Account</h1>
             <p style={styles.subtitle}>e inizia subito il tuo percorso di allenamento.</p>
-            {error && <p style={styles.errorText}>{error}</p>}
-            {success && <p style={styles.successText}>{success}</p>}
             <form onSubmit={handleRegisterSubmit} style={styles.form}>
                 <div style={styles.inputGroup}>
                     <label htmlFor="firstName" style={styles.label}>Nome</label>
-                    <input type="text" id="firstName" value={firstName} onChange={(e) => setFirstName(e.target.value)} style={styles.input} className="login-input" required />
+                    <input type="text" id="firstName" value={firstName} onChange={(e) => setFirstName(e.target.value)} style={styles.input} className="login-input" required disabled={isLoading} />
                 </div>
                 <div style={styles.inputGroup}>
                     <label htmlFor="lastName" style={styles.label}>Cognome</label>
-                    <input type="text" id="lastName" value={lastName} onChange={(e) => setLastName(e.target.value)} style={styles.input} className="login-input" required />
+                    <input type="text" id="lastName" value={lastName} onChange={(e) => setLastName(e.target.value)} style={styles.input} className="login-input" required disabled={isLoading} />
                 </div>
                 <div style={styles.inputGroup}>
                     <label htmlFor="reg-email" style={styles.label}>Email</label>
-                    <input type="email" id="reg-email" value={email} onChange={(e) => setEmail(e.target.value)} style={styles.input} className="login-input" required />
+                    <input type="email" id="reg-email" value={email} onChange={(e) => setEmail(e.target.value)} style={styles.input} className="login-input" required disabled={isLoading} />
                 </div>
                 <div style={styles.inputGroup}>
                     <label htmlFor="reg-password" style={styles.label}>Password</label>
-                    <input type="password" id="reg-password" value={password} onChange={(e) => setPassword(e.target.value)} style={styles.input} className="login-input" required />
+                    <input type="password" id="reg-password" value={password} onChange={(e) => setPassword(e.target.value)} style={styles.input} className="login-input" required disabled={isLoading} />
                 </div>
                 <div style={styles.inputGroup}>
                     <label htmlFor="confirmPassword" style={styles.label}>Conferma Password</label>
-                    <input type="password" id="confirmPassword" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} style={styles.input} className="login-input" required />
+                    <input type="password" id="confirmPassword" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} style={styles.input} className="login-input" required disabled={isLoading} />
                 </div>
                 <div style={styles.inputGroup}>
                     <label htmlFor="captcha" style={styles.label}>Verifica: quanto fa {captcha.num1} + {captcha.num2}?</label>
-                    <input type="number" id="captcha" value={captchaAnswer} onChange={(e) => setCaptchaAnswer(e.target.value)} style={styles.input} className="login-input" required />
+                    <input type="number" id="captcha" value={captchaAnswer} onChange={(e) => setCaptchaAnswer(e.target.value)} style={styles.input} className="login-input" required disabled={isLoading} />
                 </div>
-                <button type="submit" style={styles.loginButton} className="login-button">Registrati</button>
+                <button type="submit" style={styles.loginButton} className="login-button" disabled={isLoading}>
+                    {isLoading ? <Spinner color="white" /> : 'Registrati'}
+                </button>
             </form>
-             <button onClick={() => { soundService.playClick(); setView('login'); }} style={styles.switchLink}>
+             <button onClick={() => { soundService.playClick(); setView('login'); }} style={styles.switchLink} disabled={isLoading}>
                 Hai già un account? Accedi
             </button>
         </>
@@ -107,23 +113,28 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onRegister, o
   const [view, setView] = useState<'login' | 'register'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const { addToast } = useToast();
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     soundService.playClick();
-    setError('');
+    setIsLoading(true);
 
-    try {
-      onLogin(email, password);
-    } catch (err: any) {
-      setError(err.message || "Errore sconosciuto.");
-    }
+    // Simulate network delay for better UX
+    setTimeout(() => {
+        try {
+          onLogin(email, password);
+          // On success, component will unmount, no need to setIsLoading(false)
+        } catch (err: any) {
+          addToast(err.message || "Errore sconosciuto.", 'error');
+          setIsLoading(false); // Only set loading to false on error
+        }
+    }, 1000);
   };
 
   const handleGuestAccessClick = async () => {
       soundService.playClick();
-      setError('');
       onGuestAccess();
   };
   
@@ -135,13 +146,17 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onRegister, o
         border-color: ${COLORS.secondary};
         box-shadow: 0 0 0 3px rgba(88, 166, 166, 0.2);
     }
-    .login-button:hover {
+    .login-button:hover:not(:disabled) {
         transform: translateY(-2px);
         filter: brightness(1.1);
     }
-    .login-button:active {
-        transform: translateY(0px);
+    .login-button:active:not(:disabled) {
+        transform: translateY(0px) scale(0.98);
         filter: brightness(0.95);
+    }
+    .login-button:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
     }
   `;
   
@@ -155,22 +170,23 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onRegister, o
         {view === 'login' ? (
            <>
             <h1 style={styles.title}>Benvenuto in<br /><strong>CES Coach</strong></h1>
-             {error && <p style={styles.errorText}>{error}</p>}
             <form onSubmit={handleLoginSubmit} style={styles.form}>
               <div style={styles.inputGroup}>
                 <label htmlFor="email" style={styles.label}>Email</label>
-                <input type="email" id="email" value={email} onChange={(e) => setEmail(e.target.value)} style={styles.input} className="login-input" placeholder="iltuoindirizzo@email.com" required />
+                <input type="email" id="email" value={email} onChange={(e) => setEmail(e.target.value)} style={styles.input} className="login-input" placeholder="iltuoindirizzo@email.com" required disabled={isLoading} />
               </div>
               <div style={styles.inputGroup}>
                 <label htmlFor="password" style={styles.label}>Password</label>
-                <input type="password" id="password" value={password} onChange={(e) => setPassword(e.target.value)} style={styles.input} className="login-input" placeholder="••••••••" required />
+                <input type="password" id="password" value={password} onChange={(e) => setPassword(e.target.value)} style={styles.input} className="login-input" placeholder="••••••••" required disabled={isLoading} />
               </div>
-              <button type="submit" style={styles.loginButton} className="login-button">Accedi</button>
+              <button type="submit" style={styles.loginButton} className="login-button" disabled={isLoading}>
+                 {isLoading ? <Spinner color="white" /> : 'Accedi'}
+              </button>
             </form>
-            <button onClick={() => { soundService.playClick(); setView('register'); }} style={styles.switchLink}>
+            <button onClick={() => { soundService.playClick(); setView('register'); }} style={styles.switchLink} disabled={isLoading}>
                 Non hai un account? Registrati adesso
             </button>
-            <button onClick={handleGuestAccessClick} style={styles.guestLink}>
+            <button onClick={handleGuestAccessClick} style={styles.guestLink} disabled={isLoading}>
                 Accedi senza essere registrato
             </button>
           </>
@@ -191,7 +207,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onRegister, o
 };
 
 const styles: { [key: string]: React.CSSProperties } = {
-    container: { display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', backgroundColor: COLORS.base, padding: '20px' },
+    container: { display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', backgroundColor: '#000000', padding: '20px' },
     loginBox: { backgroundColor: COLORS.card, padding: '40px', borderRadius: '12px', border: `1px solid ${COLORS.divider}`, width: '100%', maxWidth: '450px', textAlign: 'center', boxShadow: '0 8px 30px rgba(0,0,0,0.12)', animation: 'fadeInUp 0.5s ease-out' },
     logoContainer: { marginBottom: '24px', display: 'flex', justifyContent: 'center' },
     logoImage: {
@@ -211,7 +227,7 @@ const styles: { [key: string]: React.CSSProperties } = {
         marginTop: '8px',
         lineHeight: 1.4,
     },
-    loginButton: { padding: '14px', fontSize: '16px', fontWeight: 'bold', color: 'white', background: COLORS.primaryGradient, border: 'none', borderRadius: '8px', cursor: 'pointer', marginTop: '8px', transition: 'transform 0.2s ease, filter 0.2s ease' },
+    loginButton: { padding: '14px', fontSize: '16px', fontWeight: 'bold', color: 'white', background: COLORS.primaryGradient, border: 'none', borderRadius: '8px', cursor: 'pointer', marginTop: '8px', transition: 'transform 0.2s ease, filter 0.2s ease, opacity 0.2s ease', minHeight: '53px' },
     guestLink: { marginTop: '16px', background: 'none', border: 'none', color: COLORS.textAccent, textDecoration: 'underline', cursor: 'pointer', fontSize: '14px' },
     switchLink: { marginTop: '24px', background: 'none', border: 'none', color: COLORS.textAccent, cursor: 'pointer', fontSize: '14px', fontWeight: 'bold' },
     errorText: { color: 'white', backgroundColor: COLORS.error, padding: '12px', borderRadius: '8px', fontSize: '14px', marginBottom: '16px', border: 'none', textAlign: 'center' },

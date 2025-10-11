@@ -1,8 +1,8 @@
-import { Module, DifficultyLevel, ExerciseType, Exercise } from './types';
+import { Module, DifficultyLevel, ExerciseType, Exercise, IconComponent } from './types';
 import { 
     FeedbackIcon, ConflictIcon, QuestionIcon, CustomIcon, ListeningIcon,
     HealthcareIcon, EducationIcon, CustomerCareIcon, RetailIcon, BankingIcon,
-    HRIcon, SalesIcon, LeadershipIcon, VoiceIcon
+    HRIcon, SalesIcon, LeadershipIcon, VoiceIcon, WrittenIcon, VerbalIcon
 } from './components/Icons';
 import { cardImage1, cardImage2, cardImage3, cardImage4, cardImage5, cardImage6 } from './assets';
 
@@ -363,3 +363,8 @@ export const MODULES: Module[] = [
     ],
   },
 ];
+
+export const EXERCISE_TYPE_ICONS: Record<ExerciseType, IconComponent> = {
+  [ExerciseType.WRITTEN]: WrittenIcon,
+  [ExerciseType.VERBAL]: VerbalIcon,
+};

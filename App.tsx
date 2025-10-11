@@ -9,21 +9,26 @@ import CustomSetupScreen from './components/CustomSetupScreen';
 import { LoginScreen } from './components/LoginScreen';
 import { StrategicCheckupScreen } from './components/StrategicCheckupScreen';
 import { CommunicatorProfileScreen } from './components/CommunicatorProfileScreen';
-import type { Module, Exercise, AnalysisResult, VoiceAnalysisResult, DifficultyLevel, User, UserProgress, CommunicatorProfile } from './types';
+import { Header } from './components/Header';
+import { PaywallScreen } from './components/PaywallScreen';
+import type { Module, Exercise, AnalysisResult, VoiceAnalysisResult, DifficultyLevel, User, UserProgress, CommunicatorProfile, Breadcrumb, Entitlements, Product } from './types';
 import { MODULES, COLORS } from './constants';
 import { initialUserDatabase } from './database';
 import { soundService } from './services/soundService';
+import { getUserEntitlements, purchaseProduct, restorePurchases } from './services/monetizationService';
+import { useToast } from './hooks/useToast';
 
 type AppState =
   | { screen: 'home' }
   | { screen: 'module'; module: Module }
   | { screen: 'custom_setup'; module: Module }
   | { screen: 'exercise'; exercise: Exercise; isCheckup?: boolean; checkupStep?: number; totalCheckupSteps?: number }
-  | { screen: 'report'; result: AnalysisResult; exercise: Exercise }
-  | { screen: 'voice_report'; result: VoiceAnalysisResult; exercise: Exercise }
+  | { screen: 'report'; result: AnalysisResult; exercise: Exercise; nextExercise?: Exercise; currentModule?: Module }
+  | { screen: 'voice_report'; result: VoiceAnalysisResult; exercise: Exercise; nextExercise?: Exercise; currentModule?: Module }
   | { screen: 'api_key_error'; error: string }
   | { screen: 'strategic_checkup' }
-  | { screen: 'communicator_profile' };
+  | { screen: 'communicator_profile' }
+  | { screen: 'paywall' };
 
 const USERS_STORAGE_KEY = 'ces_coach_users';
 const PROGRESS_STORAGE_KEY = 'ces_coach_progress';
@@ -54,10 +59,30 @@ const loadFromStorage = <T,>(key: string): T | null => {
     }
 };
 
+const findNextExerciseInModule = (currentExerciseId: string): { currentModule?: Module; nextExercise?: Exercise } => {
+    let currentModule: Module | undefined;
+    let nextExercise: Exercise | undefined;
+
+    for (const mod of MODULES) {
+        if (mod.isCustom) continue;
+        const exerciseIndex = mod.exercises.findIndex(e => e.id === currentExerciseId);
+        if (exerciseIndex !== -1) {
+            currentModule = mod;
+            if (exerciseIndex + 1 < mod.exercises.length) {
+                nextExercise = mod.exercises[exerciseIndex + 1];
+            }
+            break;
+        }
+    }
+    return { currentModule, nextExercise };
+};
+
 
 const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [entitlements, setEntitlements] = useState<Entitlements | null>(null);
+  const { addToast } = useToast();
   
   const [users, setUsers] = useState<User[]>(() => {
     const storedUsers = loadFromStorage<User[]>(USERS_STORAGE_KEY);
@@ -84,10 +109,20 @@ const App: React.FC = () => {
   }, [userProgress]);
 
   useEffect(() => {
-    if (appState.screen === 'home' || appState.screen === 'module' || appState.screen === 'custom_setup') {
       window.scrollTo(0, 0);
-    }
   }, [appState.screen]);
+  
+  useEffect(() => {
+      const loadEntitlements = async () => {
+          if(isAuthenticated) {
+              const userEntitlements = await getUserEntitlements(currentUser);
+              setEntitlements(userEntitlements);
+          } else {
+              setEntitlements(null);
+          }
+      };
+      loadEntitlements();
+  }, [isAuthenticated, currentUser]);
 
   const updateUserProgress = (email: string, updates: Partial<UserProgress>) => {
       setUserProgress(prev => {
@@ -98,13 +133,33 @@ const App: React.FC = () => {
           };
       });
   };
+  
+  const handlePurchase = async (product: Product) => {
+    try {
+        const newEntitlements = await purchaseProduct(currentUser, product);
+        setEntitlements(newEntitlements);
+        soundService.playScoreSound(100); // Play triumph sound for purchase
+        addToast(`${product.name} sbloccato con successo!`, 'success');
+    } catch (error: any) {
+        addToast(error.message || "Errore durante l'acquisto.", 'error');
+    }
+  };
+  
+  const handleRestore = async () => {
+      try {
+          const restoredEntitlements = await restorePurchases(currentUser);
+          setEntitlements(restoredEntitlements);
+          addToast("Acquisti ripristinati con successo.", 'success');
+      } catch(error: any) {
+          addToast(error.message || "Errore durante il ripristino.", 'error');
+      }
+  };
 
   const handleLogin = (email: string, pass: string) => {
     const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
     if (user && user.password === pass) {
       setCurrentUser(user);
       setIsAuthenticated(true);
-      // Always go to home screen after login. The checkup is now optional from the home screen.
       setAppState({ screen: 'home' });
     } else {
       throw new Error("Email o password non validi.");
@@ -123,7 +178,7 @@ const App: React.FC = () => {
   const handleGuestAccess = () => {
     setCurrentUser(null);
     setIsAuthenticated(true);
-    setAppState({ screen: 'home' }); // Guests skip checkup
+    setAppState({ screen: 'home' });
   };
 
   const handleLogout = () => {
@@ -176,23 +231,24 @@ const App: React.FC = () => {
     setAppState({ screen: 'exercise', exercise: customExercise });
   };
 
-  const processExerciseCompletion = (exerciseId: string, score: number) => {
+  const processExerciseCompletion = (exerciseId: string, result: AnalysisResult) => {
       if (!currentUser) return;
       
+      const { score, areasForImprovement } = result;
       const userEmail = currentUser.email;
-      const currentProgress = userProgress[userEmail] || { scores: [], completedExerciseIds: [], completedModuleIds: [] };
+      const currentProgress = userProgress[userEmail] || { scores: [], completedExerciseIds: [], completedModuleIds: [], analysisHistory: [] };
       
       const newScores = [...currentProgress.scores, score];
       const newCompletedIds = [...new Set([...(currentProgress.completedExerciseIds || []), exerciseId])];
+      const newAnalysisHistory = [...(currentProgress.analysisHistory || []), { exerciseId, areasForImprovement }];
       
-      // Check for module completion
       const newCompletedModuleIds = [...(currentProgress.completedModuleIds || [])];
       for (const module of MODULES.filter(m => !m.isCustom)) {
           if (!newCompletedModuleIds.includes(module.id)) {
               const allExercisesInModuleCompleted = module.exercises.every(ex => newCompletedIds.includes(ex.id));
               if (allExercisesInModuleCompleted) {
                   newCompletedModuleIds.push(module.id);
-                  soundService.playSuccess(); // Play a sound for module completion
+                  soundService.playSuccess();
               }
           }
       }
@@ -201,14 +257,16 @@ const App: React.FC = () => {
           scores: newScores,
           completedExerciseIds: newCompletedIds,
           completedModuleIds: newCompletedModuleIds,
+          analysisHistory: newAnalysisHistory,
       });
   };
   
   const handleCompleteWrittenExercise = (result: AnalysisResult) => {
     if (appState.screen === 'exercise') {
       if (!appState.isCheckup) {
-        processExerciseCompletion(appState.exercise.id, result.score);
-        setAppState({ screen: 'report', result, exercise: appState.exercise });
+        processExerciseCompletion(appState.exercise.id, result);
+        const { currentModule, nextExercise } = findNextExerciseInModule(appState.exercise.id);
+        setAppState({ screen: 'report', result, exercise: appState.exercise, nextExercise, currentModule });
       }
     }
   };
@@ -216,10 +274,19 @@ const App: React.FC = () => {
   const handleCompleteVerbalExercise = (result: VoiceAnalysisResult) => {
       if (appState.screen === 'exercise') {
           const averageScore = Math.round(result.scores.reduce((acc, s) => acc + s.score, 0) / result.scores.length * 10);
-          if (!appState.isCheckup) {
-              processExerciseCompletion(appState.exercise.id, averageScore);
-              setAppState({ screen: 'voice_report', result, exercise: appState.exercise });
+          if (!appState.isCheckup && currentUser) {
+                const userEmail = currentUser.email;
+                const currentProgress = userProgress[userEmail] || { scores: [], completedExerciseIds: [], completedModuleIds: [] };
+                const newScores = [...currentProgress.scores, averageScore];
+                const newCompletedIds = [...new Set([...(currentProgress.completedExerciseIds || []), appState.exercise.id])];
+                
+                updateUserProgress(userEmail, {
+                    scores: newScores,
+                    completedExerciseIds: newCompletedIds,
+                });
           }
+          const { currentModule, nextExercise } = findNextExerciseInModule(appState.exercise.id);
+          setAppState({ screen: 'voice_report', result, exercise: appState.exercise, nextExercise, currentModule });
       }
   };
 
@@ -228,13 +295,9 @@ const App: React.FC = () => {
           setAppState({ screen: 'exercise', exercise: appState.exercise });
       }
   };
-
-  const handleNextExercise = () => {
-    setAppState({ screen: 'home' });
-  };
   
   const handleBack = () => {
-    if (appState.screen === 'module' || appState.screen === 'custom_setup' || appState.screen === 'communicator_profile' || appState.screen === 'strategic_checkup') {
+    if (appState.screen === 'module' || appState.screen === 'custom_setup' || appState.screen === 'communicator_profile' || appState.screen === 'strategic_checkup' || appState.screen === 'paywall') {
       setAppState({ screen: 'home' });
     }
     if (appState.screen === 'exercise') {
@@ -257,19 +320,45 @@ const App: React.FC = () => {
       setAppState({ screen: 'api_key_error', error });
   };
   
-  const hoverStyle = `
-      .logout-button:hover {
-        opacity: 0.9;
-        transform: translateY(-2px);
-      }
-    `;
+  const generateBreadcrumbs = (): Breadcrumb[] => {
+    const homeCrumb: Breadcrumb = { label: "Home", onClick: () => setAppState({ screen: 'home' }) };
+    
+    switch (appState.screen) {
+        case 'module':
+            return [homeCrumb, { label: appState.module.title }];
+        case 'custom_setup':
+            return [homeCrumb, { label: appState.module.title }];
+        case 'exercise':
+            const module = MODULES.find(m => m.exercises.some(e => e.id === appState.exercise.id));
+            if (module) {
+                return [homeCrumb, { label: module.title, onClick: () => setAppState({ screen: 'module', module }) }, { label: "Esercizio" }];
+            }
+            return [homeCrumb, { label: "Esercizio" }];
+        case 'report':
+        case 'voice_report':
+             if (appState.currentModule) {
+                return [homeCrumb, { label: appState.currentModule.title, onClick: () => setAppState({ screen: 'module', module: appState.currentModule }) }, { label: "Report" }];
+             }
+             return [homeCrumb, { label: "Report" }];
+        case 'strategic_checkup':
+            return [homeCrumb, { label: 'Check-up Strategico' }];
+        case 'communicator_profile':
+            return [homeCrumb, { label: 'Profilo Comunicatore' }];
+        case 'paywall':
+            return [homeCrumb, { label: 'Sblocca PRO' }];
+        default:
+            return [homeCrumb];
+    }
+  };
 
   if (!isAuthenticated) {
     return <LoginScreen onLogin={handleLogin} onRegister={handleRegister} onGuestAccess={handleGuestAccess} />;
   }
-
+  
+  const completedExerciseIds = (currentUser && userProgress[currentUser.email]?.completedExerciseIds) || [];
   let screenContent;
   let screenKey = 'home';
+  const showHeader = appState.screen !== 'api_key_error';
 
   switch (appState.screen) {
     case 'home':
@@ -284,7 +373,13 @@ const App: React.FC = () => {
       break;
     case 'module':
       screenKey = appState.module.id;
-      screenContent = <ModuleScreen module={appState.module} onSelectExercise={handleSelectExercise} onBack={handleBack} />;
+      screenContent = <ModuleScreen 
+                        module={appState.module} 
+                        onSelectExercise={handleSelectExercise} 
+                        onBack={handleBack} 
+                        completedExerciseIds={completedExerciseIds} 
+                        entitlements={entitlements}
+                      />;
       break;
     case 'custom_setup':
       screenKey = 'custom_setup';
@@ -298,18 +393,31 @@ const App: React.FC = () => {
                     onCompleteVerbal={handleCompleteVerbalExercise}
                     onBack={handleBack} 
                     onApiKeyError={handleApiKeyError}
+                    entitlements={entitlements}
                     isCheckup={appState.isCheckup}
                     checkupStep={appState.checkupStep}
                     totalCheckupSteps={appState.totalCheckupSteps}
                     />;
         break;
     case 'report':
-        screenKey = `report-${appState.exercise.id}`;
-        screenContent = <AnalysisReportScreen result={appState.result} exercise={appState.exercise} onRetry={handleRetryExercise} onNext={handleNextExercise} />;
-        break;
     case 'voice_report':
-        screenKey = `voice-report-${appState.exercise.id}`;
-        screenContent = <VoiceAnalysisReportScreen result={appState.result} exercise={appState.exercise} onRetry={handleRetryExercise} onNext={handleNextExercise} />;
+        const { nextExercise, currentModule } = appState;
+        const onNextExercise = () => {
+            if (nextExercise) {
+                handleSelectExercise(nextExercise);
+            } else if (currentModule) {
+                handleSelectModule(currentModule);
+            }
+        };
+        const nextExerciseLabel = nextExercise ? 'Prossimo Esercizio' : 'Torna al Modulo';
+        
+        if (appState.screen === 'report') {
+            screenKey = `report-${appState.exercise.id}`;
+            screenContent = <AnalysisReportScreen result={appState.result} exercise={appState.exercise} onRetry={handleRetryExercise} onNextExercise={onNextExercise} nextExerciseLabel={nextExerciseLabel} entitlements={entitlements} onNavigateToPaywall={() => setAppState({ screen: 'paywall' })} />;
+        } else {
+            screenKey = `voice-report-${appState.exercise.id}`;
+            screenContent = <VoiceAnalysisReportScreen result={appState.result} exercise={appState.exercise} onRetry={handleRetryExercise} onNextExercise={onNextExercise} nextExerciseLabel={nextExerciseLabel} entitlements={entitlements} onNavigateToPaywall={() => setAppState({ screen: 'paywall' })}/>;
+        }
         break;
     case 'api_key_error':
         screenKey = 'api_key_error';
@@ -317,12 +425,16 @@ const App: React.FC = () => {
         break;
     case 'strategic_checkup':
         screenKey = 'strategic_checkup';
-        screenContent = <StrategicCheckupScreen onSelectExercise={handleSelectExercise} onCompleteCheckup={handleCompleteCheckup} onApiKeyError={handleApiKeyError} onBack={handleBack} />;
+        screenContent = <StrategicCheckupScreen onSelectExercise={handleSelectExercise} onCompleteCheckup={handleCompleteCheckup} onApiKeyError={handleApiKeyError} onBack={handleBack} entitlements={entitlements} />;
         break;
     case 'communicator_profile':
         screenKey = 'communicator_profile';
         const profile = currentUser ? userProgress[currentUser.email]?.checkupResults : undefined;
         screenContent = <CommunicatorProfileScreen profile={profile} onContinue={handleFinishProfileReview} />;
+        break;
+    case 'paywall':
+        screenKey = 'paywall';
+        screenContent = <PaywallScreen entitlements={entitlements!} onPurchase={handlePurchase} onRestore={handleRestore} />;
         break;
     default:
         screenContent = <HomeScreen 
@@ -336,15 +448,14 @@ const App: React.FC = () => {
 
   return (
     <div>
-        <style>{hoverStyle}</style>
-        <div key={screenKey} style={{ animation: 'fadeInUp 0.5s ease-out' }}>
-            {screenContent}
-        </div>
-        {(appState.screen !== 'api_key_error' && appState.screen !== 'strategic_checkup') && (
+        {showHeader && <Header currentUser={currentUser} breadcrumbs={generateBreadcrumbs()} onLogout={handleLogout} onGoToPaywall={() => setAppState({ screen: 'paywall' })} />}
+        <main style={showHeader ? styles.mainContent : {}}>
+            <div key={screenKey} style={{ animation: 'fadeInUp 0.5s ease-out' }}>
+                {screenContent}
+            </div>
+        </main>
+        {appState.screen !== 'api_key_error' && (
             <footer style={styles.footer}>
-                <button onClick={handleLogout} style={styles.logoutButton} className="logout-button">
-                    Logout
-                </button>
                 <div style={styles.copyrightContainer}>
                     <p style={styles.copyrightText}>
                         CES Coach © Copyright 2025
@@ -360,22 +471,13 @@ const App: React.FC = () => {
 };
 
 const styles: { [key: string]: React.CSSProperties } = {
+    mainContent: {
+        paddingTop: '64px', // Height of the fixed header
+    },
     footer: {
         textAlign: 'center',
         padding: '32px 20px',
         backgroundColor: COLORS.base,
-    },
-    logoutButton: {
-        padding: '12px 24px',
-        fontSize: '16px',
-        fontWeight: '500',
-        border: 'none',
-        backgroundColor: '#dc3545',
-        color: 'white',
-        borderRadius: '8px',
-        cursor: 'pointer',
-        transition: 'all 0.2s ease',
-        boxShadow: '0 4px 12px rgba(220, 53, 69, 0.3)',
     },
     copyrightContainer: {
         marginTop: '24px',

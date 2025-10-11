@@ -1,35 +1,36 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Exercise, AnalysisResult, CommunicatorProfile } from '../types';
+import { Exercise, AnalysisResult, CommunicatorProfile, Entitlements } from '../types';
 import { STRATEGIC_CHECKUP_EXERCISES, COLORS } from '../constants';
 import { ExerciseScreen } from './ExerciseScreen';
-import { Loader } from './Loader';
+import { FullScreenLoader } from './Loader';
 import { generateCommunicatorProfile, analyzeResponse } from '../services/geminiService';
 import { Logo } from './Logo';
 import { HomeIcon, MicIcon } from './Icons';
 import { soundService } from '../services/soundService';
 import { useSpeech } from '../hooks/useSpeech';
+import { useToast } from '../hooks/useToast';
 
 interface StrategicCheckupScreenProps {
   onSelectExercise: (exercise: Exercise, isCheckup: boolean, checkupStep: number, totalCheckupSteps: number) => void;
   onCompleteCheckup: (profile: CommunicatorProfile) => void;
   onApiKeyError: (error: string) => void;
   onBack: () => void;
+  entitlements: Entitlements | null;
 }
 
-export const StrategicCheckupScreen: React.FC<StrategicCheckupScreenProps> = ({ onSelectExercise, onCompleteCheckup, onApiKeyError, onBack }) => {
+export const StrategicCheckupScreen: React.FC<StrategicCheckupScreenProps> = ({ onSelectExercise, onCompleteCheckup, onApiKeyError, onBack, entitlements }) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [analysisResults, setAnalysisResults] = useState<{ exerciseId: string; analysis: AnalysisResult }[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { addToast } = useToast();
 
   const totalSteps = STRATEGIC_CHECKUP_EXERCISES.length;
 
   const handleCompleteExercise = async (response: string) => {
     setIsLoading(true);
-    setError(null);
     try {
       const exercise = STRATEGIC_CHECKUP_EXERCISES[currentStep];
-      const result = await analyzeResponse(response, exercise.scenario, exercise.task, false);
+      const result = await analyzeResponse(response, exercise.scenario, exercise.task, entitlements, false);
       const newResults = [...analysisResults, { exerciseId: exercise.id, analysis: result }];
       setAnalysisResults(newResults);
 
@@ -44,7 +45,7 @@ export const StrategicCheckupScreen: React.FC<StrategicCheckupScreenProps> = ({ 
       if (e.message.includes('API_KEY')) {
         onApiKeyError(e.message);
       } else {
-        setError(e.message || "An unknown error occurred.");
+        addToast(e.message || "An unknown error occurred.", 'error');
       }
     } finally {
       setIsLoading(false);
@@ -57,13 +58,11 @@ export const StrategicCheckupScreen: React.FC<StrategicCheckupScreenProps> = ({ 
   };
 
   if (isLoading) {
-    return <Loader />;
+    return <FullScreenLoader />;
   }
   
   const currentExercise = STRATEGIC_CHECKUP_EXERCISES[currentStep];
 
-  // Since ExerciseScreen is complex, we re-use it in a simplified form.
-  // We'll wrap it or create a simplified version for the checkup.
   const StandaloneExercise: React.FC = () => {
     const [userResponse, setUserResponse] = useState('');
     const { isListening, transcript, startListening, stopListening, isSupported } = useSpeech();
@@ -78,7 +77,7 @@ export const StrategicCheckupScreen: React.FC<StrategicCheckupScreenProps> = ({ 
     const handleSubmit = () => {
         soundService.playClick();
         if (!userResponse.trim()) {
-            setError("La risposta non può essere vuota.");
+            addToast("La risposta non può essere vuota.", 'error');
             return;
         }
         handleCompleteExercise(userResponse);
@@ -120,7 +119,6 @@ export const StrategicCheckupScreen: React.FC<StrategicCheckupScreenProps> = ({ 
             <button onClick={handleSubmit} style={styles.button}>
                 {currentStep < totalSteps - 1 ? 'Avanti e Conferma' : 'Completa e Genera Profilo'}
             </button>
-            {error && <p style={{color: COLORS.error, marginTop: '12px'}}>{error}</p>}
             <button onClick={handleBackClick} style={styles.exitButton}>
                 Esci dal Check Up
             </button>

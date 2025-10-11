@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Exercise, ExerciseType, AnalysisResult, VoiceAnalysisResult } from '../types';
+import { Exercise, ExerciseType, AnalysisResult, VoiceAnalysisResult, Entitlements } from '../types';
 import { useSpeech } from '../hooks/useSpeech';
 import { analyzeResponse, analyzeParaverbalResponse } from '../services/geminiService';
-import { Loader } from './Loader';
-import { COLORS } from '../constants';
-import { BackIcon, MicIcon, SendIcon, WrittenIcon, VerbalIcon, SpeakerIcon, SpeakerOffIcon } from './Icons';
+import { FullScreenLoader } from './Loader';
+import { COLORS, EXERCISE_TYPE_ICONS } from '../constants';
+import { BackIcon, MicIcon, SendIcon, SpeakerIcon, SpeakerOffIcon } from './Icons';
 import { soundService } from '../services/soundService';
+import { useToast } from '../hooks/useToast';
 
 interface ExerciseScreenProps {
   exercise: Exercise;
@@ -13,6 +14,7 @@ interface ExerciseScreenProps {
   onCompleteVerbal: (result: VoiceAnalysisResult) => void;
   onBack: () => void;
   onApiKeyError: (error: string) => void;
+  entitlements: Entitlements | null;
   isCheckup?: boolean;
   checkupStep?: number;
   totalCheckupSteps?: number;
@@ -24,21 +26,28 @@ export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({
     onCompleteVerbal, 
     onBack, 
     onApiKeyError,
+    entitlements,
     isCheckup,
     checkupStep,
     totalCheckupSteps
 }) => {
   const [userResponse, setUserResponse] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { addToast } = useToast();
   const { isListening, transcript, startListening, stopListening, isSupported, speak, isSpeaking, stopSpeaking } = useSpeech();
   const textBeforeListening = useRef('');
 
   useEffect(() => {
     window.scrollTo(0, 0);
-  }, []);
+    // Cleanup function to stop any active speech synthesis when the component unmounts
+    return () => {
+        stopSpeaking();
+    };
+  }, [stopSpeaking]);
 
   const isVerbalExercise = exercise.exerciseType === ExerciseType.VERBAL;
+  const effectiveExerciseType = exercise.exerciseType || ExerciseType.WRITTEN;
+  const ExerciseIcon = EXERCISE_TYPE_ICONS[effectiveExerciseType];
 
   // Effect for VERBAL exercises (transcript replaces everything)
   useEffect(() => {
@@ -96,17 +105,16 @@ export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({
   const handleSubmit = async () => {
     soundService.playClick();
     if (!userResponse.trim()) {
-      setError("La risposta non può essere vuota.");
+      addToast("La risposta non può essere vuota.", 'error');
       return;
     }
     setIsLoading(true);
-    setError(null);
     try {
       if(isVerbalExercise) {
         const result = await analyzeParaverbalResponse(userResponse, exercise.scenario, exercise.task);
         onCompleteVerbal(result);
       } else {
-        const result = await analyzeResponse(userResponse, exercise.scenario, exercise.task, false, exercise.customObjective);
+        const result = await analyzeResponse(userResponse, exercise.scenario, exercise.task, entitlements, false, exercise.customObjective);
         onCompleteWritten(result);
       }
     } catch (e: any) {
@@ -114,7 +122,7 @@ export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({
       if (e.message.includes('API_KEY')) {
         onApiKeyError(e.message);
       } else {
-        setError(e.message || "Si è verificato un errore sconosciuto.");
+        addToast(e.message || "Si è verificato un errore sconosciuto.", 'error');
       }
     } finally {
       setIsLoading(false);
@@ -128,7 +136,7 @@ export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({
         }
         return (
             <div style={styles.verbalContainer}>
-                <p style={styles.transcript}>{isListening ? 'Sto ascoltando...' : (userResponse || 'Tocca il microfono per registrare la tua risposta.')}</p>
+                <p style={styles.transcript}>{userResponse || (isListening ? 'Sto ascoltando...' : 'Tocca il microfono per registrare la tua risposta.')}</p>
                 <button
                     onClick={isListening ? handleStopListening : handleStartListening}
                     style={{ ...styles.micButton, animation: !isListening && !isLoading ? 'pulse 2s infinite' : 'none' }}
@@ -174,19 +182,11 @@ export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({
   };
 
   if (isLoading) {
-    return <Loader estimatedTime={isVerbalExercise ? 20 : 15} />;
+    return <FullScreenLoader estimatedTime={isVerbalExercise ? 20 : 15} />;
   }
 
   return (
     <div style={styles.container}>
-      <button onClick={handleBackClick} style={styles.backButton}>
-        <BackIcon /> Indietro
-      </button>
-      {isCheckup && (
-          <div style={styles.checkupHeader}>
-              Passo {checkupStep} di {totalCheckupSteps}
-          </div>
-      )}
       <div style={styles.scenarioCard}>
         <div style={styles.scenarioHeader}>
             <h1 style={styles.title}>{exercise.title}</h1>
@@ -194,6 +194,11 @@ export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({
                 {isSpeaking ? <SpeakerOffIcon color={COLORS.secondary}/> : <SpeakerIcon color={COLORS.secondary}/>}
             </button>
         </div>
+        {isCheckup && (
+          <div style={styles.checkupHeader}>
+              Passo {checkupStep} di {totalCheckupSteps}
+          </div>
+         )}
         <p style={styles.scenarioText}><strong>Scenario:</strong> {exercise.scenario}</p>
         <div style={styles.taskContainer}>
           <p style={styles.taskText}><strong>Compito:</strong> {exercise.task}</p>
@@ -207,10 +212,9 @@ export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({
       
       <div style={styles.responseSection}>
         <h2 style={styles.responseTitle}>
-            <WrittenIcon />
+            <ExerciseIcon />
             Risposta
         </h2>
-        {error && <p style={styles.errorText}>{error}</p>}
         {renderInputArea()}
       </div>
 
@@ -220,22 +224,6 @@ export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({
 
 const styles: { [key: string]: React.CSSProperties } = {
   container: { maxWidth: '800px', margin: '0 auto', padding: '40px 20px', display: 'flex', flexDirection: 'column', gap: '24px' },
-  backButton: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    backgroundColor: COLORS.secondary,
-    color: 'white',
-    border: 'none',
-    borderRadius: '8px',
-    padding: '10px 16px',
-    cursor: 'pointer',
-    fontSize: '14px',
-    fontWeight: '500',
-    alignSelf: 'flex-start',
-    transition: 'all 0.2s ease',
-    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-  },
   checkupHeader: {
       textAlign: 'center',
       fontSize: '16px',
@@ -245,6 +233,7 @@ const styles: { [key: string]: React.CSSProperties } = {
       padding: '8px 16px',
       borderRadius: '20px',
       alignSelf: 'center',
+      marginBottom: '16px'
   },
   scenarioCard: { backgroundColor: COLORS.card, borderRadius: '12px', padding: '24px', border: `1px solid ${COLORS.divider}`, boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)' },
   scenarioHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', gap: '16px'},

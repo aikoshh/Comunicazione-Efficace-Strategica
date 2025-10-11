@@ -92,11 +92,6 @@ const CustomSetupScreen: React.FC<CustomSetupScreenProps> = ({ module, onStart, 
         }
     };
     
-    const handleBackClick = () => {
-        soundService.playClick();
-        onBack();
-    };
-
     const isReadyToStart = scenario.trim() !== '' && selectedObjective !== null;
     
     const hoverStyle = `
@@ -104,12 +99,15 @@ const CustomSetupScreen: React.FC<CustomSetupScreenProps> = ({ module, onStart, 
         background-color: ${COLORS.cardDark};
         transform: translateY(-3px);
       }
-      .back-button:hover, .upload-button:hover, .start-button:hover {
+      .objective-button:active {
+        transform: translateY(0) scale(0.98);
+      }
+      .upload-button:hover, .start-button:hover {
         opacity: 0.9;
         transform: translateY(-2px);
       }
-      .start-button:active {
-        transform: translateY(0px);
+      .upload-button:active, .start-button:active {
+        transform: translateY(0px) scale(0.98);
       }
       #scenario-input::placeholder, #custom-objective-input::placeholder {
         color: ${COLORS.textSecondary};
@@ -125,9 +123,6 @@ const CustomSetupScreen: React.FC<CustomSetupScreenProps> = ({ module, onStart, 
         <div style={styles.container}>
             <style>{hoverStyle}</style>
             <header style={styles.header}>
-                <button onClick={handleBackClick} className="back-button" style={styles.backButton}>
-                    <HomeIcon /> Menu
-                </button>
                 <div style={styles.titleContainer}>
                     <module.icon width={32} height={32} color={COLORS.secondary} />
                     <h1 style={styles.title}>{module.title}</h1>
@@ -219,25 +214,7 @@ const CustomSetupScreen: React.FC<CustomSetupScreenProps> = ({ module, onStart, 
 
 const styles: { [key: string]: React.CSSProperties } = {
   container: { maxWidth: '800px', margin: '0 auto', padding: '40px 20px', backgroundColor: COLORS.base, minHeight: '100vh' },
-  header: { marginBottom: '40px', textAlign: 'center', paddingTop: '60px' }, // Add padding to avoid overlap
-  backButton: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    backgroundColor: COLORS.secondary,
-    color: 'white',
-    border: 'none',
-    borderRadius: '8px',
-    padding: '10px 16px',
-    cursor: 'pointer',
-    fontSize: '14px',
-    fontWeight: '500',
-    position: 'absolute',
-    top: '20px',
-    left: '20px',
-    transition: 'all 0.2s ease',
-    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-  },
+  header: { marginBottom: '40px', textAlign: 'center' },
   titleContainer: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', marginBottom: '16px' },
   title: { fontSize: '32px', color: COLORS.textPrimary, fontWeight: 'bold' },
   description: { fontSize: '18px', color: COLORS.textSecondary, lineHeight: 1.6 },

@@ -1,5 +1,6 @@
 import { GoogleGenAI, Type } from "@google/genai";
-import type { AnalysisResult, ImprovementArea, VoiceAnalysisResult, VoiceScore, CommunicatorProfile } from '../types';
+import type { AnalysisResult, ImprovementArea, VoiceAnalysisResult, VoiceScore, CommunicatorProfile, Entitlements, DetailedRubricScore } from '../types';
+import { hasEntitlement } from './monetizationService';
 
 // ATTENZIONE: Inserire le chiavi API direttamente nel codice client-side è un grave rischio per la sicurezza.
 // Questa chiave è visibile a chiunque ispezioni il codice sorgente dell'applicazione.
@@ -55,6 +56,31 @@ const analysisSchema = {
                 }
             },
             required: ["short", "long"]
+        },
+        // --- PRO Schema Fields ---
+        detailedRubric: {
+            type: Type.ARRAY,
+            nullable: true,
+            items: {
+                type: Type.OBJECT,
+                properties: {
+                    criterion: { type: Type.STRING, enum: ['Chiarezza', 'Tono ed Empatia', 'Orientamento alla Soluzione', 'Assertività', 'Struttura'] },
+                    score: { type: Type.NUMBER },
+                    justification: { type: Type.STRING }
+                },
+                 required: ["criterion", "score", "justification"]
+            },
+            description: "Valutazione dettagliata PRO. Compila questo campo SOLO se richiesto nelle istruzioni del prompt."
+        },
+        utilityScore: {
+            type: Type.NUMBER,
+            nullable: true,
+            description: "Punteggio da 1 a 10 sull'utilità della domanda posta. Compila questo campo SOLO se richiesto."
+        },
+        clarityScore: {
+            type: Type.NUMBER,
+            nullable: true,
+            description: "Punteggio da 1 a 10 sulla chiarezza della domanda posta. Compila questo campo SOLO se richiesto."
         }
     },
     required: ["score", "strengths", "areasForImprovement", "suggestedResponse"]
@@ -65,11 +91,30 @@ export const analyzeResponse = async (
   userResponse: string,
   scenario: string,
   task: string,
+  entitlements: Entitlements | null,
   isVerbal: boolean,
   customObjective?: string,
 ): Promise<AnalysisResult> => {
   try {
     const ai = getAI();
+
+    const isRiformulazionePro = hasEntitlement(entitlements, 'ces.addon.riformulazione.pro');
+    const isDomandePro = hasEntitlement(entitlements, 'ces.addon.domande.pro');
+    const isQuestionTask = task.toLowerCase().includes('domand');
+
+    let proInstructions = '';
+    if (isRiformulazionePro) {
+        proInstructions += `
+          **Funzionalità PRO ATTIVA: Riformulazione PRO.**
+          DEVI fornire una valutazione dettagliata per ciascuno dei 5 criteri chiave (Chiarezza, Tono ed Empatia, Orientamento alla Soluzione, Assertività, Struttura). Per ogni criterio, fornisci un punteggio da 1 a 10 e una breve motivazione. Popola il campo 'detailedRubric' nel JSON.
+        `;
+    }
+     if (isDomandePro && isQuestionTask) {
+        proInstructions += `
+          **Funzionalità PRO ATTIVA: Domande PRO.**
+          L'utente sta formulando una domanda. Valutala secondo due metriche specifiche: 'utilityScore' (quanto la domanda è utile per raggiungere l'obiettivo) e 'clarityScore' (quanto la domanda è chiara e non ambigua), entrambe con un punteggio da 1 a 10. Popola i campi 'utilityScore' and 'clarityScore' nel JSON.
+        `;
+    }
 
     const verbalContext = isVerbal 
         ? "La risposta dell'utente è stata fornita verbalmente. Considera fattori come la concisione e la chiarezza adatti alla comunicazione parlata. Ignora eventuali errori di trascrizione o di battitura."
@@ -104,6 +149,8 @@ export const analyzeResponse = async (
       **Risposta dell'utente:** "${userResponse}"
 
       **Contesto di analisi:** ${verbalContext}
+      
+      ${proInstructions}
 
       Analizza la risposta dell'utente secondo le direttive fornite nella tua istruzione di sistema e genera il feedback strutturato in formato JSON.
     `;

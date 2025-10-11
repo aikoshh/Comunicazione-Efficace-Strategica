@@ -3,6 +3,7 @@ import type { Module, User, UserProgress, Exercise } from '../types';
 import { MODULES, COLORS, SAGE_PALETTE } from '../constants';
 import { Logo } from './Logo';
 import { ProgressOverview } from './ProgressOverview';
+import { ProgressAnalytics } from './ProgressAnalytics';
 import { getDailyChallenge } from '../services/progressionService';
 import { CheckCircleIcon, TargetIcon } from './Icons';
 import { soundService } from '../services/soundService';
@@ -23,13 +24,25 @@ const hoverStyle = `
   .module-card:not(.locked):hover .card-image {
     transform: scale(1.05);
   }
+  .module-card:not(.locked):active {
+    transform: translateY(-4px) scale(0.98);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+  }
   .daily-challenge:hover {
     transform: translateY(-5px);
     box-shadow: 0 8px 20px rgba(14, 58, 93, 0.2);
   }
+  .daily-challenge:active {
+    transform: translateY(-2px) scale(0.99);
+    box-shadow: 0 4px 15px rgba(14, 58, 93, 0.25);
+  }
   .checkup-prompt:hover {
     transform: translateY(-5px);
     box-shadow: 0 8px 20px rgba(88, 166, 166, 0.25);
+  }
+  .checkup-prompt:active {
+    transform: translateY(-2px) scale(0.99);
+    box-shadow: 0 4px 15px rgba(88, 166, 166, 0.3);
   }
 `;
 
@@ -43,6 +56,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectModule, onSelect
   const completedModuleIds = userProgress?.completedModuleIds || [];
   const foundationalModules = MODULES.filter(m => m.category === 'Fondamentali' || !m.category);
   const sectoralPacks = MODULES.filter(m => m.category === 'Pacchetti Settoriali');
+  
+  const hasCompletedExercises = userProgress && userProgress.scores && userProgress.scores.length > 0;
 
   const handleModuleClick = (module: Module, isLocked: boolean) => {
       if (isLocked) {
@@ -129,6 +144,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectModule, onSelect
       
       {currentUser && <ProgressOverview user={currentUser} progress={userProgress} />}
       
+      {currentUser && hasCompletedExercises && userProgress && <ProgressAnalytics userProgress={userProgress} />}
+      
       <main style={currentUser ? {marginTop: '48px'} : {}}>
         
         {currentUser && !userProgress?.hasCompletedCheckup && (
@@ -149,7 +166,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectModule, onSelect
         {dailyChallenge && (
             <section style={{marginBottom: '48px'}}>
                  <h2 style={styles.sectionTitle}>Sfida del Giorno</h2>
-                 <div style={styles.dailyChallenge} className="daily-challenge" onClick={handleDailyChallengeClick}>
+                 <div style={styles.dailyChallenge} className="daily-challenge" onClick={handleDailyChallengeClick} onMouseEnter={() => soundService.playHover()}>
                     <div>
                         <h3 style={styles.challengeTitle}>{dailyChallenge.task}</h3>
                         <p style={styles.challengeScenario}>Scenario: {dailyChallenge.scenario.substring(0,100)}...</p>

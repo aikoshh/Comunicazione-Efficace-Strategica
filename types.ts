@@ -47,6 +47,13 @@ export interface ImprovementArea {
   example: string;
 }
 
+// --- PRO Feature Types ---
+export interface DetailedRubricScore {
+    criterion: 'Chiarezza' | 'Tono ed Empatia' | 'Orientamento alla Soluzione' | 'Assertività' | 'Struttura';
+    score: number; // Score from 1 to 10
+    justification: string;
+}
+
 export interface AnalysisResult {
   score: number;
   strengths: string[];
@@ -55,6 +62,10 @@ export interface AnalysisResult {
     short: string;
     long: string;
   };
+  // PRO Features - Optional
+  detailedRubric?: DetailedRubricScore[];
+  utilityScore?: number; // For "Domande PRO"
+  clarityScore?: number; // For "Domande PRO"
 }
 
 // New Types for Voice Analysis
@@ -113,6 +124,11 @@ export interface UserProgress {
     profileTitle: string;
     profileDescription: string;
   };
+  analysisHistory?: {
+    exerciseId: string;
+    areasForImprovement: ImprovementArea[];
+  }[];
+  entitlements?: Entitlements;
 }
 
 export interface CommunicatorProfile {
@@ -120,4 +136,57 @@ export interface CommunicatorProfile {
     profileDescription: string;
     strengths: string[];
     areasToImprove: string[];
+}
+
+export interface Breadcrumb {
+  label: string;
+  onClick?: () => void;
+}
+
+export type ToastType = 'success' | 'error' | 'info';
+
+export interface ToastMessage {
+  id: string;
+  message: string;
+  type: ToastType;
+}
+
+export interface ToastContextType {
+  addToast: (message: string, type: ToastType) => void;
+}
+
+// --- Monetization Types ---
+export type ProductType = 'non-consumable' | 'subscription';
+
+export interface Product {
+  id: string;
+  type: ProductType;
+  name: string;
+  price: string;
+  description: string;
+  benefits: string[];
+  category: 'Add-on' | 'Bundle' | 'Team Plan';
+}
+
+export interface Entitlements {
+    productIDs: Set<string>;
+    teamSeats: number;
+    teamActive: boolean;
+}
+
+// --- PRO Content Types ---
+export interface StrategicQuestion {
+    question: string;
+    description: string;
+}
+
+export interface StrategicQuestionCategory {
+    category: string;
+    description: string;
+    questions: StrategicQuestion[];
+}
+
+export interface ChecklistItem {
+    id: string;
+    text: string;
 }

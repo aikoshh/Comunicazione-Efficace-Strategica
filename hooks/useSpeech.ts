@@ -34,8 +34,10 @@ export function useSpeech() {
 
         // 1. Prioritize known high-quality voices
         const preferredVoices = [
-            "Google italiano",
-            "Alice",
+            "Alice", // High-quality on Apple
+            "Silvia", // High-quality on Apple
+            "Luca", // High-quality male on Apple
+            "Google italiano", // High-quality on Android
             "Federica",
             "Paola"
         ];
