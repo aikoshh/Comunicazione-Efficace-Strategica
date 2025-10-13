@@ -1,14 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import type { Module, User, UserProgress, Exercise } from '../types';
-import { COLORS, SAGE_PALETTE } from '../constants';
+import { MODULES, COLORS, SAGE_PALETTE } from '../constants';
 import { smilingPerson, dailyChallengePerson } from '../assets';
 import { ProgressOverview } from './ProgressOverview';
 import { ProgressAnalytics } from './ProgressAnalytics';
 import { getDailyChallenge } from '../services/progressionService';
 import { CheckCircleIcon, TargetIcon } from './Icons';
 import { soundService } from '../services/soundService';
-import { useLocalization } from '../context/LocalizationContext';
-import { getContent } from '../locales/content';
 
 interface HomeScreenProps {
   onSelectModule: (module: Module) => void;
@@ -50,12 +48,10 @@ const hoverStyle = `
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectModule, onSelectExercise, onStartCheckup, currentUser, userProgress }) => {
   const [dailyChallenge, setDailyChallenge] = useState<Exercise | null>(null);
-  const { lang } = useLocalization();
-  const { MODULES } = getContent(lang);
 
   useEffect(() => {
-    setDailyChallenge(getDailyChallenge(MODULES));
-  }, [MODULES]);
+    setDailyChallenge(getDailyChallenge());
+  }, []);
 
   const completedModuleIds = userProgress?.completedModuleIds || [];
   const foundationalModules = MODULES.filter(m => m.category === 'Fondamentali' || !m.category);

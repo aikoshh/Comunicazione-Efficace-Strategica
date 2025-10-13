@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useState, useEffect, useContext, useCallback } from 'react';
+import { soundService } from '../services/soundService';
 
 const SOUND_ENABLED_KEY = 'ces_coach_sound_enabled';
 
@@ -11,14 +12,23 @@ const SoundContext = createContext<SoundContextType | undefined>(undefined);
 
 export const SoundProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isSoundEnabled, setIsSoundEnabled] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return true;
-    const storedSetting = localStorage.getItem(SOUND_ENABLED_KEY);
-    return storedSetting ? JSON.parse(storedSetting) : true; // Default to enabled
+    try {
+      const item = window.localStorage.getItem(SOUND_ENABLED_KEY);
+      // Default to sound being ON
+      return item ? JSON.parse(item) : true;
+    } catch (error) {
+      console.error("Failed to read sound setting from localStorage", error);
+      return true;
+    }
   });
 
+  // Effect to update the sound service and localStorage when the state changes
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-        localStorage.setItem(SOUND_ENABLED_KEY, JSON.stringify(isSoundEnabled));
+    soundService.setEnabled(isSoundEnabled);
+    try {
+      window.localStorage.setItem(SOUND_ENABLED_KEY, JSON.stringify(isSoundEnabled));
+    } catch (error) {
+      console.error("Failed to save sound setting to localStorage", error);
     }
   }, [isSoundEnabled]);
 

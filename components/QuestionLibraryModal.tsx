@@ -1,9 +1,8 @@
 import React from 'react';
 import { COLORS } from '../constants';
+import { QUESTION_LIBRARY } from '../proContent';
 import { CloseIcon, QuestionIcon } from './Icons';
 import { soundService } from '../services/soundService';
-import { useLocalization } from '../context/LocalizationContext';
-import { getContent } from '../locales/content';
 
 interface QuestionLibraryModalProps {
   isOpen: boolean;
@@ -11,9 +10,6 @@ interface QuestionLibraryModalProps {
 }
 
 export const QuestionLibraryModal: React.FC<QuestionLibraryModalProps> = ({ isOpen, onClose }) => {
-  const { lang } = useLocalization();
-  const { QUESTION_LIBRARY } = getContent(lang);
-
   if (!isOpen) return null;
 
   const handleClose = () => {

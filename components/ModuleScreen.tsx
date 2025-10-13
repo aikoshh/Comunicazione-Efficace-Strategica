@@ -1,19 +1,17 @@
 import React, { useState } from 'react';
-import { Module, Exercise, DifficultyLevel, ExerciseType, Entitlements, UserProgress } from '../types';
+import { Module, Exercise, DifficultyLevel, ExerciseType, Entitlements, UserProgress, AnalysisHistoryRecord } from '../types';
 import { COLORS, SAGE_PALETTE, EXERCISE_TYPE_ICONS } from '../constants';
-import { CheckCircleIcon, QuestionIcon, TargetIcon } from './Icons';
+import { HomeIcon, CheckCircleIcon, QuestionIcon, TargetIcon } from './Icons';
 import { soundService } from '../services/soundService';
 import { hasProAccess } from '../services/monetizationService';
 import { QuestionLibraryModal } from './QuestionLibraryModal';
 import { PreparationChecklistModal } from './PreparationChecklistModal';
 import { ExercisePreviewModal } from './ExercisePreviewModal';
-import { useLocalization } from '../context/LocalizationContext';
-import { translations } from '../locales/translations';
 
 interface ModuleScreenProps {
   module: Module;
   onSelectExercise: (exercise: Exercise) => void;
-  onReviewExercise: (exerciseId: string) => void;
+  onReviewExercise: (historyRecord: AnalysisHistoryRecord) => void;
   onBack: () => void;
   userProgress: UserProgress | undefined;
   entitlements: Entitlements | null;
@@ -48,17 +46,23 @@ export const ModuleScreen: React.FC<ModuleScreenProps> = ({ module, onSelectExer
   const [isLibraryModalOpen, setLibraryModalOpen] = useState(false);
   const [isChecklistModalOpen, setChecklistModalOpen] = useState(false);
   const [previewingExercise, setPreviewingExercise] = useState<Exercise | null>(null);
-  const { t } = useLocalization();
-
   const completedExerciseIds = userProgress?.completedExerciseIds || [];
   
   const handleExerciseClick = (exercise: Exercise) => {
     soundService.playClick();
-    if (completedExerciseIds.includes(exercise.id)) {
-        onReviewExercise(exercise.id);
-    } else {
-        setPreviewingExercise(exercise);
+    const isCompleted = completedExerciseIds.includes(exercise.id);
+
+    if (isCompleted && userProgress?.analysisHistory) {
+        const historyForExercise = userProgress.analysisHistory
+            .filter(h => h.exerciseId === exercise.id)
+            .sort((a, b) => b.timestamp - a.timestamp);
+        
+        if (historyForExercise.length > 0) {
+            onReviewExercise(historyForExercise[0]);
+            return;
+        }
     }
+    setPreviewingExercise(exercise);
   }
 
   const handleStartExercise = (exercise: Exercise) => {
@@ -82,11 +86,19 @@ export const ModuleScreen: React.FC<ModuleScreenProps> = ({ module, onSelectExer
       
       {showProFeatures && (
           <div style={styles.proFeaturesContainer}>
-              <button onClick={() => { soundService.playClick(); setLibraryModalOpen(true); }} style={styles.proFeatureButton} className="pro-feature-button">
-                  <QuestionIcon/> {t('proQuestionLibrary')}
+              <button 
+                  onClick={() => { soundService.playClick(); setLibraryModalOpen(true); }} 
+                  style={styles.proFeatureButton} 
+                  className="pro-feature-button"
+              >
+                  <QuestionIcon/> Libreria Domande PRO
               </button>
-              <button onClick={() => { soundService.playClick(); setChecklistModalOpen(true); }} style={styles.proFeatureButton} className="pro-feature-button">
-                  <TargetIcon/> {t('proPreparationChecklist')}
+              <button 
+                  onClick={() => { soundService.playClick(); setChecklistModalOpen(true); }} 
+                  style={styles.proFeatureButton}
+                  className="pro-feature-button"
+              >
+                  <TargetIcon/> Checklist Preparazione PRO
               </button>
           </div>
       )}
@@ -94,18 +106,28 @@ export const ModuleScreen: React.FC<ModuleScreenProps> = ({ module, onSelectExer
       <main style={styles.exerciseList}>
         {module.exercises.map((exercise, index) => {
           const isCompleted = completedExerciseIds.includes(exercise.id);
-          const cardStyle = {
+          
+          const baseCardStyle = {
             ...styles.exerciseCard,
-            backgroundColor: isCompleted ? '#6c757d' : SAGE_PALETTE[index % SAGE_PALETTE.length],
+            backgroundColor: SAGE_PALETTE[index % SAGE_PALETTE.length],
             animation: `fadeInUp 0.4s ${0.1 + index * 0.05}s ease-out both`,
           };
+
+          const cardStyle = isCompleted
+            ? {
+                ...baseCardStyle,
+                filter: 'saturate(0.6)',
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.07)',
+              }
+            : baseCardStyle;
+            
           const exerciseType = exercise.exerciseType || ExerciseType.WRITTEN;
           const ExerciseIcon = EXERCISE_TYPE_ICONS[exerciseType];
 
           return (
             <div 
               key={exercise.id} 
-              className="exercise-card"
+              className={`exercise-card`}
               style={cardStyle} 
               onClick={() => handleExerciseClick(exercise)}
               onMouseEnter={() => soundService.playHover()}
@@ -119,11 +141,11 @@ export const ModuleScreen: React.FC<ModuleScreenProps> = ({ module, onSelectExer
                       {isCompleted && (
                         <span style={styles.completedBadge}>
                           <CheckCircleIcon width={16} height={16} />
-                          {t('completed')}
+                          Completato
                         </span>
                       )}
                       <span style={{...styles.difficultyBadge, backgroundColor: difficultyColors[exercise.difficulty]}}>
-                          {t(exercise.difficulty.toLowerCase() as keyof typeof translations.it)}
+                          {exercise.difficulty}
                       </span>
                   </div>
               </div>
@@ -210,7 +232,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     padding: '20px',
     boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
     cursor: 'pointer',
-    transition: 'transform 0.3s, box-shadow 0.3s, border-left-color 0.3s, background-color 0.3s',
+    transition: 'transform 0.3s, box-shadow 0.3s, border-left-color 0.3s, filter 0.3s',
     borderLeft: `5px solid transparent`,
     textAlign: 'left'
   },
@@ -273,6 +295,5 @@ const styles: { [key: string]: React.CSSProperties } = {
     color: 'white',
     lineHeight: 1.5,
     margin: 0,
-    opacity: 0.9,
   },
 };

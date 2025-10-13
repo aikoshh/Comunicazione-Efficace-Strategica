@@ -1,34 +1,31 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Exercise, AnalysisResult, CommunicatorProfile, Entitlements } from '../types';
-import { COLORS } from '../constants';
+import { STRATEGIC_CHECKUP_EXERCISES, COLORS } from '../constants';
 import { FullScreenLoader } from './Loader';
 import { generateCommunicatorProfile, analyzeResponse } from '../services/geminiService';
 import { Logo } from './Logo';
-import { MicIcon } from './Icons';
+import { HomeIcon, MicIcon } from './Icons';
 import { soundService } from '../services/soundService';
 import { useSpeech } from '../hooks/useSpeech';
 import { useToast } from '../hooks/useToast';
-import { useLocalization } from '../context/LocalizationContext';
-import { getContent } from '../locales/content';
 
 interface StrategicCheckupScreenProps {
+  onSelectExercise: (exercise: Exercise, isCheckup: boolean, checkupStep: number, totalCheckupSteps: number) => void;
   onCompleteCheckup: (profile: CommunicatorProfile) => void;
   onApiKeyError: (error: string) => void;
   onBack: () => void;
   entitlements: Entitlements | null;
 }
 
-export const StrategicCheckupScreen: React.FC<StrategicCheckupScreenProps> = ({ onCompleteCheckup, onApiKeyError, onBack, entitlements }) => {
+export const StrategicCheckupScreen: React.FC<StrategicCheckupScreenProps> = ({ onSelectExercise, onCompleteCheckup, onApiKeyError, onBack, entitlements }) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [userResponses, setUserResponses] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { addToast } = useToast();
-  const { lang, t } = useLocalization();
   const stepContainerRef = useRef<HTMLDivElement>(null);
-  
-  const STRATEGIC_CHECKUP_EXERCISES = getContent(lang).STRATEGIC_CHECKUP_EXERCISES;
 
   useEffect(() => {
+    // From the second step onwards, scroll to the top of the step container
     if (currentStep > 0 && stepContainerRef.current) {
         stepContainerRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
@@ -39,9 +36,10 @@ export const StrategicCheckupScreen: React.FC<StrategicCheckupScreenProps> = ({ 
   const handleFinalAnalysisAndProfileGeneration = async (finalResponses: string[]) => {
       setIsLoading(true);
       try {
+        // Step 1: Run all analyses in parallel
         const analysisPromises = finalResponses.map((response, index) => {
           const exercise = STRATEGIC_CHECKUP_EXERCISES[index];
-          return analyzeResponse(response, exercise.scenario, exercise.task, entitlements, false, lang);
+          return analyzeResponse(response, exercise.scenario, exercise.task, entitlements, false);
         });
         
         const allAnalysisResults = await Promise.all(analysisPromises);
@@ -51,10 +49,18 @@ export const StrategicCheckupScreen: React.FC<StrategicCheckupScreenProps> = ({ 
           analysis,
         }));
 
-        const profile = await generateCommunicatorProfile(formattedResults, lang);
+        // Step 2: Generate profile with all results
+        const profile = await generateCommunicatorProfile(formattedResults);
+        
+        // Step 3: Complete the checkup
         onCompleteCheckup(profile);
       } catch (e: any) {
-        onApiKeyError(e.message);
+        if (e.message.includes('API_KEY')) {
+          onApiKeyError(e.message);
+        } else {
+          addToast(e.message || "Si è verificato un errore durante l'analisi finale.", 'error');
+        }
+        // If there's an error, stay on the last step to allow retry, don't lose progress.
       } finally {
         setIsLoading(false);
       }
@@ -63,12 +69,15 @@ export const StrategicCheckupScreen: React.FC<StrategicCheckupScreenProps> = ({ 
   const handleStepSubmit = (response: string) => {
     const newResponses = [...userResponses, response];
     setUserResponses(newResponses);
+
     if (currentStep < totalSteps - 1) {
       setCurrentStep(currentStep + 1);
     } else {
+      // This was the last step, proceed to final analysis
       handleFinalAnalysisAndProfileGeneration(newResponses);
     }
   };
+
 
   const handleBackClick = () => {
     soundService.playClick();
@@ -83,7 +92,7 @@ export const StrategicCheckupScreen: React.FC<StrategicCheckupScreenProps> = ({ 
 
   const StandaloneExercise: React.FC = () => {
     const [userResponse, setUserResponse] = useState('');
-    const { isListening, transcript, startListening, stopListening, isSupported } = useSpeech(lang);
+    const { isListening, transcript, startListening, stopListening, isSupported } = useSpeech();
     const textBeforeListening = useRef('');
 
     useEffect(() => {
@@ -95,7 +104,7 @@ export const StrategicCheckupScreen: React.FC<StrategicCheckupScreenProps> = ({ 
     const handleSubmit = () => {
         soundService.playClick();
         if (!userResponse.trim()) {
-            addToast(t('responseEmptyError'), 'error');
+            addToast("La risposta non può essere vuota.", 'error');
             return;
         }
         handleStepSubmit(userResponse);
@@ -114,15 +123,15 @@ export const StrategicCheckupScreen: React.FC<StrategicCheckupScreenProps> = ({ 
 
     return (
         <div style={styles.exerciseContainer}>
-            <p style={styles.scenarioText}><strong>{t('scenarioLabel')}:</strong> {currentExercise.scenario}</p>
+            <p style={styles.scenarioText}><strong>Scenario:</strong> {currentExercise.scenario}</p>
             <div style={styles.taskContainer}>
-                <p style={styles.taskText}><strong>{t('taskLabel')}:</strong> {currentExercise.task}</p>
+                <p style={styles.taskText}><strong>Compito:</strong> {currentExercise.task}</p>
             </div>
             <textarea
                 style={styles.textarea}
                 value={userResponse}
                 onChange={(e) => setUserResponse(e.target.value)}
-                placeholder={t('textAreaPlaceholder')}
+                placeholder="Scrivi qui la tua risposta migliore..."
                 rows={6}
             />
             {isSupported && (
@@ -131,14 +140,14 @@ export const StrategicCheckupScreen: React.FC<StrategicCheckupScreenProps> = ({ 
                     style={{...styles.dictationButton, ...(isListening ? styles.dictationButtonListening : {})}}
                 >
                     <MicIcon />
-                    {isListening ? t('stopDictation') : t('respondWithVoice')}
+                    {isListening ? 'Ferma Dettatura' : 'Rispondi a Voce'}
                 </button>
             )}
             <button onClick={handleSubmit} style={styles.button}>
-                {currentStep < totalSteps - 1 ? t('nextStep') : t('completeAndGenerateProfile')}
+                {currentStep < totalSteps - 1 ? 'Avanti al prossimo step' : 'Completa e Genera Profilo'}
             </button>
             <button onClick={handleBackClick} style={styles.exitButton}>
-                {t('exitCheckup')}
+                Esci dal Check Up
             </button>
         </div>
     );
@@ -151,9 +160,9 @@ export const StrategicCheckupScreen: React.FC<StrategicCheckupScreenProps> = ({ 
       <div style={styles.card}>
         <header style={styles.header}>
             <Logo />
-            <h1 style={styles.title}>{t('strategicCheckupTitle')}</h1>
+            <h1 style={styles.title}>Check-up Strategico Iniziale</h1>
             <p style={styles.subtitle}>
-              {t('strategicCheckupSubtitle').replace('{totalSteps}', totalSteps.toString())}
+              Rispondi a {totalSteps} brevi scenari per creare il tuo profilo di comunicatore personalizzato.
             </p>
         </header>
         
@@ -161,7 +170,7 @@ export const StrategicCheckupScreen: React.FC<StrategicCheckupScreenProps> = ({ 
             <div style={styles.progressBar}>
                 <div style={{...styles.progressBarFill, width: `${((currentStep + 1) / totalSteps) * 100}%`}}></div>
             </div>
-            <span style={styles.progressText}>{t('step')} {currentStep + 1} {t('of')} {totalSteps}</span>
+            <span style={styles.progressText}>Passo {currentStep + 1} di {totalSteps}</span>
         </div>
 
         <h2 style={styles.exerciseTitle}>
@@ -170,6 +179,7 @@ export const StrategicCheckupScreen: React.FC<StrategicCheckupScreenProps> = ({ 
             <span style={{ fontWeight: 400 }}>{titleParts[1]}</span>
         </h2>
         <StandaloneExercise />
+
       </div>
     </div>
   );
@@ -265,8 +275,8 @@ const styles: { [key: string]: React.CSSProperties } = {
     border: `1px solid ${COLORS.divider}`,
     fontFamily: 'inherit',
     resize: 'vertical',
-    backgroundColor: '#FFFFFF',
-    color: '#1C1C1E',
+    backgroundColor: 'white',
+    color: COLORS.textPrimary,
   },
   button: {
     display: 'block',
@@ -305,13 +315,18 @@ const styles: { [key: string]: React.CSSProperties } = {
       border: `1px solid ${COLORS.error}`,
   },
   exitButton: {
-    marginTop: '16px',
-    background: 'transparent',
-    color: COLORS.textSecondary,
+    marginTop: '24px',
+    backgroundColor: '#E67E22',
+    color: 'white',
     border: 'none',
-    textDecoration: 'underline',
+    borderRadius: '8px',
+    padding: '10px 20px',
     cursor: 'pointer',
-    fontSize: '14px',
+    fontSize: '15px',
+    fontWeight: 'bold',
     alignSelf: 'center',
+    textDecoration: 'none',
+    boxShadow: '0 4px 12px rgba(230, 126, 34, 0.3)',
+    transition: 'all 0.2s ease',
   },
 };

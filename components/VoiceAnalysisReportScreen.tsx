@@ -1,12 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { VoiceAnalysisResult, Exercise, Entitlements } from '../types';
-import { COLORS } from '../constants';
+import { COLORS, VOICE_RUBRIC_CRITERIA } from '../constants';
 import { useSpeech } from '../hooks/useSpeech';
 import { CheckCircleIcon, XCircleIcon, RetryIcon, HomeIcon, LightbulbIcon, TargetIcon, SpeakerIcon, SpeakerOffIcon, NextIcon } from './Icons';
 import { soundService } from '../services/soundService';
 import { hasProAccess } from '../services/monetizationService';
-import { useLocalization } from '../context/LocalizationContext';
-import { getContent } from '../locales/content';
 
 interface VoiceAnalysisReportScreenProps {
   result: VoiceAnalysisResult;
@@ -120,9 +118,7 @@ const AnnotatedText: React.FC<{ text: string }> = ({ text }) => {
 };
 
 export const VoiceAnalysisReportScreen: React.FC<VoiceAnalysisReportScreenProps> = ({ result, exercise, onRetry, onNextExercise, nextExerciseLabel, entitlements, onNavigateToPaywall }) => {
-  const { lang } = useLocalization();
-  const { speak, isSpeaking, stopSpeaking } = useSpeech(lang);
-  const { VOICE_RUBRIC_CRITERIA } = getContent(lang);
+  const { speak, isSpeaking, stopSpeaking } = useSpeech();
   
   const averageScore = result.scores.length > 0
     ? Math.round(result.scores.reduce((acc, s) => acc + s.score, 0) / result.scores.length * 10)

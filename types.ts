@@ -1,7 +1,5 @@
 import React from 'react';
 
-export type Language = 'it' | 'en';
-
 export enum DifficultyLevel {
   BASE = 'Base',
   INTERMEDIO = 'Intermedio',
@@ -51,7 +49,7 @@ export interface ImprovementArea {
 
 // --- PRO Feature Types ---
 export interface DetailedRubricScore {
-    criterion: string; // Dynamic based on language
+    criterion: 'Chiarezza' | 'Tono ed Empatia' | 'Orientamento alla Soluzione' | 'Assertività' | 'Struttura';
     score: number; // Score from 1 to 10
     justification: string;
 }
@@ -92,14 +90,6 @@ export interface VoiceAnalysisResult {
   suggested_delivery: SuggestedDelivery;
 }
 
-export interface AnalysisHistoryItem {
-    exerciseId: string;
-    userResponse: string;
-    analysis: AnalysisResult | VoiceAnalysisResult;
-    timestamp: number;
-}
-
-
 // New Types for Progression System
 export interface ProgressOverviewData {
   header: {
@@ -125,6 +115,12 @@ export interface ScoreExplanation {
 export type CompetenceKey = "ascolto" | "riformulazione" | "assertivita" | "gestione_conflitto";
 export type CompetenceScores = Record<CompetenceKey, number>;
 
+export interface AnalysisHistoryRecord {
+  exerciseId: string;
+  timestamp: number;
+  userResponse: string;
+  result: AnalysisResult | VoiceAnalysisResult;
+}
 
 // New type for user progress tracking
 export interface UserProgress {
@@ -140,7 +136,8 @@ export interface UserProgress {
     profileTitle: string;
     profileDescription: string;
   };
-  analysisHistory?: AnalysisHistoryItem[];
+  analysisHistory?: AnalysisHistoryRecord[];
+  // FIX: Corrected typo from Entitleaments to Entitlements.
   entitlements?: Entitlements;
   competenceScores?: CompetenceScores;
 }
