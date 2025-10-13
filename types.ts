@@ -118,11 +118,9 @@ export type CompetenceScores = Record<CompetenceKey, number>;
 export interface AnalysisHistoryItem {
   exerciseId: string;
   userResponse: string;
-  analysisResult: AnalysisResult | VoiceAnalysisResult;
+  analysis: AnalysisResult | VoiceAnalysisResult;
   timestamp: number;
 }
-
-export type SaveState = 'idle' | 'saving' | 'saved';
 
 // New type for user progress tracking
 export interface UserProgress {
@@ -202,3 +200,5 @@ export interface ChecklistItem {
     id: string;
     text: string;
 }
+
+export type SaveState = 'idle' | 'saving' | 'saved';

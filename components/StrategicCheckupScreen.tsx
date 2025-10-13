@@ -128,7 +128,7 @@ export const StrategicCheckupScreen: React.FC<StrategicCheckupScreenProps> = ({ 
                 <p style={styles.taskText}><strong>Compito:</strong> {currentExercise.task}</p>
             </div>
             <textarea
-                style={{...styles.textarea, backgroundColor: '#FFFFFF', color: COLORS.textPrimary}}
+                style={styles.textarea}
                 value={userResponse}
                 onChange={(e) => setUserResponse(e.target.value)}
                 placeholder="Scrivi qui la tua risposta migliore..."
@@ -275,6 +275,8 @@ const styles: { [key: string]: React.CSSProperties } = {
     border: `1px solid ${COLORS.divider}`,
     fontFamily: 'inherit',
     resize: 'vertical',
+    backgroundColor: 'white',
+    color: COLORS.textPrimary,
   },
   button: {
     display: 'block',
@@ -313,17 +315,17 @@ const styles: { [key: string]: React.CSSProperties } = {
       border: `1px solid ${COLORS.error}`,
   },
   exitButton: {
-    marginTop: '16px',
+    marginTop: '24px',
     backgroundColor: 'transparent',
     color: COLORS.textSecondary,
     border: 'none',
-    textDecoration: 'underline',
     borderRadius: '8px',
     padding: '10px 20px',
     cursor: 'pointer',
-    fontSize: '14px',
+    fontSize: '15px',
     fontWeight: '500',
     alignSelf: 'center',
+    textDecoration: 'underline',
     transition: 'all 0.2s ease',
   },
 };

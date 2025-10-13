@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Module, Exercise, DifficultyLevel, ExerciseType, Entitlements, UserProgress } from '../types';
+import { Module, Exercise, DifficultyLevel, ExerciseType, Entitlements, UserProgress, AnalysisHistoryItem } from '../types';
 import { COLORS, SAGE_PALETTE, EXERCISE_TYPE_ICONS } from '../constants';
 import { HomeIcon, CheckCircleIcon, QuestionIcon, TargetIcon } from './Icons';
 import { soundService } from '../services/soundService';
@@ -11,7 +11,7 @@ import { ExercisePreviewModal } from './ExercisePreviewModal';
 interface ModuleScreenProps {
   module: Module;
   onSelectExercise: (exercise: Exercise) => void;
-  onReviewExercise: (exercise: Exercise) => void;
+  onReviewExercise: (historyItem: AnalysisHistoryItem) => void;
   onBack: () => void;
   userProgress: UserProgress | undefined;
   entitlements: Entitlements | null;
@@ -51,11 +51,17 @@ export const ModuleScreen: React.FC<ModuleScreenProps> = ({ module, onSelectExer
 
   const handleExerciseClick = (exercise: Exercise) => {
     soundService.playClick();
-    if (completedExerciseIds.includes(exercise.id)) {
-        onReviewExercise(exercise);
-    } else {
-        setPreviewingExercise(exercise);
+    const isCompleted = completedExerciseIds.includes(exercise.id);
+    if (isCompleted && userProgress?.analysisHistory) {
+      const historyItems = userProgress.analysisHistory.filter(h => h.exerciseId === exercise.id);
+      const latestItem = historyItems.sort((a, b) => b.timestamp - a.timestamp)[0];
+      if (latestItem) {
+        onReviewExercise(latestItem);
+        return;
+      }
     }
+    // If not completed or no history found, show preview
+    setPreviewingExercise(exercise);
   }
 
   const handleStartExercise = (exercise: Exercise) => {

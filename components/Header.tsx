@@ -44,9 +44,9 @@ export const Header: React.FC<HeaderProps> = ({ currentUser, breadcrumbs, onLogo
   const getInitials = (user: User) => {
     return `${user.firstName[0]}${user.lastName[0]}`.toUpperCase();
   };
-
+  
   const renderSaveButton = () => {
-    switch (saveState) {
+    switch(saveState) {
         case 'saving':
             return <Spinner size={20} color={COLORS.primary} />;
         case 'saved':
@@ -84,21 +84,22 @@ export const Header: React.FC<HeaderProps> = ({ currentUser, breadcrumbs, onLogo
           </div>
 
           <div style={styles.userSection}>
-            <button onClick={toggleMute} style={styles.iconButton} className="icon-button" aria-label={isMuted ? "Attiva audio" : "Disattiva audio"}>
-                {isMuted ? <SpeakerOffIcon /> : <SpeakerIcon />}
-            </button>
-
-            {currentUser && (
-                <button onClick={onManualSave} style={styles.iconButton} className="icon-button" aria-label="Salva progresso" disabled={saveState !== 'idle'}>
-                    {renderSaveButton()}
-                </button>
-            )}
-
             {!isPro && (
                 <button style={styles.proButton} className="pro-button" onClick={onGoToPaywall}>
                     Sblocca PRO
                 </button>
             )}
+
+            <button onClick={toggleMute} style={styles.iconButton} className="icon-button" aria-label={isMuted ? "Attiva audio" : "Disattiva audio"}>
+                {isMuted ? <SpeakerOffIcon/> : <SpeakerIcon/>}
+            </button>
+            
+            {currentUser && (
+                <button onClick={onManualSave} disabled={saveState !== 'idle'} style={styles.iconButton} className="icon-button" aria-label="Salva progresso">
+                    {renderSaveButton()}
+                </button>
+            )}
+
             {currentUser && (
               <div style={styles.userMenuContainer}>
                 <button 
@@ -179,19 +180,7 @@ const styles: { [key: string]: React.CSSProperties } = {
   userSection: {
     display: 'flex',
     alignItems: 'center',
-    gap: '8px'
-  },
-  iconButton: {
-    background: 'none',
-    border: 'none',
-    cursor: 'pointer',
-    padding: '8px',
-    borderRadius: '50%',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    color: COLORS.textSecondary,
-    transition: 'background-color 0.2s ease',
+    gap: '16px'
   },
   proButton: {
     backgroundColor: COLORS.secondary,
@@ -204,7 +193,18 @@ const styles: { [key: string]: React.CSSProperties } = {
     cursor: 'pointer',
     transition: 'all 0.2s ease',
     boxShadow: '0 2px 5px rgba(88, 166, 166, 0.2)',
-    marginLeft: '8px',
+  },
+  iconButton: {
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    padding: '8px',
+    borderRadius: '50%',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    color: COLORS.textSecondary,
+    transition: 'background-color 0.2s ease',
   },
   userMenuContainer: {
     position: 'relative',

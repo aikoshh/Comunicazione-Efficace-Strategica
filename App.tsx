@@ -12,7 +12,7 @@ import { CommunicatorProfileScreen } from './components/CommunicatorProfileScree
 import { Header } from './components/Header';
 import { PaywallScreen } from './components/PaywallScreen';
 import { ReviewScreen } from './components/ReviewScreen';
-import type { Module, Exercise, AnalysisResult, VoiceAnalysisResult, DifficultyLevel, User, UserProgress, CommunicatorProfile, Breadcrumb, Entitlements, Product, SaveState, AnalysisHistoryItem } from './types';
+import type { Module, Exercise, AnalysisResult, VoiceAnalysisResult, DifficultyLevel, User, UserProgress, CommunicatorProfile, Breadcrumb, Entitlements, Product, AnalysisHistoryItem, SaveState } from './types';
 import { MODULES, COLORS } from './constants';
 import { initialUserDatabase } from './database';
 import { soundService } from './services/soundService';
@@ -27,11 +27,11 @@ type AppState =
   | { screen: 'exercise'; exercise: Exercise; isCheckup?: boolean; checkupStep?: number; totalCheckupSteps?: number }
   | { screen: 'report'; result: AnalysisResult; exercise: Exercise; nextExercise?: Exercise; currentModule?: Module }
   | { screen: 'voice_report'; result: VoiceAnalysisResult; exercise: Exercise; nextExercise?: Exercise; currentModule?: Module }
-  | { screen: 'review'; exercise: Exercise }
   | { screen: 'api_key_error'; error: string }
   | { screen: 'strategic_checkup' }
   | { screen: 'communicator_profile' }
-  | { screen: 'paywall' };
+  | { screen: 'paywall' }
+  | { screen: 'review'; historyItem: AnalysisHistoryItem };
 
 const USERS_STORAGE_KEY = 'ces_coach_users';
 const PROGRESS_STORAGE_KEY = 'ces_coach_progress';
@@ -88,7 +88,6 @@ const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [entitlements, setEntitlements] = useState<Entitlements | null>(null);
   const { addToast } = useToast();
-  const [saveState, setSaveState] = useState<SaveState>('idle');
   
   const [users, setUsers] = useState<User[]>(() => {
     const storedUsers = loadFromStorage<User[]>(USERS_STORAGE_KEY);
@@ -106,6 +105,7 @@ const App: React.FC = () => {
 
   const [appState, setAppState] = useState<AppState>({ screen: 'home' });
   const [returnToState, setReturnToState] = useState<AppState | null>(null);
+  const [saveState, setSaveState] = useState<SaveState>('idle');
 
   useEffect(() => {
       // Session Persistence: Restore session on initial load
@@ -162,12 +162,13 @@ const App: React.FC = () => {
   const handleManualSave = () => {
     if (!currentUser) return;
     setSaveState('saving');
+    soundService.playClick();
     saveToStorage(PROGRESS_STORAGE_KEY, userProgress);
     setTimeout(() => {
         setSaveState('saved');
         addToast("Progresso salvato con successo!", 'success');
         setTimeout(() => setSaveState('idle'), 2000);
-    }, 1000);
+    }, 500);
   };
 
   const updateUserProgress = (email: string, updates: Partial<UserProgress>) => {
@@ -283,12 +284,12 @@ const App: React.FC = () => {
     }
   };
 
-  const handleReviewExercise = (exercise: Exercise) => {
-    setAppState({ screen: 'review', exercise });
-  };
-
   const handleSelectExercise = (exercise: Exercise, isCheckup: boolean = false, checkupStep: number = 0, totalCheckupSteps: number = 0) => {
     setAppState({ screen: 'exercise', exercise, isCheckup, checkupStep, totalCheckupSteps });
+  };
+  
+  const handleReviewExercise = (historyItem: AnalysisHistoryItem) => {
+    setAppState({ screen: 'review', historyItem });
   };
 
   const handleStartCustomExercise = (scenario: string, task: string, customObjective?: string) => {
@@ -303,14 +304,10 @@ const App: React.FC = () => {
     setAppState({ screen: 'exercise', exercise: customExercise });
   };
 
-  const processExerciseCompletion = (
-      exerciseId: string, 
-      score: number, 
-      userResponse: string,
-      analysisResult: AnalysisResult | VoiceAnalysisResult
-    ) => {
+  const processExerciseCompletion = (exercise: Exercise, userResponse: string, result: AnalysisResult) => {
       if (!currentUser) return;
       
+      const { score } = result;
       const userEmail = currentUser.email;
       const currentProgress = userProgress[userEmail] || { 
           scores: [], 
@@ -322,21 +319,16 @@ const App: React.FC = () => {
       };
       
       const newScores = [...currentProgress.scores, score];
-      const newCompletedIds = [...new Set([...(currentProgress.completedExerciseIds || []), exerciseId])];
+      const newCompletedIds = [...new Set([...(currentProgress.completedExerciseIds || []), exercise.id])];
       
       const newAnalysisHistory: AnalysisHistoryItem[] = [
         ...(currentProgress.analysisHistory || []),
-        {
-          exerciseId,
-          userResponse,
-          analysisResult,
-          timestamp: Date.now(),
-        }
+        { exerciseId: exercise.id, userResponse, analysis: result, timestamp: Date.now() }
       ];
       
       const newCompetenceScores = updateCompetenceScores(
         currentProgress.competenceScores,
-        exerciseId,
+        exercise.id,
         score
       );
 
@@ -363,18 +355,39 @@ const App: React.FC = () => {
   const handleCompleteWrittenExercise = (result: AnalysisResult, userResponse: string) => {
     if (appState.screen === 'exercise') {
       if (!appState.isCheckup) {
-        processExerciseCompletion(appState.exercise.id, result.score, userResponse, result);
+        processExerciseCompletion(appState.exercise, userResponse, result);
         const { currentModule, nextExercise } = findNextExerciseInModule(appState.exercise.id);
         setAppState({ screen: 'report', result, exercise: appState.exercise, nextExercise, currentModule });
       }
     }
   };
 
-  const handleCompleteVerbalExercise = (result: VoiceAnalysisResult, transcript: string) => {
+  const handleCompleteVerbalExercise = (result: VoiceAnalysisResult, userResponse: string) => {
       if (appState.screen === 'exercise') {
           const averageScore = Math.round(result.scores.reduce((acc, s) => acc + s.score, 0) / result.scores.length * 10);
-          if (!appState.isCheckup) {
-                processExerciseCompletion(appState.exercise.id, averageScore, transcript, result);
+          if (!appState.isCheckup && currentUser) {
+                const userEmail = currentUser.email;
+                const currentProgress = userProgress[userEmail] || { scores: [], completedExerciseIds: [], skippedExerciseIds: [], completedModuleIds: [], analysisHistory: [] };
+                const newScores = [...currentProgress.scores, averageScore];
+                const newCompletedIds = [...new Set([...(currentProgress.completedExerciseIds || []), appState.exercise.id])];
+                
+                const newAnalysisHistory: AnalysisHistoryItem[] = [
+                    ...(currentProgress.analysisHistory || []),
+                    { exerciseId: appState.exercise.id, userResponse, analysis: result, timestamp: Date.now() }
+                ];
+                
+                const newCompetenceScores = updateCompetenceScores(
+                    currentProgress.competenceScores,
+                    appState.exercise.id,
+                    averageScore
+                );
+
+                updateUserProgress(userEmail, {
+                    scores: newScores,
+                    completedExerciseIds: newCompletedIds,
+                    analysisHistory: newAnalysisHistory,
+                    competenceScores: newCompetenceScores,
+                });
           }
           const { currentModule, nextExercise } = findNextExerciseInModule(appState.exercise.id);
           setAppState({ screen: 'voice_report', result, exercise: appState.exercise, nextExercise, currentModule });
@@ -389,8 +402,8 @@ const App: React.FC = () => {
           });
       }
 
-      if (appState.screen === 'exercise' || appState.screen === 'review') {
-          const { nextExercise, currentModule } = findNextExerciseInModule(appState.screen === 'exercise' ? appState.exercise.id : appState.exercise.id);
+      if (appState.screen === 'exercise') {
+          const { nextExercise, currentModule } = findNextExerciseInModule(appState.exercise.id);
           if (nextExercise) {
               handleSelectExercise(nextExercise);
           } else if (currentModule) {
@@ -402,9 +415,7 @@ const App: React.FC = () => {
   };
 
   const handleRetryExercise = (exercise: Exercise) => {
-      if (appState.screen === 'report' || appState.screen === 'voice_report' || appState.screen === 'review') {
-          setAppState({ screen: 'exercise', exercise });
-      }
+      setAppState({ screen: 'exercise', exercise });
   };
   
   const handleBack = () => {
@@ -417,20 +428,19 @@ const App: React.FC = () => {
         }
         return;
     }
-    if (appState.screen === 'module' || appState.screen === 'custom_setup' || appState.screen === 'communicator_profile' || appState.screen === 'strategic_checkup') {
+    if (appState.screen === 'module' || appState.screen === 'custom_setup' || appState.screen === 'communicator_profile' || appState.screen === 'strategic_checkup' || appState.screen === 'review') {
       setAppState({ screen: 'home' });
     }
-    if (appState.screen === 'exercise' || appState.screen === 'review') {
-        const exerciseId = appState.exercise.id;
-        const isCustom = exerciseId.startsWith('custom-');
+    if (appState.screen === 'exercise') {
+        const isCustom = appState.exercise.id.startsWith('custom-');
         if (isCustom) {
             const customModule = MODULES.find(m => m.isCustom);
             if (customModule) setAppState({ screen: 'custom_setup', module: customModule });
             else setAppState({ screen: 'home' });
-        } else if (appState.screen === 'exercise' && appState.isCheckup) {
+        } else if (appState.isCheckup) {
             setAppState({ screen: 'strategic_checkup' });
         } else {
-            const moduleForExercise = MODULES.find(m => m.exercises.some(e => e.id === exerciseId));
+            const moduleForExercise = MODULES.find(m => m.exercises.some(e => e.id === appState.exercise.id));
             if (moduleForExercise) setAppState({ screen: 'module', module: moduleForExercise });
             else setAppState({ screen: 'home' });
         }
@@ -450,18 +460,17 @@ const App: React.FC = () => {
         case 'custom_setup':
             return [homeCrumb, { label: appState.module.title }];
         case 'exercise':
-        case 'review':
             const module = MODULES.find(m => m.exercises.some(e => e.id === appState.exercise.id));
             if (module) {
-                const crumbs = [homeCrumb, { label: module.title, onClick: () => setAppState({ screen: 'module', module }) }];
-                if (appState.screen === 'review') {
-                    crumbs.push({ label: 'Revisione' });
-                } else {
-                    crumbs.push({ label: 'Esercizio' });
-                }
-                return crumbs;
+                return [homeCrumb, { label: module.title, onClick: () => setAppState({ screen: 'module', module }) }, { label: "Esercizio" }];
             }
-            return [homeCrumb, { label: appState.screen === 'review' ? 'Revisione' : 'Esercizio' }];
+            return [homeCrumb, { label: "Esercizio" }];
+        case 'review':
+             const reviewModule = MODULES.find(m => m.exercises.some(e => e.id === appState.historyItem.exerciseId));
+             if (reviewModule) {
+                return [homeCrumb, { label: reviewModule.title, onClick: () => setAppState({ screen: 'module', module: reviewModule }) }, { label: "Revisione" }];
+             }
+             return [homeCrumb, { label: "Revisione" }];
         case 'report':
         case 'voice_report':
              if (appState.currentModule) {
@@ -483,7 +492,7 @@ const App: React.FC = () => {
     return <LoginScreen onLogin={handleLogin} onRegister={handleRegister} onGuestAccess={handleGuestAccess} />;
   }
   
-  const currentUserProgress = currentUser ? userProgress[currentUser.email] : undefined;
+  const currentProgress = currentUser ? userProgress[currentUser.email] : undefined;
   const isPro = hasProAccess(entitlements);
   let screenContent;
   let screenKey = 'home';
@@ -496,7 +505,7 @@ const App: React.FC = () => {
                 onSelectModule={handleSelectModule} 
                 onSelectExercise={handleSelectExercise}
                 currentUser={currentUser}
-                userProgress={currentUserProgress}
+                userProgress={currentProgress}
                 onStartCheckup={handleStartCheckup}
              />;
       break;
@@ -507,7 +516,7 @@ const App: React.FC = () => {
                         onSelectExercise={handleSelectExercise} 
                         onReviewExercise={handleReviewExercise}
                         onBack={handleBack} 
-                        userProgress={currentUserProgress}
+                        userProgress={currentProgress}
                         entitlements={entitlements}
                       />;
       break;
@@ -551,12 +560,11 @@ const App: React.FC = () => {
         }
         break;
     case 'review':
-        screenKey = `review-${appState.exercise.id}`;
+        screenKey = `review-${appState.historyItem.exerciseId}-${appState.historyItem.timestamp}`;
         screenContent = <ReviewScreen 
-                            exercise={appState.exercise} 
-                            userProgress={currentUserProgress}
+                            historyItem={appState.historyItem} 
+                            onBack={handleBack} 
                             onRetry={handleRetryExercise}
-                            onBack={handleBack}
                         />;
         break;
     case 'api_key_error':
@@ -581,14 +589,22 @@ const App: React.FC = () => {
                  onSelectModule={handleSelectModule} 
                  onSelectExercise={handleSelectExercise}
                  currentUser={currentUser}
-                 userProgress={currentUserProgress}
+                 userProgress={currentProgress}
                  onStartCheckup={handleStartCheckup}
                />;
   }
 
   return (
     <div>
-        {showHeader && <Header currentUser={currentUser} breadcrumbs={generateBreadcrumbs()} onLogout={handleLogout} onGoToPaywall={navigateToPaywall} isPro={isPro} onManualSave={handleManualSave} saveState={saveState} />}
+        {showHeader && <Header 
+            currentUser={currentUser} 
+            breadcrumbs={generateBreadcrumbs()} 
+            onLogout={handleLogout} 
+            onGoToPaywall={navigateToPaywall} 
+            isPro={isPro}
+            onManualSave={handleManualSave}
+            saveState={saveState}
+        />}
         <main style={showHeader ? styles.mainContent : {}}>
             <div key={screenKey} style={{ animation: 'fadeInUp 0.5s ease-out' }}>
                 {screenContent}

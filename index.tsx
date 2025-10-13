@@ -12,10 +12,10 @@ if (!rootElement) {
 const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
-    <SoundProvider>
-      <ToastProvider>
+    <ToastProvider>
+      <SoundProvider>
         <App />
-      </ToastProvider>
-    </SoundProvider>
+      </SoundProvider>
+    </ToastProvider>
   </React.StrictMode>
 );

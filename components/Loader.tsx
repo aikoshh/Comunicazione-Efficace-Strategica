@@ -3,36 +3,62 @@ import { COLORS } from '../constants';
 
 const DEFAULT_ESTIMATED_TIME = 15; // Default time in seconds
 
+const loadingPhrases = [
+    "“La singola più grande differenza tra comunicazione e illusione è il risultato.” - Milton Erickson",
+    "“Le parole giuste possono essere poche, ma trovare quelle giuste è il difficile.” - Mark Twain",
+    "“Il modo in cui comunichiamo con gli altri e con noi stessi determina la qualità delle nostre vite.” - Tony Robbins",
+    "“Non ascoltiamo per rispondere. Ascoltiamo per comprendere.” - Stephen Covey",
+    "L'AI sta analizzando il ritmo, il tono e le pause strategiche...",
+    "Stiamo calibrando il feedback sulla base dei principi CES®...",
+];
+
 interface LoaderProps {
   estimatedTime?: number;
 }
 
-const loadingMessages = [
-    "Analizzando la struttura della tua risposta...",
-    "Valutando il tono e l'empatia...",
-    "Verificando l'allineamento con l'obiettivo strategico...",
-    "Elaborando suggerimenti personalizzati...",
-    "Costruendo il tuo report dettagliato...",
-    "Quasi pronto, gli ultimi ritocchi dall'AI...",
-];
+const OrangeSpinner: React.FC<{ size?: number; color?: string }> = ({ size = 80, color = COLORS.warning }) => (
+    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+        <style>{`
+            @keyframes spin {
+                from { transform: rotate(0deg); }
+                to { transform: rotate(360deg); }
+            }
+        `}</style>
+        <svg 
+            style={{ animation: 'spin 1.2s linear infinite' }}
+            width={size} 
+            height={size} 
+            viewBox="0 0 24 24" 
+            fill="none" 
+            xmlns="http://www.w3.org/2000/svg"
+        >
+            <path d="M12 2V6" stroke={color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M4.93 4.93L7.76 7.76" stroke={color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.8 }}/>
+            <path d="M2 12H6" stroke={color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.6 }}/>
+            <path d="M4.93 19.07L7.76 16.24" stroke={color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.4 }}/>
+            <path d="M12 18V22" stroke={color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.2 }}/>
+        </svg>
+    </div>
+);
 
 export const FullScreenLoader: React.FC<LoaderProps> = ({ estimatedTime = DEFAULT_ESTIMATED_TIME }) => {
   const [timeLeft, setTimeLeft] = useState(estimatedTime);
-  const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
+  const [currentPhraseIndex, setCurrentPhraseIndex] = useState(0);
 
   useEffect(() => {
     setTimeLeft(estimatedTime);
-    const countdownTimer = setInterval(() => {
+    
+    const timer = setInterval(() => {
       setTimeLeft(prevTime => (prevTime > 0 ? prevTime - 1 : 0));
     }, 1000);
 
-    const messageTimer = setInterval(() => {
-        setCurrentMessageIndex(prevIndex => (prevIndex + 1) % loadingMessages.length);
-    }, 3000); // Change message every 3 seconds
+    const phraseTimer = setInterval(() => {
+        setCurrentPhraseIndex(prevIndex => (prevIndex + 1) % loadingPhrases.length);
+    }, 4000);
 
     return () => {
-        clearInterval(countdownTimer);
-        clearInterval(messageTimer);
+        clearInterval(timer);
+        clearInterval(phraseTimer);
     };
   }, [estimatedTime]);
 
@@ -43,10 +69,18 @@ export const FullScreenLoader: React.FC<LoaderProps> = ({ estimatedTime = DEFAUL
                 0%, 100% { opacity: 1; }
                 50% { opacity: 0.6; }
             }
+            @keyframes phrase-fade {
+                0%, 100% { opacity: 0; }
+                20%, 80% { opacity: 1; }
+            }
         `}</style>
-      <Spinner size={80} color={COLORS.warning} />
+      <OrangeSpinner />
       <p style={{...styles.text, animation: 'slow-blink 2s infinite ease-in-out'}}>Analisi in corso...</p>
-      <p style={styles.subtext}>{loadingMessages[currentMessageIndex]}</p>
+      
+      <p key={currentPhraseIndex} style={styles.subtext}>
+        {loadingPhrases[currentPhraseIndex]}
+      </p>
+
       <div style={styles.countdownContainer}>
         {timeLeft > 0 ? (
           <p style={styles.countdownText}>
@@ -98,11 +132,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     height: '100vh',
     textAlign: 'center',
     backgroundColor: COLORS.base,
-  },
-  gif: {
-    width: '150px',
-    height: '150px',
-    marginBottom: '16px',
+    padding: '20px',
   },
   text: {
     marginTop: '24px',
@@ -114,10 +144,15 @@ const styles: { [key: string]: React.CSSProperties } = {
   subtext: {
     color: COLORS.textSecondary,
     fontSize: '16px',
-    maxWidth: '320px',
-    lineHeight: 1.5,
+    maxWidth: '400px',
+    lineHeight: 1.6,
     margin: 0,
-    minHeight: '48px', // Prevent layout shift
+    height: '70px', // Reserve space to avoid layout shifts
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontStyle: 'italic',
+    animation: 'phrase-fade 4s infinite ease-in-out',
   },
   countdownContainer: {
     marginTop: '24px',

@@ -1,6 +1,17 @@
 // A simple sound service using the Web Audio API to avoid dealing with audio files.
+const SOUND_MUTED_KEY = 'ces_coach_sound_muted';
+
 class SoundService {
   private audioCtx: AudioContext | null = null;
+  
+  private isMuted(): boolean {
+      try {
+          const storedValue = localStorage.getItem(SOUND_MUTED_KEY);
+          return storedValue ? JSON.parse(storedValue) : false;
+      } catch {
+          return false;
+      }
+  }
 
   private initializeAudioContext() {
     if (this.audioCtx || typeof window === 'undefined' || window.document.hidden) {
@@ -20,9 +31,9 @@ class SoundService {
     duration: number,
     volume: number = 0.5
   ) {
+    if (this.isMuted()) return;
     this.initializeAudioContext();
-    const isMuted = localStorage.getItem('ces_coach_sound_muted') === 'true';
-    if (!this.audioCtx || isMuted) return;
+    if (!this.audioCtx) return;
 
     // Resume context if it's suspended (e.g., due to browser auto-play policies)
     if (this.audioCtx.state === 'suspended') {
@@ -45,9 +56,9 @@ class SoundService {
   }
   
   private playFailSound() {
+    if (this.isMuted()) return;
     this.initializeAudioContext();
-    const isMuted = localStorage.getItem('ces_coach_sound_muted') === 'true';
-    if (!this.audioCtx || isMuted) return;
+    if (!this.audioCtx) return;
 
     const oscillator = this.audioCtx.createOscillator();
     const gainNode = this.audioCtx.createGain();
@@ -69,9 +80,9 @@ class SoundService {
   }
   
   private playTriumphSound() {
+    if (this.isMuted()) return;
     this.initializeAudioContext();
-    const isMuted = localStorage.getItem('ces_coach_sound_muted') === 'true';
-    if (!this.audioCtx || isMuted) return;
+    if (!this.audioCtx) return;
     const volume = 0.3;
 
     // --- Arpeggio ---
@@ -130,6 +141,7 @@ class SoundService {
   }
   
   public playSuccess() {
+    if (this.isMuted()) return;
     this.initializeAudioContext();
     if (!this.audioCtx) return;
     
@@ -140,6 +152,7 @@ class SoundService {
   }
 
   public playScoreSound(score: number) {
+    if (this.isMuted()) return;
     this.initializeAudioContext();
     if (!this.audioCtx) return;
     
