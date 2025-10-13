@@ -1,17 +1,19 @@
 import React, { useState } from 'react';
-import { Module, Exercise, DifficultyLevel, ExerciseType, Entitlements, UserProgress, AnalysisHistoryRecord } from '../types';
+import { Module, Exercise, DifficultyLevel, ExerciseType, Entitlements, UserProgress, AnalysisHistoryEntry } from '../types';
 import { COLORS, SAGE_PALETTE, EXERCISE_TYPE_ICONS } from '../constants';
-import { HomeIcon, CheckCircleIcon, QuestionIcon, TargetIcon } from './Icons';
+import { CheckCircleIcon, QuestionIcon, TargetIcon } from './Icons';
 import { soundService } from '../services/soundService';
 import { hasProAccess } from '../services/monetizationService';
 import { QuestionLibraryModal } from './QuestionLibraryModal';
 import { PreparationChecklistModal } from './PreparationChecklistModal';
 import { ExercisePreviewModal } from './ExercisePreviewModal';
+import { useLocalization } from '../context/LocalizationContext';
+import { getContent } from '../locales/content';
 
 interface ModuleScreenProps {
   module: Module;
   onSelectExercise: (exercise: Exercise) => void;
-  onReviewExercise: (historyRecord: AnalysisHistoryRecord) => void;
+  onReviewExercise: (exercise: Exercise, historyEntry: AnalysisHistoryEntry) => void;
   onBack: () => void;
   userProgress: UserProgress | undefined;
   entitlements: Entitlements | null;
@@ -24,12 +26,12 @@ const difficultyColors: { [key in DifficultyLevel]: string } = {
 };
 
 const hoverStyle = `
-  .exercise-card:hover {
+  .exercise-card:not(.completed-no-hover):hover {
     transform: translateY(-5px);
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
     border-left-color: white;
   }
-  .exercise-card:active {
+  .exercise-card:not(.completed-no-hover):active {
     transform: translateY(-2px) scale(0.99);
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
   }
@@ -46,23 +48,21 @@ export const ModuleScreen: React.FC<ModuleScreenProps> = ({ module, onSelectExer
   const [isLibraryModalOpen, setLibraryModalOpen] = useState(false);
   const [isChecklistModalOpen, setChecklistModalOpen] = useState(false);
   const [previewingExercise, setPreviewingExercise] = useState<Exercise | null>(null);
-  const completedExerciseIds = userProgress?.completedExerciseIds || [];
+  const { t, language } = useLocalization();
+  const { QUESTION_LIBRARY, PREPARATION_CHECKLIST } = getContent(language);
   
+  const completedExerciseIds = userProgress?.completedExerciseIds || [];
+
   const handleExerciseClick = (exercise: Exercise) => {
     soundService.playClick();
     const isCompleted = completedExerciseIds.includes(exercise.id);
+    const historyEntry = userProgress?.analysisHistory?.find(h => h.exerciseId === exercise.id);
 
-    if (isCompleted && userProgress?.analysisHistory) {
-        const historyForExercise = userProgress.analysisHistory
-            .filter(h => h.exerciseId === exercise.id)
-            .sort((a, b) => b.timestamp - a.timestamp);
-        
-        if (historyForExercise.length > 0) {
-            onReviewExercise(historyForExercise[0]);
-            return;
-        }
+    if (isCompleted && historyEntry) {
+      onReviewExercise(exercise, historyEntry);
+    } else {
+      setPreviewingExercise(exercise);
     }
-    setPreviewingExercise(exercise);
   }
 
   const handleStartExercise = (exercise: Exercise) => {
@@ -91,14 +91,14 @@ export const ModuleScreen: React.FC<ModuleScreenProps> = ({ module, onSelectExer
                   style={styles.proFeatureButton} 
                   className="pro-feature-button"
               >
-                  <QuestionIcon/> Libreria Domande PRO
+                  <QuestionIcon/> {t('proQuestionLibrary')}
               </button>
               <button 
                   onClick={() => { soundService.playClick(); setChecklistModalOpen(true); }} 
                   style={styles.proFeatureButton}
                   className="pro-feature-button"
               >
-                  <TargetIcon/> Checklist Preparazione PRO
+                  <TargetIcon/> {t('proPreparationChecklist')}
               </button>
           </div>
       )}
@@ -123,11 +123,13 @@ export const ModuleScreen: React.FC<ModuleScreenProps> = ({ module, onSelectExer
             
           const exerciseType = exercise.exerciseType || ExerciseType.WRITTEN;
           const ExerciseIcon = EXERCISE_TYPE_ICONS[exerciseType];
+          
+          const difficultyText = exercise.difficulty === DifficultyLevel.BASE ? t('difficultyBase') : exercise.difficulty === DifficultyLevel.INTERMEDIO ? t('difficultyIntermediate') : t('difficultyAdvanced');
 
           return (
             <div 
               key={exercise.id} 
-              className={`exercise-card`}
+              className={`exercise-card ${isCompleted ? 'completed' : ''}`}
               style={cardStyle} 
               onClick={() => handleExerciseClick(exercise)}
               onMouseEnter={() => soundService.playHover()}
@@ -141,11 +143,11 @@ export const ModuleScreen: React.FC<ModuleScreenProps> = ({ module, onSelectExer
                       {isCompleted && (
                         <span style={styles.completedBadge}>
                           <CheckCircleIcon width={16} height={16} />
-                          Completato
+                          {t('completed')}
                         </span>
                       )}
                       <span style={{...styles.difficultyBadge, backgroundColor: difficultyColors[exercise.difficulty]}}>
-                          {exercise.difficulty}
+                          {difficultyText}
                       </span>
                   </div>
               </div>
@@ -157,8 +159,8 @@ export const ModuleScreen: React.FC<ModuleScreenProps> = ({ module, onSelectExer
         })}
       </main>
     </div>
-    <QuestionLibraryModal isOpen={isLibraryModalOpen} onClose={() => setLibraryModalOpen(false)} />
-    <PreparationChecklistModal isOpen={isChecklistModalOpen} onClose={() => setChecklistModalOpen(false)} />
+    <QuestionLibraryModal isOpen={isLibraryModalOpen} onClose={() => setLibraryModalOpen(false)} library={QUESTION_LIBRARY} />
+    <PreparationChecklistModal isOpen={isChecklistModalOpen} onClose={() => setChecklistModalOpen(false)} checklist={PREPARATION_CHECKLIST} />
     {previewingExercise && (
         <ExercisePreviewModal 
             exercise={previewingExercise}

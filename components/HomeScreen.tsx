@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import type { Module, User, UserProgress, Exercise } from '../types';
-import { MODULES, COLORS, SAGE_PALETTE } from '../constants';
+// FIX: Removed MODULES from constants import, as it's language-dependent
+import { COLORS, SAGE_PALETTE } from '../constants';
 import { smilingPerson, dailyChallengePerson } from '../assets';
 import { ProgressOverview } from './ProgressOverview';
 import { ProgressAnalytics } from './ProgressAnalytics';
 import { getDailyChallenge } from '../services/progressionService';
 import { CheckCircleIcon, TargetIcon } from './Icons';
 import { soundService } from '../services/soundService';
+// FIX: Added imports for localization to get language-specific content
+import { useLocalization } from '../context/LocalizationContext';
+import { getContent } from '../locales/content';
 
 interface HomeScreenProps {
   onSelectModule: (module: Module) => void;
@@ -48,10 +52,14 @@ const hoverStyle = `
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectModule, onSelectExercise, onStartCheckup, currentUser, userProgress }) => {
   const [dailyChallenge, setDailyChallenge] = useState<Exercise | null>(null);
+  // FIX: Get language from localization context to fetch correct modules
+  const { language } = useLocalization();
+  const { MODULES } = getContent(language);
 
   useEffect(() => {
-    setDailyChallenge(getDailyChallenge());
-  }, []);
+    // FIX: Pass language to get the correct daily challenge
+    setDailyChallenge(getDailyChallenge(language));
+  }, [language]);
 
   const completedModuleIds = userProgress?.completedModuleIds || [];
   const foundationalModules = MODULES.filter(m => m.category === 'Fondamentali' || !m.category);

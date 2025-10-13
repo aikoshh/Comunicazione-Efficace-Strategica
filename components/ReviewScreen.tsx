@@ -1,160 +1,183 @@
 import React from 'react';
-import { AnalysisHistoryRecord, Exercise, AnalysisResult, VoiceAnalysisResult } from '../types';
-import { MODULES, COLORS } from '../constants';
+import { Exercise, AnalysisHistoryEntry, AnalysisResult, VoiceAnalysisResult, DetailedRubricScore } from '../types';
+import { COLORS } from '../constants';
+import { BackIcon, RetryIcon } from './Icons';
+import { soundService } from '../services/soundService';
 import { AnalysisReportScreen } from './AnalysisReportScreen';
 import { VoiceAnalysisReportScreen } from './VoiceAnalysisReportScreen';
-import { RetryIcon } from './Icons';
-import { soundService } from '../services/soundService';
+import { useLocalization } from '../context/LocalizationContext';
 
 interface ReviewScreenProps {
-  historyRecord: AnalysisHistoryRecord;
+  exercise: Exercise;
+  historyEntry: AnalysisHistoryEntry;
+  onRetry: () => void;
   onBack: () => void;
-  onRetry: (exercise: Exercise) => void;
 }
 
-const findExerciseById = (id: string): Exercise | undefined => {
-    for (const mod of MODULES) {
-        const found = mod.exercises.find(e => e.id === id);
-        if (found) return found;
-    }
-    // Handle custom exercises
-    if (id.startsWith('custom-')) {
-        return {
-            id: id,
-            title: 'Esercizio Personalizzato',
-            scenario: 'Scenario personalizzato',
-            task: 'Compito personalizzato',
-            difficulty: 'Base' as any,
-        };
-    }
-    return undefined;
-};
+export const ReviewScreen: React.FC<ReviewScreenProps> = ({ exercise, historyEntry, onRetry, onBack }) => {
+  const { response, result, timestamp } = historyEntry;
+  const { t } = useLocalization();
 
-export const ReviewScreen: React.FC<ReviewScreenProps> = ({ historyRecord, onBack, onRetry }) => {
-  const exercise = findExerciseById(historyRecord.exerciseId);
-
-  if (!exercise) {
-    return (
-      <div style={styles.container}>
-        <p>Esercizio non trovato.</p>
-        <button onClick={onBack}>Torna Indietro</button>
-      </div>
-    );
-  }
-  
   const handleRetryClick = () => {
     soundService.playClick();
-    onRetry(exercise);
+    onRetry();
+  };
+
+  const handleBackClick = () => {
+    soundService.playClick();
+    onBack();
   };
   
-  const isVerbal = 'scores' in historyRecord.result;
-  const ReportComponent = isVerbal ? VoiceAnalysisReportScreen : AnalysisReportScreen;
+  const isVoiceResult = (res: any): res is VoiceAnalysisResult => {
+    return 'scores' in res && 'suggested_delivery' in res;
+  };
 
   return (
     <div style={styles.container}>
-      <h1 style={styles.title}>Revisione Esercizio: {exercise.title}</h1>
-      
-      <div style={styles.card}>
-        <h2 style={styles.sectionTitle}>La tua Risposta</h2>
-        <p style={styles.userResponse}>
-            "{historyRecord.userResponse}"
-        </p>
-        <p style={styles.timestamp}>
-            Risposto il: {new Date(historyRecord.timestamp).toLocaleString('it-IT')}
-        </p>
-      </div>
-      
-      <div style={styles.analysisContainer}>
-        <h2 style={styles.sectionTitle}>Analisi Ricevuta</h2>
-        {/*
-          NOTE: We are reusing the entire report screens for consistency.
-          The `onNextExercise` prop will navigate back to the module, which is a reasonable behavior.
-          The `entitlements` prop is set to null to avoid showing upsell banners in review mode.
-        */}
-        <ReportComponent
-          result={historyRecord.result as any}
-          exercise={exercise}
-          onRetry={() => onRetry(exercise)}
-          onNextExercise={onBack}
-          nextExerciseLabel="Torna al Modulo"
-          entitlements={null}
-          onNavigateToPaywall={() => {}}
-        />
-      </div>
-
-       <div style={styles.buttonContainer}>
-          <button onClick={handleRetryClick} style={styles.retryButton}>
-            <RetryIcon /> Riprova Esercizio
-          </button>
+      <div style={styles.reviewCard}>
+        <header style={styles.header}>
+            <div>
+                <h1 style={styles.title}>{t('reviewTitle')}</h1>
+                <p style={styles.exerciseTitle}>{exercise.title}</p>
+                 <p style={styles.timestamp}>{t('completedOn', { date: new Date(timestamp).toLocaleString() })}</p>
+            </div>
+             <button onClick={handleBackClick} style={styles.backButton}>
+                <BackIcon /> {t('backToModule')}
+            </button>
+        </header>
+        
+        <div style={styles.responseSection}>
+            <h2 style={styles.sectionTitle}>{t('yourPreviousResponse')}</h2>
+            <p style={styles.responseText}>"{response}"</p>
         </div>
+
+        <div style={styles.analysisSection}>
+            <h2 style={styles.sectionTitle}>{t('analysisReportTitle')}</h2>
+            {isVoiceResult(result) ? (
+                <VoiceAnalysisReportScreen 
+                    result={result} 
+                    exercise={exercise} 
+                    onRetry={() => {}} // Dummy, button is outside
+                    onNextExercise={() => {}} // Dummy
+                    nextExerciseLabel=""
+                    entitlements={null} // Not relevant in review
+                    onNavigateToPaywall={() => {}} // Not relevant
+                />
+            ) : (
+                <AnalysisReportScreen 
+                    result={result as AnalysisResult} 
+                    exercise={exercise} 
+                    onRetry={() => {}} // Dummy
+                    onNextExercise={() => {}} // Dummy
+                    nextExerciseLabel=""
+                    entitlements={null} // Not relevant
+                    onNavigateToPaywall={() => {}} // Not relevant
+                />
+            )}
+        </div>
+        
+        <footer style={styles.footer}>
+            <button onClick={handleRetryClick} style={styles.retryButton}>
+                <RetryIcon/> {t('retryExercise')}
+            </button>
+        </footer>
+      </div>
     </div>
   );
 };
 
-
 const styles: { [key: string]: React.CSSProperties } = {
-    container: {
-        maxWidth: '900px',
-        margin: '0 auto',
-        padding: '40px 20px',
-    },
-    title: {
-        fontSize: '28px',
-        fontWeight: 'bold',
-        color: COLORS.textPrimary,
-        marginBottom: '24px',
-        textAlign: 'center',
-    },
-    card: {
-        backgroundColor: COLORS.card,
-        borderRadius: '12px',
-        padding: '24px',
-        marginBottom: '24px',
-        border: `1px solid ${COLORS.divider}`,
-        boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
-    },
-    sectionTitle: {
-        fontSize: '20px',
-        fontWeight: 600,
-        color: COLORS.primary,
-        marginBottom: '16px',
-    },
-    userResponse: {
-        fontSize: '16px',
-        fontStyle: 'italic',
-        color: COLORS.textSecondary,
-        lineHeight: 1.6,
-        margin: 0,
-        padding: '16px',
-        backgroundColor: COLORS.cardDark,
-        borderRadius: '8px',
-    },
-    timestamp: {
-        fontSize: '12px',
-        color: COLORS.textSecondary,
-        textAlign: 'right',
-        marginTop: '12px',
-    },
-    analysisContainer: {
-        // The report component has its own styling, so we just wrap it.
-    },
-    buttonContainer: {
-        display: 'flex',
-        justifyContent: 'center',
-        marginTop: '24px',
-    },
-    retryButton: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        padding: '12px 24px',
-        fontSize: '16px',
-        fontWeight: 'bold',
-        color: 'white',
-        background: COLORS.primaryGradient,
-        border: 'none',
-        borderRadius: '8px',
-        cursor: 'pointer',
-        transition: 'transform 0.2s ease, filter 0.2s ease',
-    }
+  container: {
+    backgroundColor: COLORS.base,
+    padding: '40px 20px',
+  },
+  reviewCard: {
+    backgroundColor: COLORS.card,
+    borderRadius: '12px',
+    maxWidth: '900px',
+    margin: '0 auto',
+    boxShadow: '0 8px 30px rgba(0,0,0,0.08)',
+  },
+  header: {
+    padding: '24px',
+    borderBottom: `1px solid ${COLORS.divider}`,
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: '16px'
+  },
+  title: {
+    fontSize: '28px',
+    fontWeight: 'bold',
+    color: COLORS.textPrimary,
+    margin: 0,
+  },
+  exerciseTitle: {
+      fontSize: '18px',
+      color: COLORS.textSecondary,
+      margin: '8px 0 4px 0',
+      fontWeight: 500
+  },
+  timestamp: {
+      fontSize: '14px',
+      color: COLORS.textSecondary,
+      margin: 0,
+  },
+  backButton: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '8px',
+      background: 'transparent',
+      border: `1px solid ${COLORS.divider}`,
+      borderRadius: '8px',
+      padding: '8px 16px',
+      cursor: 'pointer',
+      fontSize: '15px',
+      color: COLORS.textSecondary,
+      fontWeight: '500',
+      flexShrink: 0
+  },
+  responseSection: {
+      padding: '24px',
+      backgroundColor: COLORS.cardDark
+  },
+  sectionTitle: {
+      fontSize: '20px',
+      fontWeight: 600,
+      color: COLORS.textPrimary,
+      marginBottom: '16px'
+  },
+  responseText: {
+      fontSize: '16px',
+      fontStyle: 'italic',
+      color: COLORS.textSecondary,
+      lineHeight: 1.7,
+      margin: 0,
+      padding: '16px',
+      backgroundColor: COLORS.card,
+      borderRadius: '8px',
+      borderLeft: `3px solid ${COLORS.secondary}`
+  },
+  analysisSection: {
+    padding: '0', // The report components have their own padding
+  },
+  footer: {
+      padding: '24px',
+      borderTop: `1px solid ${COLORS.divider}`,
+      textAlign: 'center'
+  },
+  retryButton: {
+    padding: '12px 24px',
+    fontSize: '16px',
+    fontWeight: 'bold',
+    border: 'none',
+    backgroundColor: COLORS.secondary,
+    color: 'white',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '8px',
+    transition: 'all 0.2s ease',
+  }
 };

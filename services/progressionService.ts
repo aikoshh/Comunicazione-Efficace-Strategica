@@ -1,5 +1,5 @@
-import type { ProgressOverviewData, ScoreExplanation, User, UserProgress, Exercise } from '../types';
-import { MODULES } from '../constants';
+import type { ProgressOverviewData, ScoreExplanation, User, UserProgress, Exercise, Language } from '../types';
+import { getContent } from '../locales/content';
 
 const mockScoreExplanation: ScoreExplanation = {
   Coverage: 58,
@@ -55,7 +55,9 @@ export const getScoreExplanation = async (): Promise<ScoreExplanation> => {
   return new Promise(resolve => setTimeout(() => resolve(mockScoreExplanation), 300));
 };
 
-export const getDailyChallenge = (): Exercise => {
+export const getDailyChallenge = (language: Language): Exercise => {
+    // FIX: Get language-specific modules from getContent
+    const { MODULES } = getContent(language);
     // Flatten all exercises from non-custom modules
     const allExercises = MODULES
         .filter(m => !m.isCustom && m.exercises.length > 0)
@@ -68,8 +70,11 @@ export const getDailyChallenge = (): Exercise => {
     
     const dailyExercise = allExercises[index];
     
+    // FIX: Provide a translated title for the daily challenge
+    const challengeTitlePrefix = language === 'it' ? 'Sfida del Giorno' : 'Daily Challenge';
+    
     return {
         ...dailyExercise,
-        title: `Sfida del Giorno: ${dailyExercise.title}`,
+        title: `${challengeTitlePrefix}: ${dailyExercise.title}`,
     };
 };

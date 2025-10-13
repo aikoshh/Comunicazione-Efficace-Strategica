@@ -3,62 +3,53 @@ import { COLORS } from '../constants';
 
 const DEFAULT_ESTIMATED_TIME = 15; // Default time in seconds
 
-const loadingTips = [
-    "L'ascolto è la metà silenziosa della comunicazione.",
-    "Una domanda ben posta è più potente di mille affermazioni.",
-    "La chiarezza non è dire tutto, ma dire l'essenziale.",
-    "L'empatia è vedere con gli occhi di un altro e sentire con il cuore di un altro.",
-    "Un feedback efficace si concentra sul comportamento, non sulla persona.",
-    "Le pause strategiche danno peso alle tue parole e tempo per pensare.",
-    "L'obiettivo di una conversazione difficile non è vincere, ma progredire insieme."
-];
-
 interface LoaderProps {
   estimatedTime?: number;
 }
 
 export const FullScreenLoader: React.FC<LoaderProps> = ({ estimatedTime = DEFAULT_ESTIMATED_TIME }) => {
-  const [currentTipIndex, setCurrentTipIndex] = useState(0);
-  const [countdown, setCountdown] = useState(estimatedTime);
+  const [timeLeft, setTimeLeft] = useState(estimatedTime);
 
   useEffect(() => {
-    const tipInterval = setInterval(() => {
-        setCurrentTipIndex(prevIndex => (prevIndex + 1) % loadingTips.length);
-    }, 4000); // Change tip every 4 seconds
-
-    return () => clearInterval(tipInterval);
-  }, []);
-
-  useEffect(() => {
-    // Start countdown immediately when the component is shown
-    setCountdown(estimatedTime);
-    const countdownInterval = setInterval(() => {
-        setCountdown(prev => (prev > 0 ? prev - 1 : 0));
+    // Resetta il timer se il componente viene ri-renderizzato con un nuovo tempo
+    setTimeLeft(estimatedTime);
+    
+    const timer = setInterval(() => {
+      setTimeLeft(prevTime => {
+        if (prevTime <= 1) {
+          clearInterval(timer);
+          return 0;
+        }
+        return prevTime - 1;
+      });
     }, 1000);
 
-    return () => clearInterval(countdownInterval);
-  }, [estimatedTime]);
-
-  const dynamicStyles = `
-    @keyframes blink {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.4; }
-    }
-  `;
+    return () => clearInterval(timer);
+  }, [estimatedTime]); // L'effetto si riattiva se la prop `estimatedTime` cambia
 
   return (
     <div style={styles.container}>
-      <style>{dynamicStyles}</style>
-      <Spinner size={120} color={COLORS.warning} />
-      <h2 style={{...styles.text, animation: 'blink 1.5s linear infinite'}}>Analisi in corso...</h2>
-      <p style={styles.subtext}>L'AI sta elaborando la tua risposta per darti un feedback strategico.</p>
-      <p style={styles.countdownText}>
-        Tempo stimato rimanente: {countdown} secondi
-      </p>
-      <div style={styles.tipContainer}>
-        <p key={currentTipIndex} style={styles.tipText}>
-          {loadingTips[currentTipIndex]}
-        </p>
+        <style>{`
+            @keyframes slow-blink {
+                0%, 100% { opacity: 1; }
+                50% { opacity: 0.4; }
+            }
+        `}</style>
+      <img
+        src="https://i.gifer.com/ZNeT.gif"
+        alt="Analisi in corso..."
+        style={styles.gif}
+      />
+      <p style={styles.text}>Analisi in corso...</p>
+      <p style={styles.subtext}>L'AI sta elaborando la tua risposta, attendi qualche istante.</p>
+      <div style={styles.countdownContainer}>
+        {timeLeft > 0 ? (
+          <p style={styles.countdownText}>
+            Tempo stimato: <strong style={styles.countdownNumber}>{timeLeft}s</strong>
+          </p>
+        ) : (
+          <p style={{...styles.countdownText, animation: 'slow-blink 2s infinite ease-in-out'}}>Elaborazione quasi completata...</p>
+        )}
       </div>
     </div>
   );
@@ -102,46 +93,47 @@ const styles: { [key: string]: React.CSSProperties } = {
     height: '100vh',
     textAlign: 'center',
     backgroundColor: COLORS.base,
-    padding: '20px'
+  },
+  gif: {
+    width: '150px',
+    height: '150px',
+    marginBottom: '16px',
   },
   text: {
+    marginTop: '16px',
     color: COLORS.textPrimary,
-    fontSize: '24px',
-    fontWeight: 'bold',
-    margin: '24px 0 8px 0',
+    fontSize: '20px',
+    fontWeight: 500,
+    margin: '16px 0 8px 0',
   },
   subtext: {
     color: COLORS.textSecondary,
     fontSize: '16px',
-    maxWidth: '350px',
+    maxWidth: '320px',
     lineHeight: 1.5,
     margin: 0,
   },
-  countdownText: {
-    color: COLORS.textPrimary,
-    fontSize: '18px',
-    fontWeight: 500,
-    margin: '16px 0 0 0',
-  },
-  tipContainer: {
-    marginTop: '32px',
-    padding: '16px 24px',
-    borderRadius: '12px',
+  countdownContainer: {
+    marginTop: '24px',
+    padding: '8px 24px',
+    borderRadius: '16px',
     backgroundColor: COLORS.cardDark,
     border: `1px solid ${COLORS.divider}`,
-    minHeight: '60px',
+    minHeight: '30px',
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'center',
-    width: '100%',
-    maxWidth: '450px',
-    boxSizing: 'border-box'
+    justifyContent: 'center'
   },
-  tipText: {
-    color: COLORS.textPrimary,
-    fontSize: '15px',
-    fontStyle: 'italic',
+  countdownText: {
+    color: COLORS.textSecondary,
+    fontSize: '16px',
     margin: 0,
-    animation: 'fadeInUp 0.5s ease-out'
+  },
+  countdownNumber: {
+    color: COLORS.primary,
+    fontWeight: 700,
+    fontSize: '18px',
+    minWidth: '30px', // Evita sfarfallio quando le cifre cambiano
+    display: 'inline-block'
   },
 };

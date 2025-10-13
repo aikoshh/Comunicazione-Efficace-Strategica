@@ -1,10 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { VoiceAnalysisResult, Exercise, Entitlements } from '../types';
-import { COLORS, VOICE_RUBRIC_CRITERIA } from '../constants';
+// FIX: Removed VOICE_RUBRIC_CRITERIA from constants, as it's language-dependent
+import { COLORS } from '../constants';
 import { useSpeech } from '../hooks/useSpeech';
 import { CheckCircleIcon, XCircleIcon, RetryIcon, HomeIcon, LightbulbIcon, TargetIcon, SpeakerIcon, SpeakerOffIcon, NextIcon } from './Icons';
 import { soundService } from '../services/soundService';
 import { hasProAccess } from '../services/monetizationService';
+// FIX: Added imports for localization to get language-specific content
+import { useLocalization } from '../context/LocalizationContext';
+import { getContent } from '../locales/content';
 
 interface VoiceAnalysisReportScreenProps {
   result: VoiceAnalysisResult;
@@ -119,6 +123,9 @@ const AnnotatedText: React.FC<{ text: string }> = ({ text }) => {
 
 export const VoiceAnalysisReportScreen: React.FC<VoiceAnalysisReportScreenProps> = ({ result, exercise, onRetry, onNextExercise, nextExerciseLabel, entitlements, onNavigateToPaywall }) => {
   const { speak, isSpeaking, stopSpeaking } = useSpeech();
+  // FIX: Get language-specific content
+  const { language } = useLocalization();
+  const { VOICE_RUBRIC_CRITERIA } = getContent(language);
   
   const averageScore = result.scores.length > 0
     ? Math.round(result.scores.reduce((acc, s) => acc + s.score, 0) / result.scores.length * 10)

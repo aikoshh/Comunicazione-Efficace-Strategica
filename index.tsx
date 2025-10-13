@@ -2,7 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import { ToastProvider } from './hooks/useToast';
-import { SoundProvider } from './hooks/useSound';
+import { LocalizationProvider } from './context/LocalizationContext';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -12,10 +12,10 @@ if (!rootElement) {
 const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
-    <ToastProvider>
-      <SoundProvider>
+    <LocalizationProvider>
+      <ToastProvider>
         <App />
-      </SoundProvider>
-    </ToastProvider>
+      </ToastProvider>
+    </LocalizationProvider>
   </React.StrictMode>
 );
