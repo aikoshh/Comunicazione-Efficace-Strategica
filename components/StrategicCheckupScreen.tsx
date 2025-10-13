@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Exercise, AnalysisResult, CommunicatorProfile, Entitlements } from '../types';
-// FIX: Removed STRATEGIC_CHECKUP_EXERCISES from constants, as it's language-dependent
-import { COLORS } from '../constants';
+import { STRATEGIC_CHECKUP_EXERCISES, COLORS } from '../constants';
 import { FullScreenLoader } from './Loader';
 import { generateCommunicatorProfile, analyzeResponse } from '../services/geminiService';
 import { Logo } from './Logo';
@@ -9,9 +8,6 @@ import { HomeIcon, MicIcon } from './Icons';
 import { soundService } from '../services/soundService';
 import { useSpeech } from '../hooks/useSpeech';
 import { useToast } from '../hooks/useToast';
-// FIX: Added imports for localization to get language-specific content
-import { useLocalization } from '../context/LocalizationContext';
-import { getContent } from '../locales/content';
 
 interface StrategicCheckupScreenProps {
   onSelectExercise: (exercise: Exercise, isCheckup: boolean, checkupStep: number, totalCheckupSteps: number) => void;
@@ -27,10 +23,6 @@ export const StrategicCheckupScreen: React.FC<StrategicCheckupScreenProps> = ({ 
   const [isLoading, setIsLoading] = useState(false);
   const { addToast } = useToast();
   const stepContainerRef = useRef<HTMLDivElement>(null);
-  // FIX: Get language from context to fetch correct exercises and pass to services
-  const { language } = useLocalization();
-  const { STRATEGIC_CHECKUP_EXERCISES } = getContent(language);
-
 
   useEffect(() => {
     // From the second step onwards, scroll to the top of the step container
@@ -47,8 +39,7 @@ export const StrategicCheckupScreen: React.FC<StrategicCheckupScreenProps> = ({ 
         // Step 1: Run all analyses in parallel
         const analysisPromises = finalResponses.map((response, index) => {
           const exercise = STRATEGIC_CHECKUP_EXERCISES[index];
-          // FIX: Pass the 'language' argument to 'analyzeResponse'
-          return analyzeResponse(response, exercise.scenario, exercise.task, entitlements, false, language);
+          return analyzeResponse(response, exercise.scenario, exercise.task, entitlements, false);
         });
         
         const allAnalysisResults = await Promise.all(analysisPromises);
@@ -59,8 +50,7 @@ export const StrategicCheckupScreen: React.FC<StrategicCheckupScreenProps> = ({ 
         }));
 
         // Step 2: Generate profile with all results
-        // FIX: Pass the 'language' argument to 'generateCommunicatorProfile'
-        const profile = await generateCommunicatorProfile(formattedResults, language);
+        const profile = await generateCommunicatorProfile(formattedResults);
         
         // Step 3: Complete the checkup
         onCompleteCheckup(profile);

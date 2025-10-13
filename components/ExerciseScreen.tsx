@@ -7,12 +7,11 @@ import { COLORS, EXERCISE_TYPE_ICONS } from '../constants';
 import { BackIcon, MicIcon, SendIcon, SpeakerIcon, SpeakerOffIcon } from './Icons';
 import { soundService } from '../services/soundService';
 import { useToast } from '../hooks/useToast';
-import { useLocalization } from '../context/LocalizationContext';
 
 interface ExerciseScreenProps {
   exercise: Exercise;
-  onCompleteWritten: (result: AnalysisResult, userResponse: string) => void;
-  onCompleteVerbal: (result: VoiceAnalysisResult, userResponse: string) => void;
+  onCompleteWritten: (result: AnalysisResult) => void;
+  onCompleteVerbal: (result: VoiceAnalysisResult) => void;
   onSkip: (exerciseId: string) => void;
   onBack: () => void;
   onApiKeyError: (error: string) => void;
@@ -37,7 +36,6 @@ export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({
   const [userResponse, setUserResponse] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { addToast } = useToast();
-  const { language, t } = useLocalization();
   const { isListening, transcript, startListening, stopListening, isSupported, speak, isSpeaking, stopSpeaking } = useSpeech();
   const textBeforeListening = useRef('');
 
@@ -73,7 +71,7 @@ export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({
     if (isSpeaking) {
         stopSpeaking();
     } else {
-        speak(`${exercise.title}. ${t('scenarioLabel')}: ${exercise.scenario}. ${t('taskLabel')}: ${exercise.task}`);
+        speak(`${exercise.title}. Scenario: ${exercise.scenario}. Compito: ${exercise.task}`);
     }
   };
   
@@ -113,24 +111,24 @@ export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({
   const handleSubmit = async () => {
     soundService.playClick();
     if (!userResponse.trim()) {
-      addToast(t('responseEmptyError'), 'error');
+      addToast("La risposta non può essere vuota.", 'error');
       return;
     }
     setIsLoading(true);
     try {
       if(isVerbalExercise) {
-        const result = await analyzeParaverbalResponse(userResponse, exercise.scenario, exercise.task, language);
-        onCompleteVerbal(result, userResponse);
+        const result = await analyzeParaverbalResponse(userResponse, exercise.scenario, exercise.task);
+        onCompleteVerbal(result);
       } else {
-        const result = await analyzeResponse(userResponse, exercise.scenario, exercise.task, entitlements, false, language, exercise.customObjective);
-        onCompleteWritten(result, userResponse);
+        const result = await analyzeResponse(userResponse, exercise.scenario, exercise.task, entitlements, false, exercise.customObjective);
+        onCompleteWritten(result);
       }
     } catch (e: any) {
       console.error(e);
       if (e.message.includes('API_KEY')) {
         onApiKeyError(e.message);
       } else {
-        addToast(e.message || t('unknownError'), 'error');
+        addToast(e.message || "Si è verificato un errore sconosciuto.", 'error');
       }
     } finally {
       setIsLoading(false);
@@ -140,27 +138,27 @@ export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({
   const renderInputArea = () => {
     if (isVerbalExercise) {
         if (!isSupported) {
-            return <p style={styles.errorText}>{t('speechNotSupported')}</p>
+            return <p style={styles.errorText}>Il riconoscimento vocale non è supportato da questo browser.</p>
         }
         return (
             <div style={styles.verbalContainer}>
-                <p style={styles.transcript}>{userResponse || (isListening ? t('listening') : t('transcriptPlaceholder'))}</p>
+                <p style={styles.transcript}>{userResponse || (isListening ? 'Sto ascoltando...' : 'La tua trascrizione apparirà qui.')}</p>
                 <button
                     onClick={isListening ? handleStopListening : handleStartListening}
                     style={{ ...styles.verbalRecordButton, animation: !isListening && !isLoading ? 'pulse 2s infinite' : 'none' }}
                     disabled={isLoading}
                 >
                     <MicIcon color="white" width={28} height={28} />
-                    <span style={styles.verbalRecordButtonText}>{isListening ? t('recordingInProgress') : t('clickToDictate')}</span>
+                    <span style={styles.verbalRecordButtonText}>{isListening ? 'Registrazione in Corso...' : 'Clicca per Dettare'}</span>
                 </button>
                 <div style={styles.actionsContainer}>
                     {userResponse && !isListening && (
                         <button onClick={handleSubmit} style={styles.mainButton} disabled={isLoading}>
-                            {t('submitForAnalysis')}
+                            Invia per Analisi
                         </button>
                     )}
                      <button onClick={handleSkipClick} style={styles.skipButton} disabled={isLoading}>
-                        {t('skipExercise')}
+                        Salta Esercizio
                     </button>
                 </div>
             </div>
@@ -174,7 +172,7 @@ export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({
           style={styles.textarea}
           value={userResponse}
           onChange={(e) => setUserResponse(e.target.value)}
-          placeholder={t('responsePlaceholder')}
+          placeholder="Scrivi qui la tua risposta migliore..."
           rows={6}
           disabled={isLoading}
         />
@@ -186,14 +184,14 @@ export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({
                     disabled={isLoading}
                 >
                     <MicIcon />
-                    {isListening ? t('stopDictation') : t('replyWithVoice')}
+                    {isListening ? 'Ferma Dettatura' : 'Rispondi a Voce'}
                 </button>
             )}
             <button onClick={handleSubmit} style={{...styles.mainButton, ...(!userResponse.trim() || isLoading ? styles.mainButtonDisabled : {})}} disabled={isLoading || !userResponse.trim()}>
-              {t('submitResponse')} <SendIcon color="white" />
+              Invia Risposta <SendIcon color="white" />
             </button>
             <button onClick={handleSkipClick} style={styles.skipButton} disabled={isLoading}>
-                {t('skipExercise')}
+                Salta Esercizio
             </button>
         </div>
       </div>
@@ -207,27 +205,27 @@ export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({
   return (
     <div style={styles.container}>
        <button onClick={handleBackClick} style={styles.backButton}>
-            <BackIcon /> {t('backToModule')}
+            <BackIcon /> Torna al Modulo
         </button>
       <div style={styles.scenarioCard}>
         <div style={styles.scenarioHeader}>
             <h1 style={styles.title}>{exercise.title}</h1>
-            <button onClick={handleScenarioPlayback} style={styles.speakerButton} aria-label={isSpeaking ? t('stopReading') : t('readScenario')}>
+            <button onClick={handleScenarioPlayback} style={styles.speakerButton} aria-label={isSpeaking ? "Ferma lettura" : "Leggi scenario"}>
                 {isSpeaking ? <SpeakerOffIcon color={COLORS.secondary}/> : <SpeakerIcon color={COLORS.secondary}/>}
             </button>
         </div>
         {isCheckup && (
           <div style={styles.checkupHeader}>
-              {t('checkupStep', { current: checkupStep, total: totalCheckupSteps })}
+              Passo {checkupStep} di {totalCheckupSteps}
           </div>
          )}
-        <p style={styles.scenarioText}><strong>{t('scenarioLabel')}:</strong> {exercise.scenario}</p>
+        <p style={styles.scenarioText}><strong>Scenario:</strong> {exercise.scenario}</p>
         <div style={styles.taskContainer}>
-          <p style={styles.taskText}><strong>{t('taskLabel')}:</strong> {exercise.task}</p>
+          <p style={styles.taskText}><strong>Compito:</strong> {exercise.task}</p>
         </div>
         {exercise.customObjective && (
              <div style={styles.customObjectiveContainer}>
-                <p style={styles.taskText}><strong>{t('yourObjectiveLabel')}:</strong> {exercise.customObjective}</p>
+                <p style={styles.taskText}><strong>Tuo Obiettivo:</strong> {exercise.customObjective}</p>
             </div>
         )}
       </div>
@@ -235,7 +233,7 @@ export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({
       <div style={styles.responseSection}>
         <h2 style={styles.responseTitle}>
             <ExerciseIcon />
-            {t('responseTitle')}
+            Risposta
         </h2>
         {renderInputArea()}
       </div>

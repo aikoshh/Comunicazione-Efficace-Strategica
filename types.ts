@@ -11,8 +11,6 @@ export enum ExerciseType {
   VERBAL = 'VERBAL',
 }
 
-export type Language = 'it' | 'en';
-
 export interface User {
   firstName: string;
   lastName: string;
@@ -51,7 +49,7 @@ export interface ImprovementArea {
 
 // --- PRO Feature Types ---
 export interface DetailedRubricScore {
-    criterion: 'Chiarezza' | 'Tono ed Empatia' | 'Orientamento alla Soluzione' | 'Assertività' | 'Struttura' | 'Clarity' | 'Tone and Empathy' | 'Solution-Orientation' | 'Assertiveness' | 'Structure';
+    criterion: 'Chiarezza' | 'Tono ed Empatia' | 'Orientamento alla Soluzione' | 'Assertività' | 'Struttura';
     score: number; // Score from 1 to 10
     justification: string;
 }
@@ -117,12 +115,6 @@ export interface ScoreExplanation {
 export type CompetenceKey = "ascolto" | "riformulazione" | "assertivita" | "gestione_conflitto";
 export type CompetenceScores = Record<CompetenceKey, number>;
 
-export interface AnalysisHistoryEntry {
-  exerciseId: string;
-  response: string;
-  result: AnalysisResult | VoiceAnalysisResult;
-  timestamp: number;
-}
 
 // New type for user progress tracking
 export interface UserProgress {
@@ -138,7 +130,11 @@ export interface UserProgress {
     profileTitle: string;
     profileDescription: string;
   };
-  analysisHistory?: AnalysisHistoryEntry[];
+  analysisHistory?: {
+    exerciseId: string;
+    areasForImprovement: ImprovementArea[];
+    score: number;
+  }[];
   // FIX: Corrected typo from Entitleaments to Entitlements.
   entitlements?: Entitlements;
   competenceScores?: CompetenceScores;

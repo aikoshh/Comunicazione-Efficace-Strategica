@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import type { User, Breadcrumb } from '../types';
 import { COLORS } from '../constants';
-import { ChevronRightIcon, HomeIcon } from './Icons';
-import { useLocalization } from '../context/LocalizationContext';
+import { Logo } from './Logo';
+import { HomeIcon, ChevronRightIcon } from './Icons';
+import { hasProAccess } from '../services/monetizationService';
 
 
 interface HeaderProps {
@@ -23,7 +24,7 @@ const hoverStyle = `
   .logout-button:hover {
     background-color: ${COLORS.divider};
   }
-  .pro-button:hover, .lang-button:hover {
+  .pro-button:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 10px rgba(88, 166, 166, 0.3);
   }
@@ -31,14 +32,9 @@ const hoverStyle = `
 
 export const Header: React.FC<HeaderProps> = ({ currentUser, breadcrumbs, onLogout, onGoToPaywall, isPro }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { language, setLanguage, t } = useLocalization();
-
+  
   const getInitials = (user: User) => {
     return `${user.firstName[0]}${user.lastName[0]}`.toUpperCase();
-  };
-
-  const toggleLanguage = () => {
-    setLanguage(language === 'it' ? 'en' : 'it');
   };
 
   return (
@@ -68,12 +64,9 @@ export const Header: React.FC<HeaderProps> = ({ currentUser, breadcrumbs, onLogo
           </div>
 
           <div style={styles.userSection}>
-             <button style={styles.langButton} className="lang-button" onClick={toggleLanguage}>
-                {language.toUpperCase()}
-            </button>
             {!isPro && (
                 <button style={styles.proButton} className="pro-button" onClick={onGoToPaywall}>
-                    {t('unlockPro')}
+                    Sblocca PRO
                 </button>
             )}
             {currentUser && (
@@ -93,7 +86,7 @@ export const Header: React.FC<HeaderProps> = ({ currentUser, breadcrumbs, onLogo
                 {isMenuOpen && (
                   <div style={styles.dropdownMenu}>
                     <button onClick={onLogout} style={styles.logoutButton} className="logout-button">
-                      {t('logout')}
+                      Logout
                     </button>
                   </div>
                 )}
@@ -157,17 +150,6 @@ const styles: { [key: string]: React.CSSProperties } = {
     display: 'flex',
     alignItems: 'center',
     gap: '16px'
-  },
-  langButton: {
-    backgroundColor: 'transparent',
-    border: `1px solid ${COLORS.secondary}`,
-    color: COLORS.secondary,
-    borderRadius: '8px',
-    padding: '8px 12px',
-    fontSize: '14px',
-    fontWeight: 'bold',
-    cursor: 'pointer',
-    transition: 'all 0.2s ease',
   },
   proButton: {
     backgroundColor: COLORS.secondary,

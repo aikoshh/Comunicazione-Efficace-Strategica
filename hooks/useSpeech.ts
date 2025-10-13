@@ -1,12 +1,10 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { useLocalization } from '../context/LocalizationContext';
 
 // Polyfill for browsers that support it under a webkit prefix
 // Fix: Cast window to `any` to access non-standard SpeechRecognition API which is not in the default Window type.
 const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
 export function useSpeech() {
-  const { language } = useLocalization();
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [isSupported, setIsSupported] = useState(true);
@@ -24,56 +22,67 @@ export function useSpeech() {
     const loadVoices = () => {
         if (!window.speechSynthesis) return;
         const voices = window.speechSynthesis.getVoices();
-        if (voices.length === 0) return;
+        if (voices.length === 0) {
+            return; // Voices might not be loaded yet.
+        }
 
-        const langCode = language === 'it' ? 'it-IT' : 'en-US';
-        const targetVoices = voices.filter(v => v.lang.startsWith(language));
-        if (targetVoices.length === 0) {
-            console.warn(`No voices found for language: ${language}`);
+        const italianVoices = voices.filter(v => v.lang === 'it-IT');
+        if (italianVoices.length === 0) {
+            console.warn("No Italian voices found.");
             return;
         }
 
-        let bestVoice: SpeechSynthesisVoice | undefined;
-
-        if (language === 'it') {
-            const preferredVoices = ["Alice", "Silvia", "Luca", "Google italiano", "Federica", "Paola"];
-            for (const preferredName of preferredVoices) {
-                bestVoice = targetVoices.find(v => v.name === preferredName);
-                if (bestVoice) break;
-            }
-        } else { // English voices
-            const preferredVoices = ["Samantha", "Google US English", "Alex", "Victoria"];
-             for (const preferredName of preferredVoices) {
-                bestVoice = targetVoices.find(v => v.name === preferredName);
-                if (bestVoice) break;
-            }
-             if (!bestVoice) {
-                bestVoice = targetVoices.find(v => v.name.toLowerCase().includes('female'));
-            }
-        }
+        // 1. Prioritize known high-quality voices
+        const preferredVoices = [
+            "Alice", // High-quality on Apple
+            "Silvia", // High-quality on Apple
+            "Luca", // High-quality male on Apple
+            "Google italiano", // High-quality on Android
+            "Federica",
+            "Paola"
+        ];
         
+        let bestVoice: SpeechSynthesisVoice | undefined;
+        
+        for (const preferredName of preferredVoices) {
+            bestVoice = italianVoices.find(v => v.name === preferredName);
+            if (bestVoice) break;
+        }
+
+        // 2. If no premium voice is found, search for common female names or keywords
         if (!bestVoice) {
-            bestVoice = targetVoices[0];
+            const femaleKeywords = ['female', 'donna', 'alice', 'federica', 'paola', 'silvia', 'elisa'];
+            bestVoice = italianVoices.find(v => 
+                femaleKeywords.some(keyword => v.name.toLowerCase().includes(keyword))
+            );
+        }
+
+        // 3. Fallback to the first available Italian voice if no specific female voice is found
+        if (!bestVoice) {
+            bestVoice = italianVoices[0];
+            console.warn("Could not find a preferred Italian female voice, falling back to the default available one.");
         }
 
         setSelectedVoice(bestVoice || null);
     };
 
+    // Voices can be loaded asynchronously. The 'onvoiceschanged' event is crucial for this.
     if (window.speechSynthesis) {
         window.speechSynthesis.onvoiceschanged = loadVoices;
-        loadVoices();
+        loadVoices(); // Make an initial attempt to load voices
     }
 
+    // Cleanup function
     return () => {
       if (recognitionRef.current) {
         recognitionRef.current.stop();
       }
       if (window.speechSynthesis) {
         window.speechSynthesis.onvoiceschanged = null;
-        window.speechSynthesis.cancel();
+        window.speechSynthesis.cancel(); // Stop any ongoing speech on unmount
       }
     };
-  }, [language]);
+  }, []);
 
   const stopSpeaking = useCallback(() => {
     if (window.speechSynthesis) {
@@ -85,36 +94,44 @@ export function useSpeech() {
   const speak = useCallback((text: string, onEnd?: () => void) => {
     if (!window.speechSynthesis) {
         console.warn("Speech Synthesis API is not supported in this browser.");
-        if (onEnd) onEnd();
+        if (onEnd) onEnd(); // Still call onEnd if TTS is not supported
         return;
     }
-    stopSpeaking();
+    stopSpeaking(); // Cancel any previous speech and reset state
     
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = language === 'it' ? 'it-IT' : 'en-US';
-    utterance.rate = 1; 
-    utterance.pitch = 1.1; 
+    utterance.lang = 'it-IT';
+    utterance.rate = 1; // Natural speed
+    utterance.pitch = 1.1; // Slightly higher pitch for clarity
     
     if (selectedVoice) {
         utterance.voice = selectedVoice;
     }
     
-    utterance.onstart = () => setIsSpeaking(true);
+    utterance.onstart = () => {
+        setIsSpeaking(true);
+    };
+    
     utterance.onend = () => {
         setIsSpeaking(false);
         if (onEnd) onEnd();
     };
-    utterance.onerror = () => setIsSpeaking(false);
+
+    utterance.onerror = () => {
+        setIsSpeaking(false); // Also reset on error
+    };
 
     window.speechSynthesis.speak(utterance);
-  }, [selectedVoice, stopSpeaking, language]);
+  }, [selectedVoice, stopSpeaking]);
 
   const startListening = useCallback(() => {
     if (!isSupported || isListening) return;
+
+    // Immediately stop any ongoing speech synthesis when the user wants to start speaking.
     stopSpeaking();
 
     const recognition = new SpeechRecognition();
-    recognition.lang = language === 'it' ? 'it-IT' : 'en-US';
+    recognition.lang = 'it-IT';
     recognition.interimResults = true;
     recognition.continuous = true;
 
@@ -138,9 +155,12 @@ export function useSpeech() {
       setIsListening(false);
     };
 
-    recognition.onend = () => setIsListening(false);
+    recognition.onend = () => {
+      setIsListening(false);
+    };
+
     recognition.start();
-  }, [isSupported, isListening, stopSpeaking, language]);
+  }, [isSupported, isListening, stopSpeaking]);
 
   const stopListening = useCallback(() => {
     if (recognitionRef.current && isListening) {
