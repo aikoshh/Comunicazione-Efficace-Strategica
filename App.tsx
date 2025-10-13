@@ -12,7 +12,7 @@ import { StrategicCheckupScreen } from './components/StrategicCheckupScreen';
 import { CommunicatorProfileScreen } from './components/CommunicatorProfileScreen';
 import { Header } from './components/Header';
 import { PaywallScreen } from './components/PaywallScreen';
-import type { Module, Exercise, AnalysisResult, VoiceAnalysisResult, DifficultyLevel, User, UserProgress, CommunicatorProfile, Breadcrumb, Entitlements, Product, AnalysisHistoryRecord, SaveState } from './types';
+import type { Module, Exercise, AnalysisResult, VoiceAnalysisResult, DifficultyLevel, User, UserProgress, CommunicatorProfile, Breadcrumb, Entitlements, Product, AnalysisHistoryRecord } from './types';
 import { MODULES, COLORS } from './constants';
 import { initialUserDatabase } from './database';
 import { soundService } from './services/soundService';
@@ -105,7 +105,6 @@ const App: React.FC = () => {
 
   const [appState, setAppState] = useState<AppState>({ screen: 'home' });
   const [returnToState, setReturnToState] = useState<AppState | null>(null);
-  const [saveState, setSaveState] = useState<SaveState>('idle');
 
   useEffect(() => {
       // Session Persistence: Restore session on initial load
@@ -247,23 +246,6 @@ const App: React.FC = () => {
     setAppState({ screen: 'home' });
   };
   
-  const handleManualSave = () => {
-      if (!currentUser || saveState !== 'idle') return;
-      setSaveState('saving');
-      soundService.playClick();
-      
-      // Simulate a short save operation for better UX, even though localStorage is sync
-      setTimeout(() => {
-        saveToStorage(PROGRESS_STORAGE_KEY, userProgress);
-        setSaveState('saved');
-        addToast('Progresso salvato con successo!', 'success');
-        
-        setTimeout(() => {
-          setSaveState('idle');
-        }, 2000); // Revert to idle state after 2 seconds
-      }, 500);
-  };
-
   const handleStartCheckup = () => {
       soundService.playClick();
       setAppState({ screen: 'strategic_checkup' });
@@ -619,7 +601,7 @@ const App: React.FC = () => {
 
   return (
     <div>
-        {showHeader && <Header currentUser={currentUser} breadcrumbs={generateBreadcrumbs()} onLogout={handleLogout} onGoToPaywall={navigateToPaywall} isPro={isPro} onManualSave={handleManualSave} saveState={saveState} />}
+        {showHeader && <Header currentUser={currentUser} breadcrumbs={generateBreadcrumbs()} onLogout={handleLogout} onGoToPaywall={navigateToPaywall} isPro={isPro} />}
         <main style={showHeader ? styles.mainContent : {}}>
             <div key={screenKey} style={{ animation: 'fadeInUp 0.5s ease-out' }}>
                 {screenContent}

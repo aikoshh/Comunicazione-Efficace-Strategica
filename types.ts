@@ -201,5 +201,3 @@ export interface ChecklistItem {
     id: string;
     text: string;
 }
-
-export type SaveState = 'idle' | 'saving' | 'saved';
