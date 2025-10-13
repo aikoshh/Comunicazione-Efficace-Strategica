@@ -1,63 +1,83 @@
 import { GoogleGenAI, Type } from "@google/genai";
-import type { AnalysisResult, ImprovementArea, VoiceAnalysisResult, VoiceScore, CommunicatorProfile } from '../types';
+import type { AnalysisResult, ImprovementArea, VoiceAnalysisResult, VoiceScore, CommunicatorProfile, Entitlements, DetailedRubricScore, Language } from '../types';
+import { hasProAccess } from './monetizationService';
+import { translations } from '../locales/translations';
 
-// ATTENZIONE: Inserire le chiavi API direttamente nel codice client-side è un grave rischio per la sicurezza.
-// Questa chiave è visibile a chiunque ispezioni il codice sorgente dell'applicazione.
-const API_KEY = "AIzaSyCPKmoJbTg3jhxo9oJIcY7DKPYXKj1kA_c";
+const getAnalysisSchema = (lang: Language) => {
+    const t = (key: keyof typeof translations.it) => translations[lang][key] || translations.it[key];
+    const proCriteria = t('proAnalysisCriteria');
 
-const getAI = () => {
-    if (!API_KEY) {
-        throw new Error("API_KEY non configurata nel codice sorgente.");
-    }
-    return new GoogleGenAI({ apiKey: API_KEY });
-};
-
-const analysisSchema = {
-    type: Type.OBJECT,
-    properties: {
-        score: {
-            type: Type.NUMBER,
-            description: "Un punteggio da 0 a 100 che rappresenta l'efficacia complessiva della risposta dell'utente, basato sui criteri di valutazione forniti."
-        },
-        strengths: {
-            type: Type.ARRAY,
-            items: { type: Type.STRING },
-            description: "Un elenco di 2-3 punti che evidenziano ciò che l'utente ha fatto bene, in relazione ai criteri di valutazione."
-        },
-        areasForImprovement: {
-            type: Type.ARRAY,
-            items: {
+    return {
+        type: Type.OBJECT,
+        properties: {
+            score: {
+                type: Type.NUMBER,
+                description: t('geminiSchemaScoreDesc') as string
+            },
+            strengths: {
+                type: Type.ARRAY,
+                items: { type: Type.STRING },
+                description: t('geminiSchemaStrengthsDesc') as string
+            },
+            areasForImprovement: {
+                type: Type.ARRAY,
+                items: {
+                    type: Type.OBJECT,
+                    properties: {
+                        suggestion: {
+                            type: Type.STRING,
+                            description: t('geminiSchemaSuggestionDesc') as string
+                        },
+                        example: {
+                            type: Type.STRING,
+                            description: t('geminiSchemaExampleDesc') as string
+                        }
+                    },
+                    required: ["suggestion", "example"]
+                },
+                description: t('geminiSchemaAreasForImprovementDesc') as string
+            },
+            suggestedResponse: {
                 type: Type.OBJECT,
                 properties: {
-                    suggestion: {
+                    short: {
                         type: Type.STRING,
-                        description: "Il consiglio specifico su cosa l'utente potrebbe migliorare, collegato a uno dei criteri di valutazione."
+                        description: t('geminiSchemaShortResponseDesc') as string
                     },
-                    example: {
+                    long: {
                         type: Type.STRING,
-                        description: "Una frase di esempio virgolettata che mostra come applicare il suggerimento. Es: \"Invece di dire 'hai sbagliato', potresti dire 'ho notato che questo approccio ha portato a...'\""
+                        description: t('geminiSchemaLongResponseDesc') as string
                     }
                 },
-                required: ["suggestion", "example"]
+                required: ["short", "long"]
             },
-            description: "Un elenco di 2-3 punti su cosa l'utente potrebbe migliorare, ognuno con un suggerimento e un esempio pratico virgolettato."
-        },
-        suggestedResponse: {
-            type: Type.OBJECT,
-            properties: {
-                short: {
-                    type: Type.STRING,
-                    description: "Una versione concisa e riscritta della risposta dell'utente (1-2 frasi). Le parole chiave importanti sono evidenziate con **doppi asterischi**."
+            detailedRubric: {
+                type: Type.ARRAY,
+                nullable: true,
+                items: {
+                    type: Type.OBJECT,
+                    properties: {
+                        criterion: { type: Type.STRING, enum: proCriteria as string[] },
+                        score: { type: Type.NUMBER },
+                        justification: { type: Type.STRING }
+                    },
+                    required: ["criterion", "score", "justification"]
                 },
-                long: {
-                    type: Type.STRING,
-                    description: "Eine detailliertere und vollständigere Version der Benutzerantwort, die die Prinzipien effektiver Kommunikation verkörpert. Wichtige Schlüsselwörter sind mit **doppelten Sternchen** hervorgehoben."
-                }
+                description: t('geminiSchemaDetailedRubricDesc') as string
             },
-            required: ["short", "long"]
-        }
-    },
-    required: ["score", "strengths", "areasForImprovement", "suggestedResponse"]
+            utilityScore: {
+                type: Type.NUMBER,
+                nullable: true,
+                description: t('geminiSchemaUtilityScoreDesc') as string
+            },
+            clarityScore: {
+                type: Type.NUMBER,
+                nullable: true,
+                description: t('geminiSchemaClarityScoreDesc') as string
+            }
+        },
+        required: ["score", "strengths", "areasForImprovement", "suggestedResponse"]
+    };
 };
 
 
@@ -65,59 +85,59 @@ export const analyzeResponse = async (
   userResponse: string,
   scenario: string,
   task: string,
+  entitlements: Entitlements | null,
   isVerbal: boolean,
+  lang: Language,
   customObjective?: string,
 ): Promise<AnalysisResult> => {
   try {
-    const ai = getAI();
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const t = (key: keyof typeof translations.it) => translations[lang][key] || translations.it[key];
 
-    const verbalContext = isVerbal 
-        ? "La risposta dell'utente è stata fornita verbalmente. Considera fattori come la concisione e la chiarezza adatti alla comunicazione parlata. Ignora eventuali errori di trascrizione o di battitura."
-        : "La risposta dell'utente è stata scritta. Analizzala per chiarezza, tono e struttura come faresti con un testo scritto.";
+    const isPro = hasProAccess(entitlements);
+    const isQuestionTask = task.toLowerCase().includes(t('taskVerbQuestion') as string);
 
-    const systemInstruction = `
-      Sei un coach di Comunicazione Efficace Strategica (CES) di livello mondiale. Il tuo ruolo è analizzare le risposte degli utenti a scenari di comunicazione complessi e fornire un feedback dettagliato, costruttivo e personalizzato. Rispondi SEMPRE e solo in italiano.
+    let proInstructions = '';
+    if (isPro) {
+        proInstructions += t('geminiProInstructionRubric');
+        if (isQuestionTask) {
+            proInstructions += t('geminiProInstructionMetrics');
+        }
+    }
 
-      Valuta ogni risposta in base ai seguenti criteri chiave:
-      1.  **Chiarezza e Concisinza**: La risposta è diretta, facile da capire e priva di ambiguità?
-      2.  **Tono ed Empatia**: Il tono è appropriato per lo scenario? Dimostra comprensione e rispetto per l'altra persona?
-      3.  **Orientamento alla Soluzione**: La risposta si concentra sulla risoluzione del problema o sul raggiungimento di un obiettivo costruttivo, invece che sulla colpa?
-      4.  **Assertività**: L'utente esprime i propri bisogni o punti di vista in modo chiaro e rispettoso, senza essere passivo o aggressivo?
-      5.  **Struttura**: La comunicazione segue una logica chiara (es. descrivere i fatti, esprimere l'impatto, proporre una soluzione)?
-      
-      Basa il tuo punteggio (score) su una valutazione olistica di questi criteri in relazione allo specifico scenario e compito. Il punteggio deve riflettere fedelmente la qualità della risposta dell'utente. Una risposta molto buona dovrebbe avere un punteggio alto, una mediocre un punteggio medio, e una cattiva un punteggio basso. Non dare sempre lo stesso punteggio.
-      
-      Le tue analisi devono essere incoraggianti e mirate ad aiutare l'utente a migliorare concretamente. Fornisci la tua analisi esclusivamente nel formato JSON richiesto.
-    `;
+    const verbalContext = isVerbal ? t('geminiVerbalContext') : t('geminiWrittenContext');
+    const systemInstruction = t('geminiSystemInstruction');
     
     let objectivePrompt = '';
     if (customObjective && customObjective.trim() !== '') {
-        objectivePrompt = `\n**Obiettivo Personale dell'Utente:** Oltre al compito principale, l'utente voleva specificamente raggiungere questo obiettivo: "${customObjective}". Valuta la sua risposta anche in base a questo, includendo un commento su questo punto nei tuoi feedback (punti di forza o aree di miglioramento).`
+        objectivePrompt = (t('geminiObjectivePrompt') as string).replace('{customObjective}', customObjective);
     }
 
     const prompt = `
-      **Scenario:** ${scenario}
+      **${t('scenarioLabel')}:** ${scenario}
       
-      **Compito dell'utente:** ${task}
+      **${t('taskLabel')}:** ${task}
       ${objectivePrompt}
 
-      **Risposta dell'utente:** "${userResponse}"
+      **${t('userResponseLabel')}:** "${userResponse}"
 
-      **Contesto di analisi:** ${verbalContext}
+      **${t('analysisContextLabel')}:** ${verbalContext}
+      
+      ${proInstructions}
 
-      Analizza la risposta dell'utente secondo le direttive fornite nella tua istruzione di sistema e genera il feedback strutturato in formato JSON.
+      ${t('geminiFinalPrompt')}
     `;
     
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
       contents: prompt,
       config: {
-        systemInstruction: systemInstruction,
+        systemInstruction: systemInstruction as string,
         temperature: 0.8,
         topP: 0.95,
         topK: 64,
         responseMimeType: "application/json",
-        responseSchema: analysisSchema,
+        responseSchema: getAnalysisSchema(lang),
       },
     });
     
@@ -143,126 +163,99 @@ export const analyzeResponse = async (
         typeof result.suggestedResponse?.short !== 'string' || 
         typeof result.suggestedResponse?.long !== 'string'
     ) {
-        throw new Error("Formato di analisi non valido ricevuto dall'API.");
+        throw new Error(t('errorInvalidAnalysisFormat') as string);
     }
 
     return result;
 
   } catch (error: any) {
-    console.error("Errore durante l'analisi della risposta con Gemini:", error);
+    console.error("Error analyzing response with Gemini:", error);
+    const t = (key: keyof typeof translations.it) => translations[lang][key] || translations.it[key];
     if (error.message.includes('API key') || error.message.includes('API_KEY')) {
-         throw new Error("La chiave API fornita nel codice non è valida o è scaduta. Controlla il file geminiService.ts.");
+         throw new Error(t('errorInvalidApiKey') as string);
     }
-    throw new Error("Impossibile ottenere l'analisi dal servizio. Riprova più tardi.");
+    throw new Error(t('errorAnalysisService') as string);
   }
 };
 
 
-const paraverbalAnalysisSchema = {
-    type: Type.OBJECT,
-    properties: {
-        scores: {
-            type: Type.ARRAY,
-            items: {
+const getParaverbalAnalysisSchema = (lang: Language) => {
+    const t = (key: keyof typeof translations.it) => translations[lang][key] || translations.it[key];
+    return {
+        type: Type.OBJECT,
+        properties: {
+            scores: {
+                type: Type.ARRAY,
+                items: {
+                    type: Type.OBJECT,
+                    properties: {
+                        criterion_id: { type: Type.STRING },
+                        score: { type: Type.NUMBER },
+                        why: { type: Type.STRING }
+                    },
+                    required: ["criterion_id", "score", "why"]
+                },
+                description: t('geminiParaverbalSchemaScoresDesc') as string
+            },
+            strengths: {
+                type: Type.ARRAY,
+                items: { type: Type.STRING },
+                description: t('geminiParaverbalSchemaStrengthsDesc') as string
+            },
+            improvements: {
+                type: Type.ARRAY,
+                items: { type: Type.STRING },
+                description: t('geminiParaverbalSchemaImprovementsDesc') as string
+            },
+            actions: {
+                type: Type.ARRAY,
+                items: { type: Type.STRING },
+                description: t('geminiParaverbalSchemaActionsDesc') as string
+            },
+            micro_drill_60s: {
+                type: Type.STRING,
+                description: t('geminiParaverbalSchemaMicroDrillDesc') as string
+            },
+            suggested_delivery: {
                 type: Type.OBJECT,
                 properties: {
-                    criterion_id: { type: Type.STRING },
-                    score: { type: Type.NUMBER },
-                    why: { type: Type.STRING }
+                    instructions: { type: Type.STRING },
+                    annotated_text: { type: Type.STRING, description: t('geminiParaverbalSchemaAnnotatedTextDesc') as string },
+                    ideal_script: { type: Type.STRING, description: t('geminiParaverbalSchemaIdealScriptDesc') as string }
                 },
-                required: ["criterion_id", "score", "why"]
-            },
-            description: "Un elenco di punteggi (da 1 a 10) per ciascuno dei 10 criteri paraverbali, con una breve motivazione per ogni punteggio."
+                required: ["instructions", "annotated_text", "ideal_script"]
+            }
         },
-        strengths: {
-            type: Type.ARRAY,
-            items: { type: Type.STRING },
-            description: "Un elenco di esattamente 3 punti di forza paraverbali emersi dalla risposta."
-        },
-        improvements: {
-            type: Type.ARRAY,
-            items: { type: Type.STRING },
-            description: "Un elenco di esattamente 3 aree di miglioramento paraverbali."
-        },
-        actions: {
-            type: Type.ARRAY,
-            items: { type: Type.STRING },
-            description: "Un elenco di esattamente 3 azioni pratiche e concrete che l'utente può intraprendere per migliorare."
-        },
-        micro_drill_60s: {
-            type: Type.STRING,
-            description: "Un micro-esercizio specifico e immediato, della durata massima di 60 secondi, per lavorare su uno dei punti deboli."
-        },
-        suggested_delivery: {
-            type: Type.OBJECT,
-            properties: {
-                instructions: { type: Type.STRING },
-                annotated_text: { type: Type.STRING, description: "Il testo della risposta dell'utente, arricchito con simboli per indicare pause (☐) ed enfasi (△)." },
-                ideal_script: { type: Type.STRING, description: "La versione ideale della risposta dell'utente, riscritta per essere pronunciata in modo ottimale. Questo testo verrà usato per la sintesi vocale." }
-            },
-            required: ["instructions", "annotated_text", "ideal_script"]
-        }
-    },
-    required: ["scores", "strengths", "improvements", "actions", "micro_drill_60s", "suggested_delivery"]
+        required: ["scores", "strengths", "improvements", "actions", "micro_drill_60s", "suggested_delivery"]
+    }
 };
 
 export const analyzeParaverbalResponse = async (
   transcript: string,
   scenario: string,
-  task: string
+  task: string,
+  lang: Language
 ): Promise<VoiceAnalysisResult> => {
     try {
-        const ai = getAI();
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        const t = (key: keyof typeof translations.it) => translations[lang][key] || translations.it[key];
 
-        const systemInstruction = `
-            Sei **CES Coach Engine** esteso con il modulo **Voce Strategica (Paraverbale)**. Valuta e allena il paraverbale per rendere più efficace il messaggio secondo i principi della Comunicazione Efficace Strategica®.
-            
-            Considera i seguenti **fattori chiave paraverbali**:
-            - **Respirazione & ritmo (pacing)**: regolarità, pause significative, assenza di affanno.
-            - **Velocità (parole/minuto)**: ritmo naturale; evitare eccesso/deficit di velocità.
-            - **Volume**: udibile e stabile; variazioni intenzionali per enfasi.
-            - **Tono/Timbro & Calore**: fermo, empatico, professionale; evitare piattezza/metallicità.
-            - **Intonazione & Melodia**: variazione per mantenere attenzione; evitare monotonia/cantilena.
-            - **Articolazione & Dizione**: nitidezza di consonanti, sillabe non elise.
-            - **Enfasi strategica**: parole-chiave evidenziate con pause/intonazione.
-            - **Pause strategiche**: prima/dopo concetti chiave; evitare silenzi imbarazzanti.
-            - **Disfluenze & filler**: gestione di “ehm”, autocorrezioni, sovrapposizioni.
-            - **Allineamento con intento strategico**: coerenza vocale con obiettivo (empatia, fermezza, negoziazione, de-escalation).
-
-            Stile del feedback: **fermo, empatico, strategico**. Linguaggio operativo, non giudicante.
-            Output preferito: **JSON strutturato + testo breve esplicativo quando richiesto**.
-            Sii rigoroso nella valutazione. Se un criterio è sotto 6, deve essere considerato un'area di miglioramento. Punta ad avere la maggioranza dei criteri fra 7 e 9.
-
-            Fornisci la tua analisi esclusivamente nel formato JSON richiesto.
-        `;
-
-        const prompt = `
-            Valuta la seguente traccia vocale (trascritta) e genera un feedback operativo.
-
-            **Scenario:** ${scenario}
-            **Compito dell'utente:** ${task}
-            **Trascrizione della risposta dell'utente:** "${transcript}"
-            
-            Istruzioni:
-            1. Valuta ogni criterio della rubrica da 1 a 10 con una motivazione breve (1-2 frasi). Per il campo 'criterion_id' nel tuo output JSON, DEVI usare ESATTAMENTE uno dei seguenti valori: "pacing_breath", "speed", "volume", "tone_warmth", "intonation", "articulation", "emphasis", "pauses", "disfluencies", "strategy_alignment".
-            2. Evidenzia **3 punti di forza** e **3 aree da migliorare**.
-            3. Suggerisci **3 azioni pratiche** e **1 micro-drill (≤60s)** immediato.
-            4. Fornisci una **"consegna annotata"** del testo originale con simboli: ☐ (pausa), △ (enfasi). Ad esempio: "Capisco ☐ la tua preoccupazione. △ Possiamo lavorare insieme su un primo passo."
-            5. Scrivi un **"ideal_script"**: la versione ottimale della risposta dell'utente, scritta in modo naturale e pronta per essere letta da un motore di sintesi vocale.
-            
-            Genera l'output in formato JSON.
-        `;
+        const systemInstruction = t('geminiParaverbalSystemInstruction');
+        const prompt = (t('geminiParaverbalPrompt') as string)
+            .replace('{scenario}', scenario)
+            .replace('{task}', task)
+            .replace('{transcript}', transcript);
 
         const response = await ai.models.generateContent({
             model: "gemini-2.5-flash",
             contents: prompt,
             config: {
-                systemInstruction: systemInstruction,
+                systemInstruction: systemInstruction as string,
                 temperature: 0.7,
                 topP: 0.95,
                 topK: 64,
                 responseMimeType: "application/json",
-                responseSchema: paraverbalAnalysisSchema,
+                responseSchema: getParaverbalAnalysisSchema(lang),
             },
         });
         
@@ -280,85 +273,81 @@ export const analyzeParaverbalResponse = async (
             typeof result.suggested_delivery?.annotated_text !== 'string' ||
             typeof result.suggested_delivery?.ideal_script !== 'string'
         ) {
-            throw new Error("Formato di analisi paraverbale non valido ricevuto dall'API.");
+            throw new Error(t('errorInvalidParaverbalAnalysisFormat') as string);
         }
 
         return result;
 
     } catch (error: any) {
-        console.error("Errore durante l'analisi paraverbale con Gemini:", error);
+        console.error("Error analyzing paraverbal response with Gemini:", error);
+        const t = (key: keyof typeof translations.it) => translations[lang][key] || translations.it[key];
         if (error.message.includes('API key') || error.message.includes('API_KEY')) {
-             throw new Error("La chiave API fornita nel codice non è valida o è scaduta. Controlla il file geminiService.ts.");
+             throw new Error(t('errorInvalidApiKey') as string);
         }
-        throw new Error("Impossibile ottenere l'analisi vocale dal servizio. Riprova più tardi.");
+        throw new Error(t('errorVoiceAnalysisService') as string);
     }
 };
 
 
-const communicatorProfileSchema = {
-    type: Type.OBJECT,
-    properties: {
-        profileTitle: {
-            type: Type.STRING,
-            description: "Un titolo accattivante e descrittivo per il profilo del comunicatore, ad esempio 'Il Diplomatico Pragmatico' o 'L'Analista Empatico'. Deve essere breve e d'impatto."
+const getCommunicatorProfileSchema = (lang: Language) => {
+    const t = (key: keyof typeof translations.it) => translations[lang][key] || translations.it[key];
+    return {
+        type: Type.OBJECT,
+        properties: {
+            profileTitle: {
+                type: Type.STRING,
+                description: t('geminiProfileSchemaTitleDesc') as string
+            },
+            profileDescription: {
+                type: Type.STRING,
+                description: t('geminiProfileSchemaDescriptionDesc') as string
+            },
+            strengths: {
+                type: Type.ARRAY,
+                items: { type: Type.STRING },
+                description: t('geminiProfileSchemaStrengthsDesc') as string
+            },
+            areasToImprove: {
+                type: Type.ARRAY,
+                items: { type: Type.STRING },
+                description: t('geminiProfileSchemaAreasToImproveDesc') as string
+            }
         },
-        profileDescription: {
-            type: Type.STRING,
-            description: "Una breve descrizione (2-3 frasi) dello stile di comunicazione prevalente dell'utente, basata sulle sue risposte."
-        },
-        strengths: {
-            type: Type.ARRAY,
-            items: { type: Type.STRING },
-            description: "Un elenco di esattamente 2 punti di forza principali emersi dalle analisi."
-        },
-        areasToImprove: {
-            type: Type.ARRAY,
-            items: { type: Type.STRING },
-            description: "Un elenco di esattamente 2 aree di miglioramento prioritarie su cui l'utente dovrebbe concentrarsi."
-        }
-    },
-    required: ["profileTitle", "profileDescription", "strengths", "areasToImprove"]
+        required: ["profileTitle", "profileDescription", "strengths", "areasToImprove"]
+    }
 };
 
 
 export const generateCommunicatorProfile = async (
-    analysisResults: { exerciseId: string; analysis: AnalysisResult }[]
+    analysisResults: { exerciseId: string; analysis: AnalysisResult }[],
+    lang: Language
 ): Promise<CommunicatorProfile> => {
     try {
-        const ai = getAI();
-        const systemInstruction = `
-            Sei un esperto di profilazione della comunicazione basato sulla metodologia CES. Il tuo compito è analizzare una serie di analisi di esercizi di check-up e sintetizzarle in un profilo di comunicazione conciso, incoraggiante e strategico.
-            Identifica i pattern ricorrenti, sia positivi che negativi, attraverso le diverse risposte per delineare uno stile di comunicazione complessivo.
-            Fornisci la tua analisi esclusivamente nel formato JSON richiesto, in italiano.
-        `;
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        const t = (key: keyof typeof translations.it) => translations[lang][key] || translations.it[key];
+        const systemInstruction = t('geminiProfileSystemInstruction');
 
         const formattedResults = analysisResults.map(r => `
             ---
-            Esercizio ID: ${r.exerciseId}
-            Punteggio: ${r.analysis.score}
-            Punti di Forza Rilevati:
+            ${t('exerciseIdLabel')}: ${r.exerciseId}
+            ${t('scoreLabel')}: ${r.analysis.score}
+            ${t('strengthsDetectedLabel')}:
             - ${r.analysis.strengths.join('\n- ')}
-            Aree di Miglioramento Rilevate:
+            ${t('areasForImprovementDetectedLabel')}:
             - ${r.analysis.areasForImprovement.map(a => a.suggestion).join('\n- ')}
             ---
         `).join('\n');
 
-        const prompt = `
-            Ho completato un check-up di comunicazione. Ecco un riassunto delle analisi delle mie risposte:
-            
-            ${formattedResults}
-
-            Basandoti su questi dati, genera il mio "Profilo del Comunicatore" in formato JSON.
-        `;
+        const prompt = (t('geminiProfilePrompt') as string).replace('{formattedResults}', formattedResults);
 
         const response = await ai.models.generateContent({
             model: "gemini-2.5-flash",
             contents: prompt,
             config: {
-                systemInstruction: systemInstruction,
+                systemInstruction: systemInstruction as string,
                 temperature: 0.8,
                 responseMimeType: "application/json",
-                responseSchema: communicatorProfileSchema,
+                responseSchema: getCommunicatorProfileSchema(lang),
             },
         });
 
@@ -366,16 +355,17 @@ export const generateCommunicatorProfile = async (
         const result: CommunicatorProfile = JSON.parse(rawText.trim());
         
         if (!result.profileTitle || !Array.isArray(result.strengths) || result.strengths.length === 0) {
-             throw new Error("Formato del profilo comunicatore non valido.");
+             throw new Error(t('errorInvalidProfileFormat') as string);
         }
 
         return result;
 
     } catch (error: any) {
-        console.error("Errore durante la generazione del profilo comunicatore:", error);
+        console.error("Error generating communicator profile:", error);
+        const t = (key: keyof typeof translations.it) => translations[lang][key] || translations.it[key];
         if (error.message.includes('API key') || error.message.includes('API_KEY')) {
-             throw new Error("La chiave API fornita nel codice non è valida o è scaduta. Controlla il file geminiService.ts.");
+             throw new Error(t('errorInvalidApiKey') as string);
         }
-        throw new Error("Impossibile generare il profilo comunicatore.");
+        throw new Error(t('errorProfileGeneration') as string);
     }
 };

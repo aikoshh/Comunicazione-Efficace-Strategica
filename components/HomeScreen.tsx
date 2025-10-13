@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import type { Module, User, UserProgress, Exercise } from '../types';
-import { MODULES, COLORS, SAGE_PALETTE } from '../constants';
-import { Logo } from './Logo';
+import { COLORS, SAGE_PALETTE } from '../constants';
+import { smilingPerson, dailyChallengePerson } from '../assets';
 import { ProgressOverview } from './ProgressOverview';
+import { ProgressAnalytics } from './ProgressAnalytics';
 import { getDailyChallenge } from '../services/progressionService';
 import { CheckCircleIcon, TargetIcon } from './Icons';
 import { soundService } from '../services/soundService';
+import { useLocalization } from '../context/LocalizationContext';
+import { getContent } from '../locales/content';
 
 interface HomeScreenProps {
   onSelectModule: (module: Module) => void;
@@ -23,26 +26,46 @@ const hoverStyle = `
   .module-card:not(.locked):hover .card-image {
     transform: scale(1.05);
   }
+  .module-card:not(.locked):active {
+    transform: translateY(-4px) scale(0.98);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+  }
   .daily-challenge:hover {
     transform: translateY(-5px);
     box-shadow: 0 8px 20px rgba(14, 58, 93, 0.2);
+  }
+  .daily-challenge:active {
+    transform: translateY(-2px) scale(0.99);
+    box-shadow: 0 4px 15px rgba(14, 58, 93, 0.25);
   }
   .checkup-prompt:hover {
     transform: translateY(-5px);
     box-shadow: 0 8px 20px rgba(88, 166, 166, 0.25);
   }
+  .checkup-prompt:active {
+    transform: translateY(-2px) scale(0.99);
+    box-shadow: 0 4px 15px rgba(88, 166, 166, 0.3);
+  }
 `;
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectModule, onSelectExercise, onStartCheckup, currentUser, userProgress }) => {
   const [dailyChallenge, setDailyChallenge] = useState<Exercise | null>(null);
+  const { lang } = useLocalization();
+  const { MODULES } = getContent(lang);
 
   useEffect(() => {
-    setDailyChallenge(getDailyChallenge());
-  }, []);
+    setDailyChallenge(getDailyChallenge(MODULES));
+  }, [MODULES]);
 
   const completedModuleIds = userProgress?.completedModuleIds || [];
   const foundationalModules = MODULES.filter(m => m.category === 'Fondamentali' || !m.category);
   const sectoralPacks = MODULES.filter(m => m.category === 'Pacchetti Settoriali');
+  
+  // This constant provides a default object for new users to ensure the analytics chart renders.
+  const progressDataForAnalytics: UserProgress = userProgress || {
+    scores: [],
+    competenceScores: { ascolto: 0, riformulazione: 0, assertivita: 0, gestione_conflitto: 0 }
+  };
 
   const handleModuleClick = (module: Module, isLocked: boolean) => {
       if (isLocked) {
@@ -120,14 +143,18 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectModule, onSelect
     <div style={styles.container}>
       <style>{hoverStyle}</style>
       <header style={styles.header}>
-        <Logo />
-        <h1 style={styles.title}>Inizia ora il tuo Allenamento con la Comunicazione Efficace Strategica®</h1>
-         <p style={styles.subtitle}>
-            Seleziona la tua prossima sessione dalla Mappa delle Competenze o affronta la Sfida del Giorno.
-        </p>
+        <div style={styles.headerTextContainer}>
+            <h1 style={styles.title}>Inizia ora il tuo Allenamento con la Comunicazione Efficace Strategica®</h1>
+            <p style={styles.subtitle}>
+                Seleziona la tua prossima sessione dalla Mappa delle Competenze o affronta la Sfida del Giorno.
+            </p>
+        </div>
+        <img src={smilingPerson} alt="Persona sorridente e sicura di sé" style={styles.headerImage} />
       </header>
       
       {currentUser && <ProgressOverview user={currentUser} progress={userProgress} />}
+      
+      {currentUser && <ProgressAnalytics userProgress={progressDataForAnalytics} />}
       
       <main style={currentUser ? {marginTop: '48px'} : {}}>
         
@@ -149,8 +176,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectModule, onSelect
         {dailyChallenge && (
             <section style={{marginBottom: '48px'}}>
                  <h2 style={styles.sectionTitle}>Sfida del Giorno</h2>
-                 <div style={styles.dailyChallenge} className="daily-challenge" onClick={handleDailyChallengeClick}>
-                    <div>
+                 <div style={styles.dailyChallenge} className="daily-challenge" onClick={handleDailyChallengeClick} onMouseEnter={() => soundService.playHover()}>
+                    <img src={dailyChallengePerson} alt="Persona sorridente per la sfida del giorno" style={styles.challengeImage} />
+                    <div style={styles.challengeTextContainer}>
                         <h3 style={styles.challengeTitle}>{dailyChallenge.task}</h3>
                         <p style={styles.challengeScenario}>Scenario: {dailyChallenge.scenario.substring(0,100)}...</p>
                     </div>
@@ -184,9 +212,18 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectModule, onSelect
 
 const styles: { [key: string]: React.CSSProperties } = {
     container: { maxWidth: '1200px', margin: '0 auto', padding: '40px 20px', backgroundColor: COLORS.base, minHeight: '100vh' },
-    header: { textAlign: 'center', marginBottom: '48px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' },
-    title: { fontSize: '26px', fontWeight: 'bold', color: COLORS.textPrimary, margin: '16px 0 0 0', lineHeight: 1.3 },
-    subtitle: { fontSize: '16px', color: COLORS.textSecondary, maxWidth: '600px', margin: '0 auto', lineHeight: 1.6 },
+    header: { display: 'flex', alignItems: 'center', gap: '32px', marginBottom: '48px', backgroundColor: COLORS.cardDark, padding: '32px', borderRadius: '12px' },
+    headerTextContainer: { flex: 1 },
+    headerImage: {
+        width: '150px',
+        height: '150px',
+        borderRadius: '50%',
+        objectFit: 'cover',
+        border: `4px solid ${COLORS.card}`,
+        boxShadow: '0 4px 15px rgba(0,0,0,0.1)',
+    },
+    title: { fontSize: '28px', fontWeight: 'bold', color: COLORS.textPrimary, margin: '0 0 12px 0', lineHeight: 1.3 },
+    subtitle: { fontSize: '16px', color: COLORS.textSecondary, maxWidth: '600px', lineHeight: 1.6, margin: 0 },
     sectionTitle: { fontSize: '24px', fontWeight: 'bold', color: COLORS.primary, marginBottom: '24px', borderBottom: `3px solid ${COLORS.secondary}`, paddingBottom: '8px' },
     categoryTitle: { fontSize: '20px', fontWeight: 'bold', color: COLORS.textSecondary, marginTop: '24px', marginBottom: '16px' },
     checkupPrompt: {
@@ -227,9 +264,18 @@ const styles: { [key: string]: React.CSSProperties } = {
         transition: 'all 0.3s ease',
         boxShadow: '0 4px 15px rgba(14, 58, 93, 0.15)',
         display: 'flex',
-        justifyContent: 'space-between',
         alignItems: 'center',
         gap: '20px',
+    },
+    challengeImage: {
+        width: '80px',
+        height: '80px',
+        borderRadius: '50%',
+        objectFit: 'cover',
+        border: '3px solid rgba(255, 255, 255, 0.5)',
+    },
+    challengeTextContainer: {
+        flex: 1,
     },
     challengeTitle: { margin: '0 0 8px 0', fontSize: '18px', fontWeight: 600 },
     challengeScenario: { margin: 0, fontSize: '15px', opacity: 0.9, lineHeight: 1.5 },

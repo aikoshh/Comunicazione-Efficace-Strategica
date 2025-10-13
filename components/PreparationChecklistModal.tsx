@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { COLORS } from '../constants';
-import { PREPARATION_CHECKLIST } from '../proContent';
 import { CloseIcon, TargetIcon } from './Icons';
 import { soundService } from '../services/soundService';
+import { useLocalization } from '../context/LocalizationContext';
+import { getContent } from '../locales/content';
 
 interface PreparationChecklistModalProps {
   isOpen: boolean;
@@ -11,6 +12,8 @@ interface PreparationChecklistModalProps {
 
 export const PreparationChecklistModal: React.FC<PreparationChecklistModalProps> = ({ isOpen, onClose }) => {
   const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set());
+  const { lang } = useLocalization();
+  const { PREPARATION_CHECKLIST } = getContent(lang);
   const totalItems = PREPARATION_CHECKLIST.length;
   const progress = (checkedItems.size / totalItems) * 100;
 

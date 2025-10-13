@@ -1,18 +1,41 @@
 // A simple sound service using the Web Audio API to avoid dealing with audio files.
+const SOUND_ENABLED_KEY = 'ces_coach_sound_enabled';
+
 class SoundService {
   private audioCtx: AudioContext | null = null;
-  private isEnabled: boolean = true; // Could be controlled by a UI setting in the future
 
   private initializeAudioContext() {
-    if (this.audioCtx || typeof window === 'undefined' || window.document.hidden) {
+    // Only run on client side and if not already initialized
+    if (this.audioCtx || typeof window === 'undefined') {
         return;
     }
     
-    try {
-      this.audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-    } catch (e) {
-      console.error("Web Audio API is not supported in this browser.", e);
-    }
+    // Defer initialization until the first user interaction (e.g., a click)
+    const init = () => {
+        try {
+            if (!this.audioCtx) {
+                this.audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+            }
+        } catch (e) {
+            console.error("Web Audio API is not supported in this browser.", e);
+        }
+        // Remove the event listener after it has run once
+        document.removeEventListener('click', init);
+        document.removeEventListener('touchstart', init);
+    };
+
+    document.addEventListener('click', init);
+    document.addEventListener('touchstart', init);
+  }
+
+  constructor() {
+      this.initializeAudioContext();
+  }
+
+  private isSoundEnabled(): boolean {
+      if (typeof window === 'undefined') return false;
+      const storedSetting = localStorage.getItem(SOUND_ENABLED_KEY);
+      return storedSetting ? JSON.parse(storedSetting) : true; // Default to enabled
   }
 
   private playSound(
@@ -21,10 +44,8 @@ class SoundService {
     duration: number,
     volume: number = 0.5
   ) {
-    this.initializeAudioContext();
-    if (!this.audioCtx || !this.isEnabled) return;
+    if (!this.isSoundEnabled() || !this.audioCtx) return;
 
-    // Resume context if it's suspended (e.g., due to browser auto-play policies)
     if (this.audioCtx.state === 'suspended') {
       this.audioCtx.resume();
     }
@@ -45,12 +66,11 @@ class SoundService {
   }
   
   private playFailSound() {
-    this.initializeAudioContext();
-    if (!this.audioCtx || !this.isEnabled) return;
+    if (!this.isSoundEnabled() || !this.audioCtx) return;
 
     const oscillator = this.audioCtx.createOscillator();
     const gainNode = this.audioCtx.createGain();
-    const duration = 0.6; // More prolonged
+    const duration = 0.6;
     const now = this.audioCtx.currentTime;
 
     oscillator.type = 'sawtooth';
@@ -68,11 +88,9 @@ class SoundService {
   }
   
   private playTriumphSound() {
-    this.initializeAudioContext();
-    if (!this.audioCtx || !this.isEnabled) return;
+    if (!this.isSoundEnabled() || !this.audioCtx) return;
     const volume = 0.3;
 
-    // --- Arpeggio ---
     const arpeggioNotes = [
         { freq: 523.25, time: 0, dur: 0.15 }, // C5
         { freq: 659.25, time: 0.1, dur: 0.15 }, // E5
@@ -83,7 +101,6 @@ class SoundService {
         setTimeout(() => this.playSound(note.freq, 'triangle', note.dur, volume), note.time * 1000);
     });
 
-    // --- "Sparkle" / "Cheer" sound to simulate applause/compliments ---
     const playSparkle = (startTime: number) => {
         if (!this.audioCtx) return;
         const oscillator = this.audioCtx.createOscillator();
@@ -108,7 +125,7 @@ class SoundService {
             playSparkle(sparkleTime);
             playSparkle(sparkleTime + 0.15);
         }
-    }, 400); // Start sparkles after arpeggio begins
+    }, 400);
   }
 
   public playClick() {
@@ -128,27 +145,24 @@ class SoundService {
   }
   
   public playSuccess() {
-    this.initializeAudioContext();
-    if (!this.audioCtx || !this.isEnabled) return;
+    if (!this.isSoundEnabled() || !this.audioCtx) return;
     
-    // Ascending arpeggio - prolonged
     this.playSound(440, 'sine', 0.1, 0.3); // A4
     setTimeout(() => this.playSound(554, 'sine', 0.1, 0.3), 80);  // C#5
     setTimeout(() => this.playSound(659, 'sine', 0.3, 0.3), 160); // E5, prolonged
   }
 
   public playScoreSound(score: number) {
-    this.initializeAudioContext();
-    if (!this.audioCtx || !this.isEnabled) return;
+    if (!this.isSoundEnabled() || !this.audioCtx) return;
     
-    if (score < 40) { // Red - Needs improvement
+    if (score < 40) {
         this.playFailSound();
-    } else if (score < 70) { // Yellow - Okay
+    } else if (score < 70) {
         this.playSound(330, 'sine', 0.1, 0.3);
         setTimeout(() => this.playSound(440, 'sine', 0.1, 0.3), 100);
-    } else if (score < 80) { // Green - Good
+    } else if (score < 80) {
         this.playSuccess();
-    } else { // High Green - Excellent
+    } else {
         this.playTriumphSound();
     }
   }

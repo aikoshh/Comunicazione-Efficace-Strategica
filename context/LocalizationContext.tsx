@@ -1,59 +1,45 @@
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useMemo } from 'react';
+import { Language } from '../types';
 import { translations } from '../locales/translations';
-import type { Language } from '../types';
 
-type TranslateFunction = (key: string, options?: Record<string, string | number>) => string;
+const LANGUAGE_STORAGE_KEY = 'ces_coach_language';
 
 interface LocalizationContextType {
-  language: Language;
-  setLanguage: (language: Language) => void;
-  t: TranslateFunction;
+  lang: Language;
+  setLang: (lang: Language) => void;
+  t: (key: keyof typeof translations.it, replacements?: Record<string, string>) => string;
 }
 
 const LocalizationContext = createContext<LocalizationContextType | undefined>(undefined);
 
-const LANGUAGE_STORAGE_KEY = 'ces_coach_language';
-
 export const LocalizationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [language, setLanguageState] = useState<Language>(() => {
-    try {
-      const storedLang = localStorage.getItem(LANGUAGE_STORAGE_KEY);
-      if (storedLang === 'it' || storedLang === 'en') {
-        return storedLang;
-      }
-    } catch (error) {
-      console.error("Failed to load language from storage", error);
-    }
-    // Default to browser language if available, otherwise 'it'
-    const browserLang = navigator.language.split('-')[0];
-    return browserLang === 'en' ? 'en' : 'it';
+  const [lang, setLang] = useState<Language>(() => {
+    if (typeof window === 'undefined') return 'it';
+    const storedLang = localStorage.getItem(LANGUAGE_STORAGE_KEY);
+    return (storedLang === 'en' || storedLang === 'it') ? storedLang : 'it';
   });
 
-  const setLanguage = (lang: Language) => {
-    setLanguageState(lang);
-    try {
-      localStorage.setItem(LANGUAGE_STORAGE_KEY, lang);
-    } catch (error) {
-      console.error("Failed to save language to storage", error);
-    }
-  };
-
   useEffect(() => {
-    document.documentElement.lang = language;
-  }, [language]);
-
-  const t: TranslateFunction = useCallback((key, options) => {
-    let text = translations[language][key] || translations['it'][key] || key;
-    if (options) {
-      Object.keys(options).forEach(optKey => {
-        text = text.replace(`{{${optKey}}}`, String(options[optKey]));
-      });
+    if (typeof window !== 'undefined') {
+        localStorage.setItem(LANGUAGE_STORAGE_KEY, lang);
+        document.documentElement.lang = lang;
     }
-    return text;
-  }, [language]);
+  }, [lang]);
+
+  const t = useCallback((key: keyof typeof translations.it, replacements?: Record<string, string>) => {
+    let translation = translations[lang][key] || translations.it[key];
+    if (replacements) {
+        Object.keys(replacements).forEach(rKey => {
+            translation = translation.replace(`{${rKey}}`, replacements[rKey]);
+        });
+    }
+    return translation;
+  }, [lang]);
+
+  const value = useMemo(() => ({ lang, setLang, t }), [lang, t]);
 
   return (
-    <LocalizationContext.Provider value={{ language, setLanguage, t }}>
+    <LocalizationContext.Provider value={value}>
       {children}
     </LocalizationContext.Provider>
   );

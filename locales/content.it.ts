@@ -1,8 +1,7 @@
-import { Module, DifficultyLevel, ExerciseType, Exercise, IconComponent, StrategicQuestionCategory, ChecklistItem } from '../types';
+import { Module, DifficultyLevel, ExerciseType, Exercise, StrategicQuestionCategory, ChecklistItem } from '../types';
 import { 
     FeedbackIcon, ConflictIcon, QuestionIcon, CustomIcon, ListeningIcon,
-    HealthcareIcon, EducationIcon, CustomerCareIcon, RetailIcon, BankingIcon,
-    HRIcon, SalesIcon, LeadershipIcon, VoiceIcon
+    HealthcareIcon, EducationIcon, CustomerCareIcon, SalesIcon, LeadershipIcon, VoiceIcon
 } from '../components/Icons';
 import { cardImage1, cardImage2, cardImage3, cardImage4, cardImage5, cardImage6 } from '../assets';
 
@@ -334,6 +333,7 @@ export const MODULES_IT: Module[] = [
   },
 ];
 
+
 export const QUESTION_LIBRARY_IT: StrategicQuestionCategory[] = [
   {
     category: 'Domande Aperte Esplorative',
@@ -380,7 +380,6 @@ export const QUESTION_LIBRARY_IT: StrategicQuestionCategory[] = [
     ],
   },
 ];
-
 
 export const PREPARATION_CHECKLIST_IT: ChecklistItem[] = [
     { id: 'c1', text: 'Qual è l\'UNICO obiettivo più importante di questa conversazione?' },

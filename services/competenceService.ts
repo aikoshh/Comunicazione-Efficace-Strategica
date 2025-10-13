@@ -17,6 +17,7 @@ export const EXERCISE_TO_COMPETENCE_MAP: Record<string, CompetenceKey> = {
 
     // m1: Dare un Feedback Efficace
     'e1': 'riformulazione',
+    'e2': 'assertivita', // Feedback to manager requires assertiveness
     'e7': 'riformulazione',
 
     // m3: Padroneggiare l'Arte delle Domande
@@ -27,24 +28,23 @@ export const EXERCISE_TO_COMPETENCE_MAP: Record<string, CompetenceKey> = {
     
     // m2: Gestire Conversazioni Difficili
     'e3': 'gestione_conflitto',
+    'e4': 'assertivita', // Communicating unpopular decision requires assertiveness
+    'e8': 'assertivita',
     'e13': 'gestione_conflitto',
     'e14': 'gestione_conflitto',
-    'e8': 'assertivita',
     'e15': 'assertivita',
-    'e2': 'assertivita', // Feedback to manager requires assertiveness
-    'e4': 'assertivita', // Communicating unpopular decision requires assertiveness
     
     // m5: Voce Strategica (Paraverbale)
     'v1': 'riformulazione',
-    'v2': 'riformulazione',
-    'v3': 'riformulazione',
+    'v2': 'assertivita',
+    'v3': 'assertivita',
 
     // Pacchetti Settoriali
     's1e1': 'riformulazione',
     's2e1': 'gestione_conflitto',
     's3e1': 'gestione_conflitto',
     's7e1': 'riformulazione',
-    's8e1': 'riformulazione',
+    's8e1': 'assertivita',
 };
 
 const MAX_COMPETENCE_SCORE = 33;

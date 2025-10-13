@@ -1,5 +1,4 @@
-import type { ProgressOverviewData, ScoreExplanation, User, UserProgress, Exercise } from '../types';
-import { MODULES } from '../constants';
+import type { ProgressOverviewData, ScoreExplanation, User, UserProgress, Exercise, Module } from '../types';
 
 const mockScoreExplanation: ScoreExplanation = {
   Coverage: 58,
@@ -55,9 +54,9 @@ export const getScoreExplanation = async (): Promise<ScoreExplanation> => {
   return new Promise(resolve => setTimeout(() => resolve(mockScoreExplanation), 300));
 };
 
-export const getDailyChallenge = (): Exercise => {
+export const getDailyChallenge = (modules: Module[]): Exercise => {
     // Flatten all exercises from non-custom modules
-    const allExercises = MODULES
+    const allExercises = modules
         .filter(m => !m.isCustom && m.exercises.length > 0)
         .flatMap(m => m.exercises);
 
