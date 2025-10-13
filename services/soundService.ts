@@ -1,17 +1,7 @@
 // A simple sound service using the Web Audio API to avoid dealing with audio files.
-const SOUND_MUTED_KEY = 'ces_coach_sound_muted';
-
 class SoundService {
   private audioCtx: AudioContext | null = null;
-  
-  private isMuted(): boolean {
-      try {
-          const storedValue = localStorage.getItem(SOUND_MUTED_KEY);
-          return storedValue ? JSON.parse(storedValue) : false;
-      } catch {
-          return false;
-      }
-  }
+  private isEnabled: boolean = true; // Could be controlled by a UI setting in the future
 
   private initializeAudioContext() {
     if (this.audioCtx || typeof window === 'undefined' || window.document.hidden) {
@@ -31,9 +21,8 @@ class SoundService {
     duration: number,
     volume: number = 0.5
   ) {
-    if (this.isMuted()) return;
     this.initializeAudioContext();
-    if (!this.audioCtx) return;
+    if (!this.audioCtx || !this.isEnabled) return;
 
     // Resume context if it's suspended (e.g., due to browser auto-play policies)
     if (this.audioCtx.state === 'suspended') {
@@ -56,9 +45,8 @@ class SoundService {
   }
   
   private playFailSound() {
-    if (this.isMuted()) return;
     this.initializeAudioContext();
-    if (!this.audioCtx) return;
+    if (!this.audioCtx || !this.isEnabled) return;
 
     const oscillator = this.audioCtx.createOscillator();
     const gainNode = this.audioCtx.createGain();
@@ -80,9 +68,8 @@ class SoundService {
   }
   
   private playTriumphSound() {
-    if (this.isMuted()) return;
     this.initializeAudioContext();
-    if (!this.audioCtx) return;
+    if (!this.audioCtx || !this.isEnabled) return;
     const volume = 0.3;
 
     // --- Arpeggio ---
@@ -141,9 +128,8 @@ class SoundService {
   }
   
   public playSuccess() {
-    if (this.isMuted()) return;
     this.initializeAudioContext();
-    if (!this.audioCtx) return;
+    if (!this.audioCtx || !this.isEnabled) return;
     
     // Ascending arpeggio - prolonged
     this.playSound(440, 'sine', 0.1, 0.3); // A4
@@ -152,9 +138,8 @@ class SoundService {
   }
 
   public playScoreSound(score: number) {
-    if (this.isMuted()) return;
     this.initializeAudioContext();
-    if (!this.audioCtx) return;
+    if (!this.audioCtx || !this.isEnabled) return;
     
     if (score < 40) { // Red - Needs improvement
         this.playFailSound();
