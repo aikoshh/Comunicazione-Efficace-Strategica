@@ -178,6 +178,14 @@ export const MODULES: Module[] = [
         task: 'Conduci una conversazione di coaching con Sara usando domande potenti per aiutarla a riflettere sulla sua situazione, identificare gli ostacoli e creare un piano d\'azione.',
         difficulty: DifficultyLevel.AVANZATO,
       },
+      {
+        id: 'e16',
+        title: 'Cogliere i Bisogni Non Detti',
+        scenario: 'Stai parlando con un potenziale cliente che sembra interessato alla tua soluzione ma continua a dire \'Sì, interessante, ma dobbiamo pensarci\'. Vuoi capire meglio le sue reali preoccupazioni senza essere troppo diretto.',
+        task: 'Registra una domanda che potresti fare per approfondire le sue riserve, usando un tono empatico e curioso.',
+        difficulty: DifficultyLevel.AVANZATO,
+        exerciseType: ExerciseType.VERBAL,
+      },
     ],
   },
   {

@@ -275,7 +275,8 @@ const styles: { [key: string]: React.CSSProperties } = {
     border: `1px solid ${COLORS.divider}`,
     fontFamily: 'inherit',
     resize: 'vertical',
-    backgroundColor: COLORS.card,
+    backgroundColor: 'white',
+    color: COLORS.textPrimary,
   },
   button: {
     display: 'block',

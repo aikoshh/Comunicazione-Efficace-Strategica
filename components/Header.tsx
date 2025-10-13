@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import type { User, Breadcrumb } from '../types';
+import type { User, Breadcrumb, SaveState } from '../types';
 import { COLORS } from '../constants';
 import { Logo } from './Logo';
-import { HomeIcon, ChevronRightIcon } from './Icons';
+import { HomeIcon, ChevronRightIcon, SpeakerIcon, SpeakerOffIcon, SaveIcon, CheckCircleIcon } from './Icons';
+import { Spinner } from './Loader';
 import { hasProAccess } from '../services/monetizationService';
+import { useSound } from '../hooks/useSound';
 
 
 interface HeaderProps {
@@ -12,6 +14,8 @@ interface HeaderProps {
   onLogout: () => void;
   onGoToPaywall: () => void;
   isPro: boolean;
+  onManualSave: () => void;
+  saveState: SaveState;
 }
 
 const hoverStyle = `
@@ -28,13 +32,26 @@ const hoverStyle = `
     transform: translateY(-2px);
     box-shadow: 0 4px 10px rgba(88, 166, 166, 0.3);
   }
+  .sound-button:hover {
+    background-color: ${COLORS.divider};
+    color: ${COLORS.textPrimary};
+  }
 `;
 
-export const Header: React.FC<HeaderProps> = ({ currentUser, breadcrumbs, onLogout, onGoToPaywall, isPro }) => {
+export const Header: React.FC<HeaderProps> = ({ currentUser, breadcrumbs, onLogout, onGoToPaywall, isPro, onManualSave, saveState }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { isSoundEnabled, toggleSound } = useSound();
   
   const getInitials = (user: User) => {
     return `${user.firstName[0]}${user.lastName[0]}`.toUpperCase();
+  };
+  
+  const getSaveButtonTitle = () => {
+    switch (saveState) {
+        case 'saving': return "Salvataggio in corso...";
+        case 'saved': return "Progresso salvato!";
+        default: return "Salva progresso";
+    }
   };
 
   return (
@@ -64,6 +81,28 @@ export const Header: React.FC<HeaderProps> = ({ currentUser, breadcrumbs, onLogo
           </div>
 
           <div style={styles.userSection}>
+            <button
+              onClick={toggleSound}
+              style={styles.soundButton}
+              className="sound-button"
+              aria-label={isSoundEnabled ? "Disattiva suoni" : "Attiva suoni"}
+              title={isSoundEnabled ? "Disattiva suoni" : "Attiva suoni"}
+            >
+              {isSoundEnabled ? <SpeakerIcon /> : <SpeakerOffIcon />}
+            </button>
+             {currentUser && (
+                <button
+                    onClick={onManualSave}
+                    style={styles.soundButton} // Reuse style for consistency
+                    className="sound-button"
+                    title={getSaveButtonTitle()}
+                    disabled={saveState !== 'idle'}
+                >
+                    {saveState === 'saving' && <Spinner size={20} />}
+                    {saveState === 'saved' && <CheckCircleIcon style={{color: COLORS.success}}/>}
+                    {saveState === 'idle' && <SaveIcon />}
+                </button>
+             )}
             {!isPro && (
                 <button style={styles.proButton} className="pro-button" onClick={onGoToPaywall}>
                     Sblocca PRO
@@ -150,6 +189,18 @@ const styles: { [key: string]: React.CSSProperties } = {
     display: 'flex',
     alignItems: 'center',
     gap: '16px'
+  },
+  soundButton: {
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    padding: '8px',
+    borderRadius: '50%',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    color: COLORS.textSecondary,
+    transition: 'background-color 0.2s ease, color 0.2s ease',
   },
   proButton: {
     backgroundColor: COLORS.secondary,

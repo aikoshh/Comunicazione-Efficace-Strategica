@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Module, Exercise, DifficultyLevel, ExerciseType, Entitlements } from '../types';
+import { Module, Exercise, DifficultyLevel, ExerciseType, Entitlements, UserProgress, AnalysisHistoryRecord } from '../types';
 import { COLORS, SAGE_PALETTE, EXERCISE_TYPE_ICONS } from '../constants';
 import { HomeIcon, CheckCircleIcon, QuestionIcon, TargetIcon } from './Icons';
 import { soundService } from '../services/soundService';
@@ -11,8 +11,9 @@ import { ExercisePreviewModal } from './ExercisePreviewModal';
 interface ModuleScreenProps {
   module: Module;
   onSelectExercise: (exercise: Exercise) => void;
+  onReviewExercise: (historyRecord: AnalysisHistoryRecord) => void;
   onBack: () => void;
-  completedExerciseIds: string[];
+  userProgress: UserProgress | undefined;
   entitlements: Entitlements | null;
 }
 
@@ -23,12 +24,12 @@ const difficultyColors: { [key in DifficultyLevel]: string } = {
 };
 
 const hoverStyle = `
-  .exercise-card:not(.completed):hover {
+  .exercise-card:hover {
     transform: translateY(-5px);
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
     border-left-color: white;
   }
-  .exercise-card:not(.completed):active {
+  .exercise-card:active {
     transform: translateY(-2px) scale(0.99);
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
   }
@@ -41,13 +42,26 @@ const hoverStyle = `
   }
 `;
 
-export const ModuleScreen: React.FC<ModuleScreenProps> = ({ module, onSelectExercise, onBack, completedExerciseIds, entitlements }) => {
+export const ModuleScreen: React.FC<ModuleScreenProps> = ({ module, onSelectExercise, onReviewExercise, onBack, userProgress, entitlements }) => {
   const [isLibraryModalOpen, setLibraryModalOpen] = useState(false);
   const [isChecklistModalOpen, setChecklistModalOpen] = useState(false);
   const [previewingExercise, setPreviewingExercise] = useState<Exercise | null>(null);
+  const completedExerciseIds = userProgress?.completedExerciseIds || [];
   
   const handleExerciseClick = (exercise: Exercise) => {
     soundService.playClick();
+    const isCompleted = completedExerciseIds.includes(exercise.id);
+
+    if (isCompleted && userProgress?.analysisHistory) {
+        const historyForExercise = userProgress.analysisHistory
+            .filter(h => h.exerciseId === exercise.id)
+            .sort((a, b) => b.timestamp - a.timestamp);
+        
+        if (historyForExercise.length > 0) {
+            onReviewExercise(historyForExercise[0]);
+            return;
+        }
+    }
     setPreviewingExercise(exercise);
   }
 
@@ -113,7 +127,7 @@ export const ModuleScreen: React.FC<ModuleScreenProps> = ({ module, onSelectExer
           return (
             <div 
               key={exercise.id} 
-              className={`exercise-card ${isCompleted ? 'completed' : ''}`}
+              className={`exercise-card`}
               style={cardStyle} 
               onClick={() => handleExerciseClick(exercise)}
               onMouseEnter={() => soundService.playHover()}

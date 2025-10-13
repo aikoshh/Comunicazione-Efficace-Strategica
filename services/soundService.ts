@@ -1,7 +1,11 @@
 // A simple sound service using the Web Audio API to avoid dealing with audio files.
 class SoundService {
   private audioCtx: AudioContext | null = null;
-  private isEnabled: boolean = true; // Could be controlled by a UI setting in the future
+  private isEnabled: boolean = true; // Controlled by the SoundProvider now
+
+  public setEnabled(enabled: boolean) {
+    this.isEnabled = enabled;
+  }
 
   private initializeAudioContext() {
     if (this.audioCtx || typeof window === 'undefined' || window.document.hidden) {
@@ -21,8 +25,9 @@ class SoundService {
     duration: number,
     volume: number = 0.5
   ) {
+    if (!this.isEnabled) return;
     this.initializeAudioContext();
-    if (!this.audioCtx || !this.isEnabled) return;
+    if (!this.audioCtx) return;
 
     // Resume context if it's suspended (e.g., due to browser auto-play policies)
     if (this.audioCtx.state === 'suspended') {
@@ -45,8 +50,9 @@ class SoundService {
   }
   
   private playFailSound() {
+    if (!this.isEnabled) return;
     this.initializeAudioContext();
-    if (!this.audioCtx || !this.isEnabled) return;
+    if (!this.audioCtx) return;
 
     const oscillator = this.audioCtx.createOscillator();
     const gainNode = this.audioCtx.createGain();
@@ -68,8 +74,9 @@ class SoundService {
   }
   
   private playTriumphSound() {
+    if (!this.isEnabled) return;
     this.initializeAudioContext();
-    if (!this.audioCtx || !this.isEnabled) return;
+    if (!this.audioCtx) return;
     const volume = 0.3;
 
     // --- Arpeggio ---

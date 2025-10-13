@@ -14,24 +14,43 @@ interface PaywallScreenProps {
 }
 
 export const PaywallScreen: React.FC<PaywallScreenProps> = ({ entitlements, onPurchase, onRestore, onBack }) => {
-    const [isLoading, setIsLoading] = useState<string | null>(null); // Stores product ID being purchased
+    const [loadingState, setLoadingState] = useState<string | null>(null);
+    const [successState, setSuccessState] = useState<string | null>(null);
 
     const handlePurchase = async (product: Product) => {
+        if (loadingState) return;
         soundService.playClick();
-        setIsLoading(product.id);
-        await onPurchase(product);
-        setIsLoading(null);
+        setLoadingState(product.id);
+        setSuccessState(null);
+        try {
+            await onPurchase(product);
+            setSuccessState(product.id);
+        } catch (error) {
+            console.error("Purchase failed:", error);
+            setLoadingState(null);
+        }
     };
     
     const handleRestore = async () => {
+        if (loadingState) return;
         soundService.playClick();
-        setIsLoading('restore');
-        await onRestore();
-        setIsLoading(null);
+        setLoadingState('restore');
+        setSuccessState(null);
+        try {
+            await onRestore();
+            setSuccessState('restore');
+            setTimeout(() => setSuccessState(null), 2000);
+        } catch (error) {
+            console.error("Restore failed:", error);
+        } finally {
+            setLoadingState(null);
+        }
     };
 
     const renderProductRow = (product: Product) => {
         const isPurchased = entitlements.productIDs.has(product.id);
+        const isLoading = loadingState === product.id;
+        const isSuccess = successState === product.id;
         
         let cardStyle = { ...styles.productCard };
         if (isPurchased) {
@@ -57,19 +76,26 @@ export const PaywallScreen: React.FC<PaywallScreenProps> = ({ entitlements, onPu
                             <CheckCircleIcon />
                             <span>ATTIVO</span>
                         </div>
+                    ) : isSuccess ? (
+                        <div style={{...styles.purchasedBadge, backgroundColor: 'rgba(40, 167, 69, 0.15)', color: COLORS.success, borderColor: COLORS.success}}>
+                            <CheckCircleIcon />
+                            <span>SBLOCCATO!</span>
+                        </div>
                     ) : (
                         <button 
                             style={styles.buyButton} 
                             onClick={() => handlePurchase(product)}
-                            disabled={!!isLoading}
+                            disabled={!!loadingState}
                         >
-                            {isLoading === product.id ? <Spinner size={20} color="white"/> : 'Sblocca Ora'}
+                            {isLoading ? <Spinner size={20} color="white"/> : 'Sblocca Ora'}
                         </button>
                     )}
                 </div>
             </div>
         );
     };
+
+    const isRestoring = loadingState === 'restore';
 
     return (
         <div style={styles.container}>
@@ -86,8 +112,8 @@ export const PaywallScreen: React.FC<PaywallScreenProps> = ({ entitlements, onPu
                 </section>
                 
                 <footer style={styles.footer}>
-                     <button onClick={handleRestore} style={styles.restoreButton} disabled={!!isLoading}>
-                         {isLoading === 'restore' ? <Spinner size={20} /> : 'Ripristina Acquisti'}
+                     <button onClick={handleRestore} style={styles.restoreButton} disabled={!!loadingState}>
+                         {isRestoring ? <Spinner size={20} /> : (successState === 'restore' ? 'Ripristino Riuscito!' : 'Ripristina Acquisti')}
                     </button>
                     <p style={styles.disclosure}>
                         Questo è un ambiente di simulazione. Gli acquisti non comportano addebiti reali. Gli abbonamenti si rinnovano automaticamente salvo annullamento. Puoi annullare in qualsiasi momento.

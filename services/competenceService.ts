@@ -23,6 +23,7 @@ export const EXERCISE_TO_COMPETENCE_MAP: Record<string, CompetenceKey> = {
     'e5': 'riformulazione',
     'e6': 'riformulazione',
     'e9': 'ascolto',
+    'e16': 'ascolto',
     
     // m2: Gestire Conversazioni Difficili
     'e3': 'gestione_conflitto',

@@ -10,8 +10,8 @@ import { useToast } from '../hooks/useToast';
 
 interface ExerciseScreenProps {
   exercise: Exercise;
-  onCompleteWritten: (result: AnalysisResult) => void;
-  onCompleteVerbal: (result: VoiceAnalysisResult) => void;
+  onCompleteWritten: (result: AnalysisResult, userResponse: string) => void;
+  onCompleteVerbal: (result: VoiceAnalysisResult, userResponse: string) => void;
   onSkip: (exerciseId: string) => void;
   onBack: () => void;
   onApiKeyError: (error: string) => void;
@@ -110,18 +110,19 @@ export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({
 
   const handleSubmit = async () => {
     soundService.playClick();
-    if (!userResponse.trim()) {
+    const finalResponse = userResponse.trim();
+    if (!finalResponse) {
       addToast("La risposta non può essere vuota.", 'error');
       return;
     }
     setIsLoading(true);
     try {
       if(isVerbalExercise) {
-        const result = await analyzeParaverbalResponse(userResponse, exercise.scenario, exercise.task);
-        onCompleteVerbal(result);
+        const result = await analyzeParaverbalResponse(finalResponse, exercise.scenario, exercise.task);
+        onCompleteVerbal(result, finalResponse);
       } else {
-        const result = await analyzeResponse(userResponse, exercise.scenario, exercise.task, entitlements, false, exercise.customObjective);
-        onCompleteWritten(result);
+        const result = await analyzeResponse(finalResponse, exercise.scenario, exercise.task, entitlements, false, exercise.customObjective);
+        onCompleteWritten(result, finalResponse);
       }
     } catch (e: any) {
       console.error(e);

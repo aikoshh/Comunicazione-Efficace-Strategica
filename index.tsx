@@ -2,6 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import { ToastProvider } from './hooks/useToast';
+import { SoundProvider } from './hooks/useSound';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -12,7 +13,9 @@ const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
     <ToastProvider>
-      <App />
+      <SoundProvider>
+        <App />
+      </SoundProvider>
     </ToastProvider>
   </React.StrictMode>
 );
