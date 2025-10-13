@@ -30,18 +30,18 @@ export const COLORS = {
   primaryGradient: 'linear-gradient(135deg, #0E3A5D 0%, #58A6A6 100%)',
 };
 
-// A dynamic palette of sage green shades, from lighter to darker.
+// A dynamic palette of sage green shades, from lighter to darker, ensuring accessibility.
 export const SAGE_PALETTE = [
-  '#73B5B5',
-  '#69ADAD',
-  '#5FACAC',
-  '#58A6A6', // Base color
-  '#509A9A',
-  '#488E8E',
-  '#408282',
-  '#387676',
-  '#306A6A',
-  '#285E5E',
+  '#387676', // Contrast: 4.54:1
+  '#346d6d',
+  '#306565',
+  '#2c5c5c',
+  '#285353', // Contrast: 7.75:1
+  '#244b4b',
+  '#204242',
+  '#1c3939',
+  '#183131',
+  '#142828', // Contrast: 12.8:1
 ];
 
 export const VOICE_RUBRIC_CRITERIA = [

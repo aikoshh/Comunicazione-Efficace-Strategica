@@ -29,6 +29,12 @@ export const FullScreenLoader: React.FC<LoaderProps> = ({ estimatedTime = DEFAUL
 
   return (
     <div style={styles.container}>
+        <style>{`
+            @keyframes slow-blink {
+                0%, 100% { opacity: 1; }
+                50% { opacity: 0.4; }
+            }
+        `}</style>
       <img
         src="https://i.gifer.com/ZNeT.gif"
         alt="Analisi in corso..."
@@ -42,7 +48,7 @@ export const FullScreenLoader: React.FC<LoaderProps> = ({ estimatedTime = DEFAUL
             Tempo stimato: <strong style={styles.countdownNumber}>{timeLeft}s</strong>
           </p>
         ) : (
-          <p style={styles.countdownText}>Elaborazione quasi completata...</p>
+          <p style={{...styles.countdownText, animation: 'slow-blink 2s infinite ease-in-out'}}>Elaborazione quasi completata...</p>
         )}
       </div>
     </div>

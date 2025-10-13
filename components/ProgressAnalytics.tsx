@@ -1,139 +1,142 @@
 import React from 'react';
-import { ResponsiveContainer, LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
-import type { UserProgress, Module } from '../types';
-import { COLORS, MODULES } from '../constants';
-import { TrendingUpIcon, BarChartIcon, CheckCircleIcon } from './Icons';
+import { ResponsiveContainer, PieChart, Pie, Cell, Legend, Tooltip } from 'recharts';
+// FIX: Import CompetenceKey directly from types.ts where it is defined.
+import type { UserProgress, CompetenceKey } from '../types';
+import { COLORS } from '../constants';
+import { TargetIcon } from './Icons';
 
 interface ProgressAnalyticsProps {
   userProgress: UserProgress;
 }
 
-const getScoreData = (progress: UserProgress) => {
-    return progress.scores.map((score, index) => ({
-        name: `Ex ${index + 1}`,
-        punteggio: score,
-    }));
+const COMPETENCE_LABELS: Record<CompetenceKey, string> = {
+  ascolto: 'Ascolto Strategico',
+  riformulazione: 'Riformulazione & Feedback',
+  assertivita: 'Assertività',
+  gestione_conflitto: 'Gestione del Conflitto',
 };
 
-const getImprovementData = (progress: UserProgress) => {
-    if (!progress.analysisHistory || progress.analysisHistory.length === 0) {
-        return [];
-    }
-
-    const suggestionCounts = new Map<string, number>();
-
-    progress.analysisHistory.forEach(record => {
-        record.areasForImprovement.forEach(area => {
-            const suggestion = area.suggestion.trim();
-            suggestionCounts.set(suggestion, (suggestionCounts.get(suggestion) || 0) + 1);
-        });
-    });
-
-    const sortedSuggestions = Array.from(suggestionCounts.entries())
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 3); // Get top 3
-
-    return sortedSuggestions.map(([suggestion, count]) => ({
-        name: suggestion,
-        conteggio: count,
-    })).reverse(); // Reverse for horizontal bar chart
+const BASE_PIE_COLORS: Record<CompetenceKey, { h: number; s: number; l_start: number; l_end: number; }> = {
+  ascolto:            { h: 180, s: 31, l_start: 80, l_end: 50 }, // secondary
+  riformulazione:     { h: 207, s: 71, l_start: 70, l_end: 21 }, // primary
+  assertivita:        { h: 45,  s: 100, l_start: 85, l_end: 51 }, // warning
+  gestione_conflitto: { h: 354, s: 70, l_start: 85, l_end: 54 }, // error
 };
 
-const getCompletedModules = (progress: UserProgress): Module[] => {
-    const completedIds = new Set(progress.completedModuleIds || []);
-    return MODULES.filter(m => !m.isCustom && completedIds.has(m.id));
+// Generates a color from light to saturated based on progress
+const getProgressiveColor = (key: CompetenceKey, value: number): string => {
+    const max = 33;
+    const progress = Math.min(value / max, 1);
+    const colorParams = BASE_PIE_COLORS[key];
+    const lightness = colorParams.l_start - ( (colorParams.l_start - colorParams.l_end) * progress );
+    return `hsl(${colorParams.h}, ${colorParams.s}%, ${lightness}%)`;
 };
 
-const CustomTooltip = ({ active, payload, label }: any) => {
+const CustomTooltip = ({ active, payload }: any) => {
   if (active && payload && payload.length) {
-    if (payload[0].dataKey === 'punteggio') {
-        return (
-            <div style={styles.tooltip}>
-                <p style={styles.tooltipLabel}>{`${label}: ${payload[0].value}%`}</p>
-            </div>
-        );
-    }
-    if (payload[0].dataKey === 'conteggio') {
-        return (
-            <div style={styles.tooltip}>
-                <p style={styles.tooltipLabel}>{`Conteggio: ${payload[0].value}`}</p>
-                <p style={styles.tooltipContent}>{payload[0].payload.name}</p>
-            </div>
-        )
-    }
+    return (
+         <div style={styles.tooltip}>
+            <p style={styles.tooltipLabel}>{`${payload[0].name}: ${payload[0].value.toFixed(1)}%`}</p>
+        </div>
+    )
   }
   return null;
 };
 
-const formatYAxisTick = (tick: string) => {
-    if (tick.length > 40) {
-        return tick.substring(0, 40) + '...';
-    }
-    return tick;
+const RADIAN = Math.PI / 180;
+const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
+    if (percent * 100 < 5) return null; // Don't render tiny labels
+    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+    const x = cx + radius * Math.cos(-midAngle * RADIAN);
+    const y = cy + radius * Math.sin(-midAngle * RADIAN);
+
+    return (
+        <text x={x} y={y} fill="white" textAnchor="middle" dominantBaseline="central" fontWeight="bold" fontSize="14px">
+            {`${(percent * 100).toFixed(0)}%`}
+        </text>
+    );
 };
 
-
 export const ProgressAnalytics: React.FC<ProgressAnalyticsProps> = ({ userProgress }) => {
-    const scoreData = getScoreData(userProgress);
-    const improvementData = getImprovementData(userProgress);
-    const completedModules = getCompletedModules(userProgress);
+    const competenceScores = userProgress.competenceScores || { ascolto: 0, riformulazione: 0, assertivita: 0, gestione_conflitto: 0 };
     
+    const { ascolto, riformulazione, assertivita, gestione_conflitto } = competenceScores;
+    const sumOfCompetencies = ascolto + riformulazione + assertivita + gestione_conflitto;
+    
+    const overallProgress = sumOfCompetencies / 4;
+
+    // Logic from user script to normalize and calculate "nessuna competenza"
+    let normalizedScores = { ascolto, riformulazione, assertivita, gestione_conflitto };
+    let sumForNormalization = sumOfCompetencies;
+
+    if (sumForNormalization > 100) {
+        const factor = 100 / sumForNormalization;
+        (Object.keys(normalizedScores) as CompetenceKey[]).forEach(key => {
+            normalizedScores[key] *= factor;
+        });
+        sumForNormalization = 100;
+    }
+    const nessunaValue = 100 - sumForNormalization;
+
+    const competenceData = [
+      { key: 'ascolto', name: COMPETENCE_LABELS.ascolto, value: normalizedScores.ascolto },
+      { key: 'riformulazione', name: COMPETENCE_LABELS.riformulazione, value: normalizedScores.riformulazione },
+      { key: 'assertivita', name: COMPETENCE_LABELS.assertivita, value: normalizedScores.assertivita },
+      { key: 'gestione_conflitto', name: COMPETENCE_LABELS.gestione_conflitto, value: normalizedScores.gestione_conflitto },
+      { key: 'nessuna', name: 'Nessuna Competenza', value: nessunaValue },
+    ].filter(item => item.value > 0.01); // Filter out tiny slices to prevent render issues
+
+    const renderLegendText = (value: string) => {
+        const isNoCompetence = value === 'Nessuna Competenza';
+        // Use a darker color for competence labels for better readability.
+        const textColor = isNoCompetence ? COLORS.textSecondary : COLORS.primary;
+        return <span style={{ color: textColor, fontWeight: 500 }}>{value}</span>;
+    };
+
     return (
         <section style={styles.container}>
             <h2 style={styles.sectionTitle}>Statistiche di Progresso</h2>
             <div style={styles.grid}>
                 <div style={styles.card}>
-                    <h3 style={styles.cardTitle}><TrendingUpIcon/> Andamento Punteggi</h3>
-                    {scoreData.length > 1 ? (
-                        <ResponsiveContainer width="100%" height={250}>
-                            <LineChart data={scoreData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
-                                <CartesianGrid strokeDasharray="3 3" stroke={COLORS.divider} />
-                                <XAxis dataKey="name" stroke={COLORS.textSecondary}/>
-                                <YAxis stroke={COLORS.textSecondary} domain={[0, 100]}/>
+                     <h3 style={styles.cardTitle}><TargetIcon/> Grafico delle competenze acquisite</h3>
+                     <>
+                        <ResponsiveContainer width="100%" height={300}>
+                            <PieChart>
+                                <Pie
+                                    data={competenceData}
+                                    cx="50%"
+                                    cy="50%"
+                                    labelLine={false}
+                                    label={renderCustomizedLabel}
+                                    outerRadius={110}
+                                    innerRadius={60}
+                                    fill="#8884d8"
+                                    dataKey="value"
+                                    paddingAngle={5}
+                                >
+                                    {competenceData.map((entry, index) => (
+                                        <Cell 
+                                          key={`cell-${index}`} 
+                                          fill={entry.key !== 'nessuna' ? getProgressiveColor(entry.key as CompetenceKey, entry.value) : COLORS.divider} 
+                                        />
+                                    ))}
+                                </Pie>
                                 <Tooltip content={<CustomTooltip />} />
-                                <Legend />
-                                <Line type="monotone" dataKey="punteggio" stroke={COLORS.secondary} strokeWidth={2} activeDot={{ r: 8 }} />
-                            </LineChart>
+                                <Legend 
+                                    iconSize={12} 
+                                    wrapperStyle={{fontSize: '14px', marginTop: '15px'}}
+                                    formatter={renderLegendText}
+                                />
+                            </PieChart>
                         </ResponsiveContainer>
-                    ) : (
-                        <p style={styles.placeholder}>Completa almeno due esercizi per vedere il tuo andamento.</p>
-                    )}
-                </div>
-
-                <div style={styles.card}>
-                     <h3 style={styles.cardTitle}><BarChartIcon/> Aree di Miglioramento Frequenti</h3>
-                     {improvementData.length > 0 ? (
-                        <ResponsiveContainer width="100%" height={250}>
-                             <BarChart data={improvementData} layout="vertical" margin={{ top: 5, right: 20, left: 20, bottom: 5 }}>
-                                <CartesianGrid strokeDasharray="3 3" stroke={COLORS.divider} />
-                                <XAxis type="number" hide />
-                                <YAxis type="category" dataKey="name" width={150} tick={{fontSize: 12}} tickFormatter={formatYAxisTick} stroke={COLORS.textSecondary}/>
-                                <Tooltip content={<CustomTooltip />} cursor={{fill: 'rgba(0,0,0,0.05)'}}/>
-                                <Bar dataKey="conteggio" fill={COLORS.warning} barSize={20} />
-                            </BarChart>
-                        </ResponsiveContainer>
-                     ) : (
-                         <p style={styles.placeholder}>I tuoi suggerimenti più comuni appariranno qui.</p>
-                     )}
-                </div>
-                
-                <div style={{...styles.card, gridColumn: '1 / -1'}}>
-                    <h3 style={styles.cardTitle}><CheckCircleIcon/> Moduli Completati</h3>
-                    {completedModules.length > 0 ? (
-                        <div style={styles.moduleList}>
-                            {completedModules.map(module => {
-                                const Icon = module.icon;
-                                return (
-                                <div key={module.id} style={styles.moduleItem}>
-                                    <Icon style={{color: COLORS.secondary}}/>
-                                    <span>{module.title}</span>
-                                </div>
-                                )
-                            })}
+                        <div style={styles.overallProgressContainer}>
+                            <span style={styles.overallProgressLabel}>Progresso Complessivo</span>
+                            <div style={styles.overallProgressBar}>
+                                <div style={{...styles.overallProgressBarFill, width: `${overallProgress}%`}}/>
+                            </div>
+                            <span style={styles.overallProgressValue}>{overallProgress.toFixed(1)}%</span>
                         </div>
-                    ) : (
-                        <p style={styles.placeholder}>Nessun modulo completato. Continua ad allenarti!</p>
-                    )}
+                        </>
                 </div>
             </div>
         </section>
@@ -155,7 +158,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     },
     grid: {
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))',
+        gridTemplateColumns: '1fr',
         gap: '24px',
     },
     card: {
@@ -174,15 +177,6 @@ const styles: { [key: string]: React.CSSProperties } = {
         alignItems: 'center',
         gap: '12px',
     },
-    placeholder: {
-        minHeight: '250px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        textAlign: 'center',
-        color: COLORS.textSecondary,
-        fontSize: '15px',
-    },
     tooltip: {
         backgroundColor: 'rgba(28, 28, 30, 0.9)',
         color: 'white',
@@ -196,26 +190,33 @@ const styles: { [key: string]: React.CSSProperties } = {
         fontWeight: 'bold',
         fontSize: '14px',
     },
-    tooltipContent: {
-        margin: '4px 0 0',
-        fontSize: '13px',
-        maxWidth: '250px',
-        whiteSpace: 'normal',
-    },
-    moduleList: {
-        display: 'flex',
-        flexWrap: 'wrap',
-        gap: '16px',
-    },
-    moduleItem: {
+    overallProgressContainer: {
+        marginTop: '20px',
         display: 'flex',
         alignItems: 'center',
-        gap: '10px',
-        backgroundColor: COLORS.cardDark,
-        padding: '10px 16px',
-        borderRadius: '8px',
-        fontSize: '15px',
+        gap: '12px',
+    },
+    overallProgressLabel: {
+        fontSize: '14px',
         fontWeight: 500,
-        color: COLORS.textPrimary
-    }
+        color: COLORS.textSecondary,
+    },
+    overallProgressBar: {
+        flex: 1,
+        height: '10px',
+        backgroundColor: COLORS.divider,
+        borderRadius: '5px',
+        overflow: 'hidden',
+    },
+    overallProgressBarFill: {
+        height: '100%',
+        backgroundColor: COLORS.secondary,
+        borderRadius: '5px',
+        transition: 'width 0.5s ease-out',
+    },
+    overallProgressValue: {
+        fontSize: '14px',
+        fontWeight: 'bold',
+        color: COLORS.primary,
+    },
 };

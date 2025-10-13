@@ -3,9 +3,10 @@ import { Module, Exercise, DifficultyLevel, ExerciseType, Entitlements } from '.
 import { COLORS, SAGE_PALETTE, EXERCISE_TYPE_ICONS } from '../constants';
 import { HomeIcon, CheckCircleIcon, QuestionIcon, TargetIcon } from './Icons';
 import { soundService } from '../services/soundService';
-import { hasEntitlement } from '../services/monetizationService';
+import { hasProAccess } from '../services/monetizationService';
 import { QuestionLibraryModal } from './QuestionLibraryModal';
 import { PreparationChecklistModal } from './PreparationChecklistModal';
+import { ExercisePreviewModal } from './ExercisePreviewModal';
 
 interface ModuleScreenProps {
   module: Module;
@@ -43,13 +44,19 @@ const hoverStyle = `
 export const ModuleScreen: React.FC<ModuleScreenProps> = ({ module, onSelectExercise, onBack, completedExerciseIds, entitlements }) => {
   const [isLibraryModalOpen, setLibraryModalOpen] = useState(false);
   const [isChecklistModalOpen, setChecklistModalOpen] = useState(false);
+  const [previewingExercise, setPreviewingExercise] = useState<Exercise | null>(null);
   
   const handleExerciseClick = (exercise: Exercise) => {
     soundService.playClick();
-    onSelectExercise(exercise);
+    setPreviewingExercise(exercise);
   }
+
+  const handleStartExercise = (exercise: Exercise) => {
+      setPreviewingExercise(null);
+      onSelectExercise(exercise);
+  };
   
-  const showDomandeProFeatures = module.id === 'm3' && hasEntitlement(entitlements, 'ces.addon.domande.pro');
+  const showProFeatures = module.id === 'm3' && hasProAccess(entitlements);
 
   return (
     <>
@@ -63,7 +70,7 @@ export const ModuleScreen: React.FC<ModuleScreenProps> = ({ module, onSelectExer
         <p style={styles.description}>{module.description}</p>
       </header>
       
-      {showDomandeProFeatures && (
+      {showProFeatures && (
           <div style={styles.proFeaturesContainer}>
               <button 
                   onClick={() => { soundService.playClick(); setLibraryModalOpen(true); }} 
@@ -128,7 +135,9 @@ export const ModuleScreen: React.FC<ModuleScreenProps> = ({ module, onSelectExer
                       </span>
                   </div>
               </div>
-              <p style={styles.exerciseScenarioPreview}>{exercise.scenario.substring(0, 100)}...</p>
+              <p style={styles.exerciseScenarioPreview} title={exercise.scenario}>
+                {exercise.scenario.substring(0, 100)}...
+              </p>
             </div>
           )
         })}
@@ -136,6 +145,13 @@ export const ModuleScreen: React.FC<ModuleScreenProps> = ({ module, onSelectExer
     </div>
     <QuestionLibraryModal isOpen={isLibraryModalOpen} onClose={() => setLibraryModalOpen(false)} />
     <PreparationChecklistModal isOpen={isChecklistModalOpen} onClose={() => setChecklistModalOpen(false)} />
+    {previewingExercise && (
+        <ExercisePreviewModal 
+            exercise={previewingExercise}
+            onClose={() => setPreviewingExercise(null)}
+            onStart={handleStartExercise}
+        />
+    )}
     </>
   );
 };

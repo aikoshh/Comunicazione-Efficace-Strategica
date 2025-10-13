@@ -15,8 +15,9 @@ import type { Module, Exercise, AnalysisResult, VoiceAnalysisResult, DifficultyL
 import { MODULES, COLORS } from './constants';
 import { initialUserDatabase } from './database';
 import { soundService } from './services/soundService';
-import { getUserEntitlements, purchaseProduct, restorePurchases } from './services/monetizationService';
+import { getUserEntitlements, purchaseProduct, restorePurchases, hasProAccess } from './services/monetizationService';
 import { useToast } from './hooks/useToast';
+import { updateCompetenceScores } from './services/competenceService';
 
 type AppState =
   | { screen: 'home' }
@@ -32,6 +33,8 @@ type AppState =
 
 const USERS_STORAGE_KEY = 'ces_coach_users';
 const PROGRESS_STORAGE_KEY = 'ces_coach_progress';
+const CURRENT_USER_EMAIL_KEY = 'ces_coach_current_user_email';
+const APP_STATE_KEY = 'ces_coach_app_state';
 
 const parseDatabase = (dbString: string): User[] => {
     if (!dbString.trim()) return [];
@@ -99,6 +102,27 @@ const App: React.FC = () => {
   });
 
   const [appState, setAppState] = useState<AppState>({ screen: 'home' });
+  const [returnToState, setReturnToState] = useState<AppState | null>(null);
+
+  useEffect(() => {
+      // Session Persistence: Restore session on initial load
+      const savedUserEmail = loadFromStorage<string>(CURRENT_USER_EMAIL_KEY);
+      if (savedUserEmail) {
+          const user = users.find(u => u.email === savedUserEmail);
+          if (user) {
+              setCurrentUser(user);
+              setIsAuthenticated(true);
+              const savedState = loadFromStorage<AppState>(APP_STATE_KEY);
+              if (savedState) {
+                  setAppState(savedState);
+              }
+          } else {
+              // Clear invalid session data if user not found
+              localStorage.removeItem(CURRENT_USER_EMAIL_KEY);
+              localStorage.removeItem(APP_STATE_KEY);
+          }
+      }
+  }, [users]);
 
   useEffect(() => {
     saveToStorage(USERS_STORAGE_KEY, users);
@@ -107,6 +131,14 @@ const App: React.FC = () => {
   useEffect(() => {
     saveToStorage(PROGRESS_STORAGE_KEY, userProgress);
   }, [userProgress]);
+
+  useEffect(() => {
+      // Session Persistence: Save state on change
+      if (isAuthenticated && currentUser) {
+          saveToStorage(CURRENT_USER_EMAIL_KEY, currentUser.email);
+          saveToStorage(APP_STATE_KEY, appState);
+      }
+  }, [appState, isAuthenticated, currentUser]);
 
   useEffect(() => {
       window.scrollTo(0, 0);
@@ -126,12 +158,25 @@ const App: React.FC = () => {
 
   const updateUserProgress = (email: string, updates: Partial<UserProgress>) => {
       setUserProgress(prev => {
-          const currentProgress = prev[email] || { scores: [], completedExerciseIds: [], completedModuleIds: [] };
+          const currentProgress = prev[email] || { 
+              scores: [], 
+              completedExerciseIds: [], 
+              skippedExerciseIds: [],
+              completedModuleIds: [],
+              competenceScores: { ascolto: 0, riformulazione: 0, assertivita: 0, gestione_conflitto: 0 } 
+          };
           return {
               ...prev,
               [email]: { ...currentProgress, ...updates }
           };
       });
+  };
+
+  const navigateToPaywall = () => {
+    if (appState.screen !== 'paywall') {
+        setReturnToState(appState);
+    }
+    setAppState({ screen: 'paywall' });
   };
   
   const handlePurchase = async (product: Product) => {
@@ -140,6 +185,12 @@ const App: React.FC = () => {
         setEntitlements(newEntitlements);
         soundService.playScoreSound(100); // Play triumph sound for purchase
         addToast(`${product.name} sbloccato con successo!`, 'success');
+        if (returnToState) {
+            setTimeout(() => {
+                setAppState(returnToState);
+                setReturnToState(null);
+            }, 1000);
+        }
     } catch (error: any) {
         addToast(error.message || "Errore durante l'acquisto.", 'error');
     }
@@ -183,6 +234,8 @@ const App: React.FC = () => {
 
   const handleLogout = () => {
     soundService.playClick();
+    localStorage.removeItem(CURRENT_USER_EMAIL_KEY);
+    localStorage.removeItem(APP_STATE_KEY);
     setIsAuthenticated(false);
     setCurrentUser(null);
     setAppState({ screen: 'home' });
@@ -236,12 +289,25 @@ const App: React.FC = () => {
       
       const { score, areasForImprovement } = result;
       const userEmail = currentUser.email;
-      const currentProgress = userProgress[userEmail] || { scores: [], completedExerciseIds: [], completedModuleIds: [], analysisHistory: [] };
+      const currentProgress = userProgress[userEmail] || { 
+          scores: [], 
+          completedExerciseIds: [], 
+          skippedExerciseIds: [],
+          completedModuleIds: [], 
+          analysisHistory: [],
+          competenceScores: { ascolto: 0, riformulazione: 0, assertivita: 0, gestione_conflitto: 0 } 
+      };
       
       const newScores = [...currentProgress.scores, score];
       const newCompletedIds = [...new Set([...(currentProgress.completedExerciseIds || []), exerciseId])];
-      const newAnalysisHistory = [...(currentProgress.analysisHistory || []), { exerciseId, areasForImprovement }];
+      const newAnalysisHistory = [...(currentProgress.analysisHistory || []), { exerciseId, areasForImprovement, score }];
       
+      const newCompetenceScores = updateCompetenceScores(
+        currentProgress.competenceScores,
+        exerciseId,
+        score
+      );
+
       const newCompletedModuleIds = [...(currentProgress.completedModuleIds || [])];
       for (const module of MODULES.filter(m => !m.isCustom)) {
           if (!newCompletedModuleIds.includes(module.id)) {
@@ -258,6 +324,7 @@ const App: React.FC = () => {
           completedExerciseIds: newCompletedIds,
           completedModuleIds: newCompletedModuleIds,
           analysisHistory: newAnalysisHistory,
+          competenceScores: newCompetenceScores,
       });
   };
   
@@ -276,17 +343,44 @@ const App: React.FC = () => {
           const averageScore = Math.round(result.scores.reduce((acc, s) => acc + s.score, 0) / result.scores.length * 10);
           if (!appState.isCheckup && currentUser) {
                 const userEmail = currentUser.email;
-                const currentProgress = userProgress[userEmail] || { scores: [], completedExerciseIds: [], completedModuleIds: [] };
+                const currentProgress = userProgress[userEmail] || { scores: [], completedExerciseIds: [], skippedExerciseIds: [], completedModuleIds: [] };
                 const newScores = [...currentProgress.scores, averageScore];
                 const newCompletedIds = [...new Set([...(currentProgress.completedExerciseIds || []), appState.exercise.id])];
                 
+                const newCompetenceScores = updateCompetenceScores(
+                    currentProgress.competenceScores,
+                    appState.exercise.id,
+                    averageScore
+                );
+
                 updateUserProgress(userEmail, {
                     scores: newScores,
                     completedExerciseIds: newCompletedIds,
+                    competenceScores: newCompetenceScores,
                 });
           }
           const { currentModule, nextExercise } = findNextExerciseInModule(appState.exercise.id);
           setAppState({ screen: 'voice_report', result, exercise: appState.exercise, nextExercise, currentModule });
+      }
+  };
+
+  const handleSkipExercise = (exerciseId: string) => {
+      soundService.playClick();
+      if (currentUser) {
+          updateUserProgress(currentUser.email, {
+              skippedExerciseIds: [...new Set([...(userProgress[currentUser.email]?.skippedExerciseIds || []), exerciseId])]
+          });
+      }
+
+      if (appState.screen === 'exercise') {
+          const { nextExercise, currentModule } = findNextExerciseInModule(appState.exercise.id);
+          if (nextExercise) {
+              handleSelectExercise(nextExercise);
+          } else if (currentModule) {
+              handleSelectModule(currentModule);
+          } else {
+              setAppState({ screen: 'home' });
+          }
       }
   };
 
@@ -297,7 +391,16 @@ const App: React.FC = () => {
   };
   
   const handleBack = () => {
-    if (appState.screen === 'module' || appState.screen === 'custom_setup' || appState.screen === 'communicator_profile' || appState.screen === 'strategic_checkup' || appState.screen === 'paywall') {
+    if (appState.screen === 'paywall') {
+        if (returnToState) {
+            setAppState(returnToState);
+            setReturnToState(null);
+        } else {
+            setAppState({ screen: 'home' });
+        }
+        return;
+    }
+    if (appState.screen === 'module' || appState.screen === 'custom_setup' || appState.screen === 'communicator_profile' || appState.screen === 'strategic_checkup') {
       setAppState({ screen: 'home' });
     }
     if (appState.screen === 'exercise') {
@@ -356,6 +459,7 @@ const App: React.FC = () => {
   }
   
   const completedExerciseIds = (currentUser && userProgress[currentUser.email]?.completedExerciseIds) || [];
+  const isPro = hasProAccess(entitlements);
   let screenContent;
   let screenKey = 'home';
   const showHeader = appState.screen !== 'api_key_error';
@@ -391,6 +495,7 @@ const App: React.FC = () => {
                     exercise={appState.exercise} 
                     onCompleteWritten={handleCompleteWrittenExercise} 
                     onCompleteVerbal={handleCompleteVerbalExercise}
+                    onSkip={handleSkipExercise}
                     onBack={handleBack} 
                     onApiKeyError={handleApiKeyError}
                     entitlements={entitlements}
@@ -413,10 +518,10 @@ const App: React.FC = () => {
         
         if (appState.screen === 'report') {
             screenKey = `report-${appState.exercise.id}`;
-            screenContent = <AnalysisReportScreen result={appState.result} exercise={appState.exercise} onRetry={handleRetryExercise} onNextExercise={onNextExercise} nextExerciseLabel={nextExerciseLabel} entitlements={entitlements} onNavigateToPaywall={() => setAppState({ screen: 'paywall' })} />;
+            screenContent = <AnalysisReportScreen result={appState.result} exercise={appState.exercise} onRetry={handleRetryExercise} onNextExercise={onNextExercise} nextExerciseLabel={nextExerciseLabel} entitlements={entitlements} onNavigateToPaywall={navigateToPaywall} />;
         } else {
             screenKey = `voice-report-${appState.exercise.id}`;
-            screenContent = <VoiceAnalysisReportScreen result={appState.result} exercise={appState.exercise} onRetry={handleRetryExercise} onNextExercise={onNextExercise} nextExerciseLabel={nextExerciseLabel} entitlements={entitlements} onNavigateToPaywall={() => setAppState({ screen: 'paywall' })}/>;
+            screenContent = <VoiceAnalysisReportScreen result={appState.result} exercise={appState.exercise} onRetry={handleRetryExercise} onNextExercise={onNextExercise} nextExerciseLabel={nextExerciseLabel} entitlements={entitlements} onNavigateToPaywall={navigateToPaywall}/>;
         }
         break;
     case 'api_key_error':
@@ -434,7 +539,7 @@ const App: React.FC = () => {
         break;
     case 'paywall':
         screenKey = 'paywall';
-        screenContent = <PaywallScreen entitlements={entitlements!} onPurchase={handlePurchase} onRestore={handleRestore} />;
+        screenContent = <PaywallScreen entitlements={entitlements!} onPurchase={handlePurchase} onRestore={handleRestore} onBack={handleBack} />;
         break;
     default:
         screenContent = <HomeScreen 
@@ -448,7 +553,7 @@ const App: React.FC = () => {
 
   return (
     <div>
-        {showHeader && <Header currentUser={currentUser} breadcrumbs={generateBreadcrumbs()} onLogout={handleLogout} onGoToPaywall={() => setAppState({ screen: 'paywall' })} />}
+        {showHeader && <Header currentUser={currentUser} breadcrumbs={generateBreadcrumbs()} onLogout={handleLogout} onGoToPaywall={navigateToPaywall} isPro={isPro} />}
         <main style={showHeader ? styles.mainContent : {}}>
             <div key={screenKey} style={{ animation: 'fadeInUp 0.5s ease-out' }}>
                 {screenContent}
@@ -456,6 +561,11 @@ const App: React.FC = () => {
         </main>
         {appState.screen !== 'api_key_error' && (
             <footer style={styles.footer}>
+                 <div style={styles.footerLinks}>
+                    <a href="#" style={styles.footerLink}>Privacy Policy</a>
+                    <span style={styles.footerSeparator}>|</span>
+                    <a href="#" style={styles.footerLink}>Termini di Servizio</a>
+                </div>
                 <div style={styles.copyrightContainer}>
                     <p style={styles.copyrightText}>
                         CES Coach © Copyright 2025
@@ -478,6 +588,19 @@ const styles: { [key: string]: React.CSSProperties } = {
         textAlign: 'center',
         padding: '32px 20px',
         backgroundColor: COLORS.base,
+    },
+    footerLinks: {
+        marginBottom: '16px',
+    },
+    footerLink: {
+        color: COLORS.textSecondary,
+        textDecoration: 'none',
+        fontSize: '12px',
+        margin: '0 8px'
+    },
+    footerSeparator: {
+        color: COLORS.textSecondary,
+        fontSize: '12px',
     },
     copyrightContainer: {
         marginTop: '24px',

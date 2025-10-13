@@ -4,7 +4,7 @@ import { COLORS, VOICE_RUBRIC_CRITERIA } from '../constants';
 import { useSpeech } from '../hooks/useSpeech';
 import { CheckCircleIcon, XCircleIcon, RetryIcon, HomeIcon, LightbulbIcon, TargetIcon, SpeakerIcon, SpeakerOffIcon, NextIcon } from './Icons';
 import { soundService } from '../services/soundService';
-import { hasEntitlement } from '../services/monetizationService';
+import { hasProAccess } from '../services/monetizationService';
 
 interface VoiceAnalysisReportScreenProps {
   result: VoiceAnalysisResult;
@@ -120,8 +120,11 @@ const AnnotatedText: React.FC<{ text: string }> = ({ text }) => {
 export const VoiceAnalysisReportScreen: React.FC<VoiceAnalysisReportScreenProps> = ({ result, exercise, onRetry, onNextExercise, nextExerciseLabel, entitlements, onNavigateToPaywall }) => {
   const { speak, isSpeaking, stopSpeaking } = useSpeech();
   
-  const averageScore = Math.round(result.scores.reduce((acc, s) => acc + s.score, 0) / result.scores.length * 10);
-  const hasParaverbalPro = hasEntitlement(entitlements, 'ces.addon.paraverbale.pro');
+  const averageScore = result.scores.length > 0
+    ? Math.round(result.scores.reduce((acc, s) => acc + s.score, 0) / result.scores.length * 10)
+    : 0;
+
+  const isPro = hasProAccess(entitlements);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -144,7 +147,7 @@ export const VoiceAnalysisReportScreen: React.FC<VoiceAnalysisReportScreenProps>
   
   const handleStrategicReplay = () => {
     soundService.playClick();
-    if (!hasParaverbalPro) {
+    if (!isPro) {
         onNavigateToPaywall();
         return;
     }
@@ -234,9 +237,9 @@ export const VoiceAnalysisReportScreen: React.FC<VoiceAnalysisReportScreenProps>
         <div style={{...styles.suggestedDeliveryContainer, animation: 'fadeInUp 0.5s 0.8s ease-out both'}}>
           <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px'}}>
               <h2 style={styles.sectionTitle}>Risposta Consigliata</h2>
-              <button onClick={handleStrategicReplay} style={!hasParaverbalPro ? styles.replayButtonLocked : styles.replayButton} className="replay-button">
+              <button onClick={handleStrategicReplay} style={!isPro ? styles.replayButtonLocked : styles.replayButton} className="replay-button">
                   {isSpeaking ? <SpeakerOffIcon/> : <SpeakerIcon/>}
-                  {isSpeaking ? 'Ferma Ascolto' : (hasParaverbalPro ? 'Ascolta Versione Ideale' : 'Sblocca con Paraverbale PRO')}
+                  {isSpeaking ? 'Ferma Ascolto' : (isPro ? 'Ascolta Versione Ideale' : 'Sblocca PRO')}
               </button>
           </div>
           <p style={styles.deliveryInstructions}><HighlightText text={result.suggested_delivery.instructions}/></p>

@@ -3,12 +3,15 @@ import type { User, Breadcrumb } from '../types';
 import { COLORS } from '../constants';
 import { Logo } from './Logo';
 import { HomeIcon, ChevronRightIcon } from './Icons';
+import { hasProAccess } from '../services/monetizationService';
+
 
 interface HeaderProps {
   currentUser: User | null;
   breadcrumbs: Breadcrumb[];
   onLogout: () => void;
   onGoToPaywall: () => void;
+  isPro: boolean;
 }
 
 const hoverStyle = `
@@ -27,7 +30,7 @@ const hoverStyle = `
   }
 `;
 
-export const Header: React.FC<HeaderProps> = ({ currentUser, breadcrumbs, onLogout, onGoToPaywall }) => {
+export const Header: React.FC<HeaderProps> = ({ currentUser, breadcrumbs, onLogout, onGoToPaywall, isPro }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   
   const getInitials = (user: User) => {
@@ -61,9 +64,11 @@ export const Header: React.FC<HeaderProps> = ({ currentUser, breadcrumbs, onLogo
           </div>
 
           <div style={styles.userSection}>
-            <button style={styles.proButton} className="pro-button" onClick={onGoToPaywall}>
-              Sblocca PRO
-            </button>
+            {!isPro && (
+                <button style={styles.proButton} className="pro-button" onClick={onGoToPaywall}>
+                    Sblocca PRO
+                </button>
+            )}
             {currentUser && (
               <div style={styles.userMenuContainer}>
                 <button 

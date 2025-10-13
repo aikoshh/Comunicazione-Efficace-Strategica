@@ -5,8 +5,9 @@ import { CheckCircleIcon, RetryIcon, HomeIcon, LightbulbIcon, NextIcon, TargetIc
 import { soundService } from '../services/soundService';
 import { UpsellBanner } from './UpsellBanner';
 import { PRODUCTS } from '../products';
-import { hasProAccess, hasEntitlement } from '../services/monetizationService';
+import { hasProAccess } from '../services/monetizationService';
 import { printService } from '../services/printService';
+import { PrintPreviewModal } from './PrintPreviewModal';
 
 
 interface AnalysisReportScreenProps {
@@ -136,10 +137,13 @@ const QuestionMetrics: React.FC<{ utility: number; clarity: number }> = ({ utili
 
 export const AnalysisReportScreen: React.FC<AnalysisReportScreenProps> = ({ result, exercise, onRetry, onNextExercise, nextExerciseLabel, entitlements, onNavigateToPaywall }) => {
   const [activeTab, setActiveTab] = useState<'short' | 'long'>('short');
-  const showUpsell = result.score >= 70 && !hasProAccess(entitlements);
-  const suggestedProduct = PRODUCTS.find(p => p.id === 'ces.addon.riformulazione.pro');
-  const hasRiformulazionePro = hasEntitlement(entitlements, 'ces.addon.riformulazione.pro');
-  const hasDomandePro = hasEntitlement(entitlements, 'ces.addon.domande.pro');
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [reportHtml, setReportHtml] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<Record<number, 'like' | 'dislike' | null>>({});
+
+  const isPro = hasProAccess(entitlements);
+  const showUpsell = result.score >= 70 && !isPro;
+  const proProduct = PRODUCTS[0]; // There's only one product now
   
   const reportCardId = `report-card-${exercise.id}`;
 
@@ -152,9 +156,31 @@ export const AnalysisReportScreen: React.FC<AnalysisReportScreenProps> = ({ resu
   const handleNext = () => { soundService.playClick(); onNextExercise(); };
   const handleExport = () => { 
       soundService.playClick();
-      printService.printReport(reportCardId, `Report Esercizio: ${exercise.title}`);
+      const html = printService.getReportHTML(reportCardId, `Report Esercizio: ${exercise.title}`);
+      if (html) {
+          setReportHtml(html);
+          setIsPreviewOpen(true);
+      } else {
+          alert("Errore: Impossibile generare l'anteprima del report.");
+      }
+  };
+
+  const handleFeedback = (index: number, choice: 'like' | 'dislike') => {
+    soundService.playClick();
+    setFeedback(prev => ({
+        ...prev,
+        [index]: prev[index] === choice ? null : choice,
+    }));
+    // In a real app, this feedback would be sent to a logging service.
+    console.log(`Feedback for suggestion ${index}: ${choice}`);
   };
   
+  const handlePrint = () => {
+      if (reportHtml) {
+          printService.triggerPrint(reportHtml);
+      }
+  };
+
   const hoverStyle = `
     .primary-button:hover, .secondary-button:hover, .export-button:hover {
       transform: translateY(-2px);
@@ -167,12 +193,13 @@ export const AnalysisReportScreen: React.FC<AnalysisReportScreenProps> = ({ resu
   `;
 
   return (
+    <>
     <div style={styles.container}>
       <style>{hoverStyle}</style>
       <div style={styles.card} id={reportCardId}>
         <div style={styles.headerContainer}>
             <h1 style={styles.title}>Report dell'Analisi</h1>
-            {hasRiformulazionePro && (
+            {isPro && (
                 <button onClick={handleExport} style={styles.exportButton} className="export-button no-print">
                     Esporta in PDF
                 </button>
@@ -204,6 +231,19 @@ export const AnalysisReportScreen: React.FC<AnalysisReportScreenProps> = ({ resu
                         <span style={styles.exampleText}>
                           <strong>Esempio:</strong> <em>"{item.example}"</em>
                         </span>
+                        <div style={styles.feedbackContainer} className="no-print">
+                            <span>È stato utile?</span>
+                            <button 
+                                onClick={() => handleFeedback(index, 'like')} 
+                                style={{...styles.feedbackButton, ...(feedback[index] === 'like' ? styles.feedbackButtonActiveLike : {})}}
+                                aria-pressed={feedback[index] === 'like'}
+                            >👍</button>
+                            <button 
+                                onClick={() => handleFeedback(index, 'dislike')} 
+                                style={{...styles.feedbackButton, ...(feedback[index] === 'dislike' ? styles.feedbackButtonActiveDislike : {})}}
+                                aria-pressed={feedback[index] === 'dislike'}
+                            >👎</button>
+                        </div>
                       </div>
                     </li>
                   ))}
@@ -211,8 +251,8 @@ export const AnalysisReportScreen: React.FC<AnalysisReportScreenProps> = ({ resu
             </div>
         </div>
         
-        {hasRiformulazionePro && result.detailedRubric && <DetailedRubric rubric={result.detailedRubric} />}
-        {hasDomandePro && result.utilityScore && result.clarityScore && <QuestionMetrics utility={result.utilityScore} clarity={result.clarityScore} />}
+        {isPro && result.detailedRubric && <DetailedRubric rubric={result.detailedRubric} />}
+        {isPro && result.utilityScore && result.clarityScore && <QuestionMetrics utility={result.utilityScore} clarity={result.clarityScore} />}
         
         <div style={{...styles.suggestedResponseContainer, animation: 'fadeInUp 0.5s 0.6s ease-out both'}}>
           <h2 style={styles.sectionTitle}><TargetIcon style={{color: COLORS.secondary}}/> Risposta Suggerita</h2>
@@ -236,9 +276,9 @@ export const AnalysisReportScreen: React.FC<AnalysisReportScreenProps> = ({ resu
           </div>
         </div>
         
-        {showUpsell && suggestedProduct && (
+        {showUpsell && proProduct && (
             <UpsellBanner 
-                product={suggestedProduct}
+                product={proProduct}
                 score={result.score}
                 onUnlock={onNavigateToPaywall}
                 onDetails={onNavigateToPaywall}
@@ -255,6 +295,13 @@ export const AnalysisReportScreen: React.FC<AnalysisReportScreenProps> = ({ resu
         </div>
       </div>
     </div>
+    <PrintPreviewModal 
+        isOpen={isPreviewOpen} 
+        onClose={() => setIsPreviewOpen(false)} 
+        htmlContent={reportHtml} 
+        onPrint={handlePrint} 
+    />
+    </>
   );
 };
 
@@ -344,6 +391,33 @@ const styles: { [key: string]: React.CSSProperties } = {
     listItemIcon: { flexShrink: 0, width: '20px', height: '20px', marginTop: '3px' },
     listItemText: { flex: 1 },
     exampleText: { display: 'block', marginTop: '8px', padding: '10px 12px', backgroundColor: '#EAECEE', borderRadius: '8px', color: COLORS.textSecondary, fontSize: '15px', borderLeft: `3px solid ${COLORS.secondary}` },
+    feedbackContainer: {
+        marginTop: '12px',
+        paddingTop: '12px',
+        borderTop: `1px solid ${COLORS.divider}`,
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        fontSize: '14px',
+        color: COLORS.textSecondary,
+    },
+    feedbackButton: {
+        background: 'none',
+        border: '1px solid transparent',
+        padding: '4px 8px',
+        borderRadius: '6px',
+        cursor: 'pointer',
+        transition: 'all 0.2s ease',
+        fontSize: '16px',
+    },
+    feedbackButtonActiveLike: {
+        backgroundColor: 'rgba(40, 167, 69, 0.1)',
+        borderColor: COLORS.success,
+    },
+    feedbackButtonActiveDislike: {
+        backgroundColor: 'rgba(220, 53, 69, 0.1)',
+        borderColor: COLORS.error,
+    },
     suggestedResponseContainer: { textAlign: 'left', marginTop: '32px' },
     tabs: { display: 'flex', gap: '8px', marginBottom: '16px' },
     tabButton: { padding: '8px 16px', fontSize: '14px', fontWeight: '500', border: `1px solid ${COLORS.divider}`, backgroundColor: COLORS.divider, color: COLORS.textSecondary, borderRadius: '8px', cursor: 'pointer', transition: 'all 0.2s' },

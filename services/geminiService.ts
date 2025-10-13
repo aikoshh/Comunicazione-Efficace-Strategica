@@ -1,17 +1,6 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import type { AnalysisResult, ImprovementArea, VoiceAnalysisResult, VoiceScore, CommunicatorProfile, Entitlements, DetailedRubricScore } from '../types';
-import { hasEntitlement } from './monetizationService';
-
-// ATTENZIONE: Inserire le chiavi API direttamente nel codice client-side è un grave rischio per la sicurezza.
-// Questa chiave è visibile a chiunque ispezioni il codice sorgente dell'applicazione.
-const API_KEY = "AIzaSyCPKmoJbTg3jhxo9oJIcY7DKPYXKj1kA_c";
-
-const getAI = () => {
-    if (!API_KEY) {
-        throw new Error("API_KEY non configurata nel codice sorgente.");
-    }
-    return new GoogleGenAI({ apiKey: API_KEY });
-};
+import { hasProAccess } from './monetizationService';
 
 const analysisSchema = {
     type: Type.OBJECT,
@@ -96,24 +85,23 @@ export const analyzeResponse = async (
   customObjective?: string,
 ): Promise<AnalysisResult> => {
   try {
-    const ai = getAI();
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
-    const isRiformulazionePro = hasEntitlement(entitlements, 'ces.addon.riformulazione.pro');
-    const isDomandePro = hasEntitlement(entitlements, 'ces.addon.domande.pro');
+    const isPro = hasProAccess(entitlements);
     const isQuestionTask = task.toLowerCase().includes('domand');
 
     let proInstructions = '';
-    if (isRiformulazionePro) {
+    if (isPro) {
         proInstructions += `
-          **Funzionalità PRO ATTIVA: Riformulazione PRO.**
+          **Funzionalità PRO ATTIVA: Valutazione Dettagliata.**
           DEVI fornire una valutazione dettagliata per ciascuno dei 5 criteri chiave (Chiarezza, Tono ed Empatia, Orientamento alla Soluzione, Assertività, Struttura). Per ogni criterio, fornisci un punteggio da 1 a 10 e una breve motivazione. Popola il campo 'detailedRubric' nel JSON.
         `;
-    }
-     if (isDomandePro && isQuestionTask) {
-        proInstructions += `
-          **Funzionalità PRO ATTIVA: Domande PRO.**
-          L'utente sta formulando una domanda. Valutala secondo due metriche specifiche: 'utilityScore' (quanto la domanda è utile per raggiungere l'obiettivo) e 'clarityScore' (quanto la domanda è chiara e non ambigua), entrambe con un punteggio da 1 a 10. Popola i campi 'utilityScore' and 'clarityScore' nel JSON.
-        `;
+        if (isQuestionTask) {
+            proInstructions += `
+            **Funzionalità PRO ATTIVA: Metriche Domande.**
+            L'utente sta formulando una domanda. Valutala secondo due metriche specifiche: 'utilityScore' (quanto la domanda è utile per raggiungere l'obiettivo) e 'clarityScore' (quanto la domanda è chiara e non ambigua), entrambe con un punteggio da 1 a 10. Popola i campi 'utilityScore' and 'clarityScore' nel JSON.
+            `;
+        }
     }
 
     const verbalContext = isVerbal 
@@ -259,7 +247,7 @@ export const analyzeParaverbalResponse = async (
   task: string
 ): Promise<VoiceAnalysisResult> => {
     try {
-        const ai = getAI();
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
         const systemInstruction = `
             Sei **CES Coach Engine** esteso con il modulo **Voce Strategica (Paraverbale)**. Valuta e allena il paraverbale per rendere più efficace il messaggio secondo i principi della Comunicazione Efficace Strategica®.
@@ -372,7 +360,7 @@ export const generateCommunicatorProfile = async (
     analysisResults: { exerciseId: string; analysis: AnalysisResult }[]
 ): Promise<CommunicatorProfile> => {
     try {
-        const ai = getAI();
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         const systemInstruction = `
             Sei un esperto di profilazione della comunicazione basato sulla metodologia CES. Il tuo compito è analizzare una serie di analisi di esercizi di check-up e sintetizzarle in un profilo di comunicazione conciso, incoraggiante e strategico.
             Identifica i pattern ricorrenti, sia positivi che negativi, attraverso le diverse risposte per delineare uno stile di comunicazione complessivo.

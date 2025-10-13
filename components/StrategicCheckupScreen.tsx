@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Exercise, AnalysisResult, CommunicatorProfile, Entitlements } from '../types';
 import { STRATEGIC_CHECKUP_EXERCISES, COLORS } from '../constants';
-import { ExerciseScreen } from './ExerciseScreen';
 import { FullScreenLoader } from './Loader';
 import { generateCommunicatorProfile, analyzeResponse } from '../services/geminiService';
 import { Logo } from './Logo';
@@ -20,37 +19,65 @@ interface StrategicCheckupScreenProps {
 
 export const StrategicCheckupScreen: React.FC<StrategicCheckupScreenProps> = ({ onSelectExercise, onCompleteCheckup, onApiKeyError, onBack, entitlements }) => {
   const [currentStep, setCurrentStep] = useState(0);
-  const [analysisResults, setAnalysisResults] = useState<{ exerciseId: string; analysis: AnalysisResult }[]>([]);
+  const [userResponses, setUserResponses] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { addToast } = useToast();
+  const stepContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    // From the second step onwards, scroll to the top of the step container
+    if (currentStep > 0 && stepContainerRef.current) {
+        stepContainerRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [currentStep]);
 
   const totalSteps = STRATEGIC_CHECKUP_EXERCISES.length;
 
-  const handleCompleteExercise = async (response: string) => {
-    setIsLoading(true);
-    try {
-      const exercise = STRATEGIC_CHECKUP_EXERCISES[currentStep];
-      const result = await analyzeResponse(response, exercise.scenario, exercise.task, entitlements, false);
-      const newResults = [...analysisResults, { exerciseId: exercise.id, analysis: result }];
-      setAnalysisResults(newResults);
+  const handleFinalAnalysisAndProfileGeneration = async (finalResponses: string[]) => {
+      setIsLoading(true);
+      try {
+        // Step 1: Run all analyses in parallel
+        const analysisPromises = finalResponses.map((response, index) => {
+          const exercise = STRATEGIC_CHECKUP_EXERCISES[index];
+          return analyzeResponse(response, exercise.scenario, exercise.task, entitlements, false);
+        });
+        
+        const allAnalysisResults = await Promise.all(analysisPromises);
+        
+        const formattedResults = allAnalysisResults.map((analysis, index) => ({
+          exerciseId: STRATEGIC_CHECKUP_EXERCISES[index].id,
+          analysis,
+        }));
 
-      if (currentStep < totalSteps - 1) {
-        setCurrentStep(currentStep + 1);
-      } else {
-        // Last step completed, generate profile
-        const profile = await generateCommunicatorProfile(newResults);
+        // Step 2: Generate profile with all results
+        const profile = await generateCommunicatorProfile(formattedResults);
+        
+        // Step 3: Complete the checkup
         onCompleteCheckup(profile);
+      } catch (e: any) {
+        if (e.message.includes('API_KEY')) {
+          onApiKeyError(e.message);
+        } else {
+          addToast(e.message || "Si è verificato un errore durante l'analisi finale.", 'error');
+        }
+        // If there's an error, stay on the last step to allow retry, don't lose progress.
+      } finally {
+        setIsLoading(false);
       }
-    } catch (e: any) {
-      if (e.message.includes('API_KEY')) {
-        onApiKeyError(e.message);
-      } else {
-        addToast(e.message || "An unknown error occurred.", 'error');
-      }
-    } finally {
-      setIsLoading(false);
+  };
+  
+  const handleStepSubmit = (response: string) => {
+    const newResponses = [...userResponses, response];
+    setUserResponses(newResponses);
+
+    if (currentStep < totalSteps - 1) {
+      setCurrentStep(currentStep + 1);
+    } else {
+      // This was the last step, proceed to final analysis
+      handleFinalAnalysisAndProfileGeneration(newResponses);
     }
   };
+
 
   const handleBackClick = () => {
     soundService.playClick();
@@ -58,7 +85,7 @@ export const StrategicCheckupScreen: React.FC<StrategicCheckupScreenProps> = ({ 
   };
 
   if (isLoading) {
-    return <FullScreenLoader />;
+    return <FullScreenLoader estimatedTime={30} />;
   }
   
   const currentExercise = STRATEGIC_CHECKUP_EXERCISES[currentStep];
@@ -80,7 +107,7 @@ export const StrategicCheckupScreen: React.FC<StrategicCheckupScreenProps> = ({ 
             addToast("La risposta non può essere vuota.", 'error');
             return;
         }
-        handleCompleteExercise(userResponse);
+        handleStepSubmit(userResponse);
     }
 
     const handleToggleDictation = () => {
@@ -117,7 +144,7 @@ export const StrategicCheckupScreen: React.FC<StrategicCheckupScreenProps> = ({ 
                 </button>
             )}
             <button onClick={handleSubmit} style={styles.button}>
-                {currentStep < totalSteps - 1 ? 'Avanti e Conferma' : 'Completa e Genera Profilo'}
+                {currentStep < totalSteps - 1 ? 'Avanti al prossimo step' : 'Completa e Genera Profilo'}
             </button>
             <button onClick={handleBackClick} style={styles.exitButton}>
                 Esci dal Check Up
@@ -125,6 +152,8 @@ export const StrategicCheckupScreen: React.FC<StrategicCheckupScreenProps> = ({ 
         </div>
     );
   }
+  
+  const titleParts = currentExercise.title.split(': ');
 
   return (
     <div style={styles.container}>
@@ -137,14 +166,18 @@ export const StrategicCheckupScreen: React.FC<StrategicCheckupScreenProps> = ({ 
             </p>
         </header>
         
-        <div style={styles.progressContainer}>
+        <div style={styles.progressContainer} ref={stepContainerRef}>
             <div style={styles.progressBar}>
                 <div style={{...styles.progressBarFill, width: `${((currentStep + 1) / totalSteps) * 100}%`}}></div>
             </div>
             <span style={styles.progressText}>Passo {currentStep + 1} di {totalSteps}</span>
         </div>
 
-        <h2 style={styles.exerciseTitle}>{currentExercise.title}</h2>
+        <h2 style={styles.exerciseTitle}>
+            {titleParts[0]}:
+            <br />
+            <span style={{ fontWeight: 400 }}>{titleParts[1]}</span>
+        </h2>
         <StandaloneExercise />
 
       </div>
@@ -212,10 +245,11 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
   exerciseTitle: {
       fontSize: '22px',
-      fontWeight: '600',
+      fontWeight: 600,
       color: COLORS.textPrimary,
       marginBottom: '16px',
-      textAlign: 'center'
+      textAlign: 'center',
+      lineHeight: 1.4,
   },
   exerciseContainer: {
       backgroundColor: COLORS.cardDark,
@@ -241,6 +275,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     border: `1px solid ${COLORS.divider}`,
     fontFamily: 'inherit',
     resize: 'vertical',
+    backgroundColor: COLORS.card,
   },
   button: {
     display: 'block',

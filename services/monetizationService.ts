@@ -55,27 +55,13 @@ export const purchaseProduct = async (user: User | null, product: Product): Prom
     const currentEntitlements = await getUserEntitlements(user);
     const newProductIDs = new Set(currentEntitlements.productIDs);
 
-    if (product.id === 'ces.bundle.pro') {
-        // If buying the bundle, add all non-consumable add-ons
-        PRODUCTS.forEach(p => {
-            if (p.category === 'Add-on') {
-                newProductIDs.add(p.id);
-            }
-        });
-        newProductIDs.add(product.id);
-    } else {
-        newProductIDs.add(product.id);
-    }
+    newProductIDs.add(product.id);
 
     const updatedEntitlements: Entitlements = {
         ...currentEntitlements,
         productIDs: newProductIDs,
+        teamActive: product.type === 'subscription', // Enable team features if it's a sub
     };
-    
-    if(product.type === 'subscription'){
-        updatedEntitlements.teamActive = true;
-        updatedEntitlements.teamSeats = product.id === 'ces.sub.team.basic.monthly' ? 3 : 10;
-    }
 
     // Save to storage
     const key = getStorageKey(user.email);
@@ -114,6 +100,5 @@ export const hasEntitlement = (entitlements: Entitlements | null, productId: str
  */
 export const hasProAccess = (entitlements: Entitlements | null): boolean => {
     if (!entitlements) return false;
-    // User has PRO access if they bought the bundle or any individual add-on.
-    return PRODUCTS.some(p => p.category !== 'Team Plan' && entitlements.productIDs.has(p.id));
+    return entitlements.productIDs.has('ces.pro.monthly');
 };

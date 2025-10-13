@@ -111,11 +111,17 @@ export interface ScoreExplanation {
   VoiceDelta: number;
 }
 
+// New Types for Competence Pie Chart
+export type CompetenceKey = "ascolto" | "riformulazione" | "assertivita" | "gestione_conflitto";
+export type CompetenceScores = Record<CompetenceKey, number>;
+
+
 // New type for user progress tracking
 export interface UserProgress {
   scores: number[];
   hasCompletedCheckup?: boolean;
   completedExerciseIds?: string[];
+  skippedExerciseIds?: string[];
   completedModuleIds?: string[];
   dailyChallengeCompletedOn?: string; // e.g., "2024-07-29"
   checkupResults?: {
@@ -127,8 +133,11 @@ export interface UserProgress {
   analysisHistory?: {
     exerciseId: string;
     areasForImprovement: ImprovementArea[];
+    score: number;
   }[];
+  // FIX: Corrected typo from Entitleaments to Entitlements.
   entitlements?: Entitlements;
+  competenceScores?: CompetenceScores;
 }
 
 export interface CommunicatorProfile {

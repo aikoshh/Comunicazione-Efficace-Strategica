@@ -10,9 +10,10 @@ interface PaywallScreenProps {
   entitlements: Entitlements;
   onPurchase: (product: Product) => Promise<void>;
   onRestore: () => Promise<void>;
+  onBack: () => void;
 }
 
-export const PaywallScreen: React.FC<PaywallScreenProps> = ({ entitlements, onPurchase, onRestore }) => {
+export const PaywallScreen: React.FC<PaywallScreenProps> = ({ entitlements, onPurchase, onRestore, onBack }) => {
     const [isLoading, setIsLoading] = useState<string | null>(null); // Stores product ID being purchased
 
     const handlePurchase = async (product: Product) => {
@@ -79,17 +80,8 @@ export const PaywallScreen: React.FC<PaywallScreenProps> = ({ entitlements, onPu
 
             <main>
                 <section style={styles.section}>
-                    <h2 style={styles.sectionTitle}>Add-on PRO & Bundle</h2>
                     <div style={styles.productList}>
-                        {PRODUCTS.filter(p => p.category === 'Add-on').map(renderProductRow)}
-                        {PRODUCTS.filter(p => p.category === 'Bundle').map(renderProductRow)}
-                    </div>
-                </section>
-
-                <section style={styles.section}>
-                    <h2 style={styles.sectionTitle}>Piani Team</h2>
-                    <div style={styles.productList}>
-                        {PRODUCTS.filter(p => p.category === 'Team Plan').map(renderProductRow)}
+                        {PRODUCTS.map(renderProductRow)}
                     </div>
                 </section>
                 
