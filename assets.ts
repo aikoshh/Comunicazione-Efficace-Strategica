@@ -8,3 +8,8 @@ export const cardImage4 = 'https://images.unsplash.com/photo-1484480974693-6ca0a
 export const cardImage5 = 'https://www.centroclinicaformazionestrategica.it/wp-content/uploads/2014/09/comunicazione-efficace-strategica-roma-centro-cfs.jpg';
 export const cardImage6 = 'https://www.marinaosnaghi.com/wp-content/uploads/2020/03/Parlare-in-pubblico-1170x600.jpg';
 export const cesLogoUrl = 'https://www.centroclinicaformazionestrategica.it/wp-content/uploads/2019/11/Logo-Comunicazione-Efficace-Strategica.jpg';
+
+// New assets
+export const smilingPerson = 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=400&auto=format&fit=crop';
+export const loginBackground = 'https://images.unsplash.com/photo-1590650516494-0c8e4a4dd67e?q=80&w=1200&auto=format&fit=crop';
+export const dailyChallengePerson = 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=400&auto=format&fit=crop';

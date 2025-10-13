@@ -1,7 +1,6 @@
 // A simple sound service using the Web Audio API to avoid dealing with audio files.
 class SoundService {
   private audioCtx: AudioContext | null = null;
-  private isEnabled: boolean = true; // Could be controlled by a UI setting in the future
 
   private initializeAudioContext() {
     if (this.audioCtx || typeof window === 'undefined' || window.document.hidden) {
@@ -22,7 +21,8 @@ class SoundService {
     volume: number = 0.5
   ) {
     this.initializeAudioContext();
-    if (!this.audioCtx || !this.isEnabled) return;
+    const isMuted = localStorage.getItem('ces_coach_sound_muted') === 'true';
+    if (!this.audioCtx || isMuted) return;
 
     // Resume context if it's suspended (e.g., due to browser auto-play policies)
     if (this.audioCtx.state === 'suspended') {
@@ -46,7 +46,8 @@ class SoundService {
   
   private playFailSound() {
     this.initializeAudioContext();
-    if (!this.audioCtx || !this.isEnabled) return;
+    const isMuted = localStorage.getItem('ces_coach_sound_muted') === 'true';
+    if (!this.audioCtx || isMuted) return;
 
     const oscillator = this.audioCtx.createOscillator();
     const gainNode = this.audioCtx.createGain();
@@ -69,7 +70,8 @@ class SoundService {
   
   private playTriumphSound() {
     this.initializeAudioContext();
-    if (!this.audioCtx || !this.isEnabled) return;
+    const isMuted = localStorage.getItem('ces_coach_sound_muted') === 'true';
+    if (!this.audioCtx || isMuted) return;
     const volume = 0.3;
 
     // --- Arpeggio ---
@@ -129,7 +131,7 @@ class SoundService {
   
   public playSuccess() {
     this.initializeAudioContext();
-    if (!this.audioCtx || !this.isEnabled) return;
+    if (!this.audioCtx) return;
     
     // Ascending arpeggio - prolonged
     this.playSound(440, 'sine', 0.1, 0.3); // A4
@@ -139,7 +141,7 @@ class SoundService {
 
   public playScoreSound(score: number) {
     this.initializeAudioContext();
-    if (!this.audioCtx || !this.isEnabled) return;
+    if (!this.audioCtx) return;
     
     if (score < 40) { // Red - Needs improvement
         this.playFailSound();

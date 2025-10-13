@@ -17,6 +17,28 @@ interface ProgressOverviewProps {
   progress: UserProgress | undefined;
 }
 
+const ProgressOverviewSkeleton: React.FC = () => (
+    <div style={styles.container}>
+      <style>{`
+        @keyframes pulse-bg {
+          0% { background-color: ${COLORS.divider}; }
+          50% { background-color: #E0DCD7; }
+          100% { background-color: ${COLORS.divider}; }
+        }
+      `}</style>
+      <div style={styles.header}>
+        <div style={{...styles.skeletonText, width: '200px', height: '27px', animation: 'pulse-bg 1.5s infinite ease-in-out'}} />
+        <div style={{...styles.skeletonPill, width: '150px', height: '26px', animation: 'pulse-bg 1.5s infinite ease-in-out'}} />
+      </div>
+      <div style={{ ...styles.progressBar, animation: 'pulse-bg 1.5s infinite ease-in-out' }} />
+      <div style={{ ...styles.footer, justifyContent: 'space-between' }}>
+        <div style={{...styles.skeletonText, width: '120px', height: '22px', animation: 'pulse-bg 1.5s infinite ease-in-out'}} />
+        <div style={{...styles.skeletonText, width: '150px', height: '22px', animation: 'pulse-bg 1.5s infinite ease-in-out'}} />
+      </div>
+    </div>
+);
+
+
 export const ProgressOverview: React.FC<ProgressOverviewProps> = ({ user, progress }) => {
   const [overviewData, setOverviewData] = useState<ProgressOverviewData | null>(null);
   const [explanationData, setExplanationData] = useState<ScoreExplanation | null>(null);
@@ -50,7 +72,7 @@ export const ProgressOverview: React.FC<ProgressOverviewProps> = ({ user, progre
   };
 
   if (isLoading) {
-    return <div style={styles.loadingContainer}>Caricamento dei progressi...</div>;
+    return <ProgressOverviewSkeleton />;
   }
 
   if (!overviewData) {
@@ -97,17 +119,13 @@ const styles: { [key: string]: React.CSSProperties } = {
     marginBottom: '24px',
     boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
   },
-  loadingContainer: {
-    textAlign: 'center',
-    padding: '40px',
-    color: COLORS.textSecondary,
-    fontSize: '16px',
-  },
   header: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: '16px',
+    flexWrap: 'wrap',
+    gap: '8px'
   },
   welcomeText: {
     fontSize: '18px',
@@ -174,4 +192,12 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontWeight: 500,
     padding: '4px'
   },
+  skeletonText: {
+    backgroundColor: COLORS.divider,
+    borderRadius: '4px',
+  },
+  skeletonPill: {
+    backgroundColor: COLORS.divider,
+    borderRadius: '999px',
+  }
 };
