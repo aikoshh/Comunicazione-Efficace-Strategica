@@ -1,4 +1,5 @@
 import type { CompetenceKey, CompetenceScores } from '../types';
+import { ProgressPieManager } from './progressPieManager';
 
 /**
  * Maps each exercise ID to a specific core competence.
@@ -47,8 +48,6 @@ export const EXERCISE_TO_COMPETENCE_MAP: Record<string, CompetenceKey> = {
     's8e1': 'riformulazione',
 };
 
-const MAX_COMPETENCE_SCORE = 33;
-
 /**
  * Updates the competence scores based on the result of a single exercise.
  * @param currentScores The user's current scores for the 4 competencies.
@@ -61,18 +60,21 @@ export const updateCompetenceScores = (
   exerciseId: string,
   newExerciseScore: number
 ): CompetenceScores => {
-  const scores = currentScores || { ascolto: 0, riformulazione: 0, assertivita: 0, gestione_conflitto: 0 };
   const competenceKey = EXERCISE_TO_COMPETENCE_MAP[exerciseId];
+  
+  const initialScores = currentScores || { ascolto: 0, riformulazione: 0, assertivita: 0, gestione_conflitto: 0 };
 
-  if (competenceKey) {
-    const currentCompetenceValue = scores[competenceKey] || 0;
-    
-    // Logic as per specification: average of the current value (0-33) and the new exercise score (0-100)
-    const averagedScore = (currentCompetenceValue + newExerciseScore) / 2;
-    
-    // The result is capped at the maximum allowed value for a single competence
-    scores[competenceKey] = Math.min(averagedScore, MAX_COMPETENCE_SCORE);
+  if (!competenceKey) {
+    return initialScores;
   }
 
-  return scores;
+  // Use the new manager to perform the calculation
+  const pieManager = new ProgressPieManager(initialScores);
+  const newSlices = pieManager.updateWithExercise(competenceKey, newExerciseScore);
+
+  // The UserProgress type expects CompetenceScores, which does not include 'nessuna'.
+  // We strip it out before returning.
+  const { nessuna, ...newCompetenceScores } = newSlices;
+  
+  return newCompetenceScores;
 };

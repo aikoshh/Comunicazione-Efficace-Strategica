@@ -1,9 +1,9 @@
 import React from 'react';
 import { ResponsiveContainer, PieChart, Pie, Cell, Legend, Tooltip } from 'recharts';
-// FIX: Import CompetenceKey directly from types.ts where it is defined.
 import type { UserProgress, CompetenceKey } from '../types';
 import { COLORS } from '../constants';
 import { TargetIcon } from './Icons';
+import { ProgressPieManager } from '../services/progressPieManager';
 
 interface ProgressAnalyticsProps {
   userProgress: UserProgress;
@@ -60,30 +60,21 @@ const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, per
 export const ProgressAnalytics: React.FC<ProgressAnalyticsProps> = ({ userProgress }) => {
     const competenceScores = userProgress.competenceScores || { ascolto: 0, riformulazione: 0, assertivita: 0, gestione_conflitto: 0 };
     
-    const { ascolto, riformulazione, assertivita, gestione_conflitto } = competenceScores;
-    const sumOfCompetencies = ascolto + riformulazione + assertivita + gestione_conflitto;
-    
+    // Calculate overall progress based on the raw (capped at 33) competence scores.
+    // FIX: Add explicit types for accumulator and value in reduce to fix type inference issue.
+    const sumOfCompetencies = Object.values(competenceScores).reduce((sum: number, score: number) => sum + score, 0);
     const overallProgress = sumOfCompetencies / 4;
 
-    // Logic from user script to normalize and calculate "nessuna competenza"
-    let normalizedScores = { ascolto, riformulazione, assertivita, gestione_conflitto };
-    let sumForNormalization = sumOfCompetencies;
-
-    if (sumForNormalization > 100) {
-        const factor = 100 / sumForNormalization;
-        (Object.keys(normalizedScores) as CompetenceKey[]).forEach(key => {
-            normalizedScores[key] *= factor;
-        });
-        sumForNormalization = 100;
-    }
-    const nessunaValue = 100 - sumForNormalization;
+    // Use the manager to get the normalized data for the pie chart
+    const pieManager = new ProgressPieManager(competenceScores);
+    const slices = pieManager.getData();
 
     const competenceData = [
-      { key: 'ascolto', name: COMPETENCE_LABELS.ascolto, value: normalizedScores.ascolto },
-      { key: 'riformulazione', name: COMPETENCE_LABELS.riformulazione, value: normalizedScores.riformulazione },
-      { key: 'assertivita', name: COMPETENCE_LABELS.assertivita, value: normalizedScores.assertivita },
-      { key: 'gestione_conflitto', name: COMPETENCE_LABELS.gestione_conflitto, value: normalizedScores.gestione_conflitto },
-      { key: 'nessuna', name: 'Nessuna Competenza', value: nessunaValue },
+      { key: 'ascolto', name: COMPETENCE_LABELS.ascolto, value: slices.ascolto },
+      { key: 'riformulazione', name: COMPETENCE_LABELS.riformulazione, value: slices.riformulazione },
+      { key: 'assertivita', name: COMPETENCE_LABELS.assertivita, value: slices.assertivita },
+      { key: 'gestione_conflitto', name: COMPETENCE_LABELS.gestione_conflitto, value: slices.gestione_conflitto },
+      { key: 'nessuna', name: 'Nessuna Competenza', value: slices.nessuna },
     ].filter(item => item.value > 0.01); // Filter out tiny slices to prevent render issues
 
     const renderLegendText = (value: string) => {
