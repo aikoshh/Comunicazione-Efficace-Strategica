@@ -41,7 +41,7 @@ const analysisSchema = {
                 },
                 long: {
                     type: Type.STRING,
-                    description: "Una versione più dettagliata e completa della risposta dell'utente, che incarna i principi della comunicazione efficace. Le parole chiave importanti sono evidenziate con **doppi asterischi**."
+                    description: "Eine detailliertere und vollständigere Version der Benutzerantwort, die die Prinzipien effektiver Kommunikation verkörpert. Wichtige Schlüsselwörter sind mit **doppelten Sternchen** hervorgehoben."
                 }
             },
             required: ["short", "long"]
@@ -57,7 +57,7 @@ const analysisSchema = {
                     score: { type: Type.NUMBER },
                     justification: { type: Type.STRING }
                 },
-                required: ["criterion", "score", "justification"]
+                 required: ["criterion", "score", "justification"]
             },
             description: "Valutazione dettagliata PRO. Compila questo campo SOLO se richiesto nelle istruzioni del prompt."
         },
