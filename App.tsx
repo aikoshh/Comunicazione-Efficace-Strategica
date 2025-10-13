@@ -18,7 +18,6 @@ import { initialUserDatabase } from './database';
 import { soundService } from './services/soundService';
 import { getUserEntitlements, purchaseProduct, restorePurchases, hasProAccess } from './services/monetizationService';
 import { useToast } from './hooks/useToast';
-import { updateCompetenceScores } from './services/competenceService';
 
 type AppState =
   | { screen: 'home' }
@@ -179,7 +178,6 @@ const App: React.FC = () => {
               skippedExerciseIds: [],
               completedModuleIds: [],
               analysisHistory: [],
-              competenceScores: { ascolto: 0, riformulazione: 0, assertivita: 0, gestione_conflitto: 0 } 
           };
           return {
               ...prev,
@@ -315,7 +313,6 @@ const App: React.FC = () => {
           skippedExerciseIds: [],
           completedModuleIds: [], 
           analysisHistory: [],
-          competenceScores: { ascolto: 0, riformulazione: 0, assertivita: 0, gestione_conflitto: 0 } 
       };
       
       const newScores = [...currentProgress.scores, score];
@@ -326,12 +323,6 @@ const App: React.FC = () => {
         { exerciseId: exercise.id, userResponse, analysis: result, timestamp: Date.now() }
       ];
       
-      const newCompetenceScores = updateCompetenceScores(
-        currentProgress.competenceScores,
-        exercise.id,
-        score
-      );
-
       const newCompletedModuleIds = [...(currentProgress.completedModuleIds || [])];
       for (const module of MODULES.filter(m => !m.isCustom)) {
           if (!newCompletedModuleIds.includes(module.id)) {
@@ -348,7 +339,6 @@ const App: React.FC = () => {
           completedExerciseIds: newCompletedIds,
           completedModuleIds: newCompletedModuleIds,
           analysisHistory: newAnalysisHistory,
-          competenceScores: newCompetenceScores,
       });
   };
   
@@ -375,18 +365,11 @@ const App: React.FC = () => {
                     ...(currentProgress.analysisHistory || []),
                     { exerciseId: appState.exercise.id, userResponse, analysis: result, timestamp: Date.now() }
                 ];
-                
-                const newCompetenceScores = updateCompetenceScores(
-                    currentProgress.competenceScores,
-                    appState.exercise.id,
-                    averageScore
-                );
 
                 updateUserProgress(userEmail, {
                     scores: newScores,
                     completedExerciseIds: newCompletedIds,
                     analysisHistory: newAnalysisHistory,
-                    competenceScores: newCompetenceScores,
                 });
           }
           const { currentModule, nextExercise } = findNextExerciseInModule(appState.exercise.id);

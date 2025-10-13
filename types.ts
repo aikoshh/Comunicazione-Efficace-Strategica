@@ -111,10 +111,6 @@ export interface ScoreExplanation {
   VoiceDelta: number;
 }
 
-// New Types for Competence Pie Chart
-export type CompetenceKey = "ascolto" | "riformulazione" | "assertivita" | "gestione_conflitto";
-export type CompetenceScores = Record<CompetenceKey, number>;
-
 export interface AnalysisHistoryItem {
   exerciseId: string;
   userResponse: string;
@@ -138,7 +134,6 @@ export interface UserProgress {
   };
   analysisHistory?: AnalysisHistoryItem[];
   entitlements?: Entitlements;
-  competenceScores?: CompetenceScores;
 }
 
 export interface CommunicatorProfile {

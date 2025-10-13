@@ -1,66 +1,56 @@
 import React from 'react';
-import type { UserProgress, CompetenceKey } from '../types';
-import { COLORS } from '../constants';
-import { TargetIcon } from './Icons';
+import type { UserProgress } from '../types';
+import { MODULES, COLORS } from '../constants';
+import { BarChartIcon, TrendingUpIcon } from './Icons';
 
 interface ProgressAnalyticsProps {
   userProgress: UserProgress;
 }
 
-const COMPETENCE_LABELS: Record<CompetenceKey, string> = {
-  ascolto: 'Ascolto Strategico',
-  riformulazione: 'Riformulazione & Feedback',
-  assertivita: 'Assertività',
-  gestione_conflitto: 'Gestione del Conflitto',
-};
+const ProgressBar: React.FC<{ value: number; color: string; }> = ({ value, color }) => (
+    <div style={styles.progressBarContainer}>
+        <div style={{ ...styles.progressBarFill, width: `${value}%`, backgroundColor: color }} />
+    </div>
+);
 
-const competenceColors: Record<CompetenceKey, string> = {
-    ascolto: COLORS.secondary,
-    riformulazione: COLORS.primary,
-    assertivita: COLORS.warning,
-    gestione_conflitto: COLORS.error,
-};
 
 export const ProgressAnalytics: React.FC<ProgressAnalyticsProps> = ({ userProgress }) => {
-    const competenceScores = userProgress.competenceScores || { ascolto: 0, riformulazione: 0, assertivita: 0, gestione_conflitto: 0 };
-    
-    const competenceData = (Object.keys(competenceScores) as CompetenceKey[]).map(key => ({
-        key,
-        name: COMPETENCE_LABELS[key],
-        value: competenceScores[key],
-        color: competenceColors[key],
-    }));
+    const totalExercises = MODULES.filter(m => !m.isCustom).reduce((acc, module) => acc + module.exercises.length, 0);
+    const completedCount = userProgress.completedExerciseIds?.length || 0;
+    const completionPercentage = totalExercises > 0 ? (completedCount / totalExercises) * 100 : 0;
 
-    const sumOfCompetencies = competenceData.reduce((sum, comp) => sum + comp.value, 0);
-    // The overall progress is the percentage of the total possible score (33 * 4 = 132).
-    const overallProgress = (sumOfCompetencies / (33 * 4)) * 100;
+    const scores = userProgress.scores || [];
+    const averageScore = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
 
     return (
         <section style={styles.container}>
             <h2 style={styles.sectionTitle}>Statistiche di Progresso</h2>
             <div style={styles.grid}>
                 <div style={styles.card}>
-                     <h3 style={styles.cardTitle}><TargetIcon/> Livello Competenze</h3>
-                     
-                     <div style={styles.competenceList}>
-                        {competenceData.map(comp => (
-                            <div key={comp.key} style={styles.competenceRow} title={`${comp.name}: ${comp.value.toFixed(1)} su 33`}>
-                                <span style={styles.competenceLabel}>{comp.name}</span>
-                                <div style={styles.progressBarContainer}>
-                                    <div style={{ ...styles.progressBarFill, width: `${(comp.value / 33) * 100}%`, backgroundColor: comp.color }} />
-                                </div>
-                                <span style={styles.competenceValue}>{comp.value.toFixed(1)}</span>
-                            </div>
-                        ))}
-                     </div>
-                     
-                     <div style={styles.overallProgressContainer}>
-                        <span style={styles.overallProgressLabel}>Progresso Complessivo</span>
-                        <div style={styles.overallProgressBar}>
-                            <div style={{...styles.overallProgressBarFill, width: `${overallProgress}%`}}/>
+                     <div style={styles.statItem}>
+                        <div style={styles.statHeader}>
+                            <BarChartIcon style={{color: COLORS.primary}} />
+                            <h3 style={styles.cardTitle}>Esercizi Completati</h3>
                         </div>
-                        <span style={styles.overallProgressValue}>{overallProgress.toFixed(1)}%</span>
-                    </div>
+                        <ProgressBar value={completionPercentage} color={COLORS.warning} />
+                        <div style={styles.statFooter}>
+                            <span>{completedCount} / {totalExercises}</span>
+                            <span>{completionPercentage.toFixed(0)}%</span>
+                        </div>
+                     </div>
+                </div>
+                 <div style={styles.card}>
+                     <div style={styles.statItem}>
+                        <div style={styles.statHeader}>
+                            <TrendingUpIcon style={{color: COLORS.primary}} />
+                            <h3 style={styles.cardTitle}>Punteggio Medio</h3>
+                        </div>
+                        <ProgressBar value={averageScore} color={COLORS.warning} />
+                        <div style={styles.statFooter}>
+                            <span>Qualità media delle risposte</span>
+                            <span>{averageScore.toFixed(0)} / 100</span>
+                        </div>
+                     </div>
                 </div>
             </div>
         </section>
@@ -82,7 +72,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     },
     grid: {
         display: 'grid',
-        gridTemplateColumns: '1fr',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
         gap: '24px',
     },
     card: {
@@ -92,83 +82,41 @@ const styles: { [key: string]: React.CSSProperties } = {
         boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
         border: `1px solid ${COLORS.divider}`,
     },
+    statItem: {
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '12px',
+    },
+    statHeader: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '12px'
+    },
     cardTitle: {
         fontSize: '18px',
         fontWeight: 600,
         color: COLORS.textPrimary,
-        margin: '0 0 24px 0',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '12px',
-    },
-    competenceList: {
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '18px',
-        marginBottom: '24px',
-    },
-    competenceRow: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '12px',
-    },
-    competenceLabel: {
-        flex: '0 0 180px',
-        fontSize: '15px',
-        color: COLORS.textSecondary,
-        fontWeight: 500,
-        whiteSpace: 'nowrap',
-        overflow: 'hidden',
-        textOverflow: 'ellipsis',
+        margin: 0,
     },
     progressBarContainer: {
-        flex: 1,
-        height: '12px',
+        width: '100%',
+        height: '16px',
         backgroundColor: COLORS.divider,
-        borderRadius: '6px',
+        borderRadius: '8px',
         overflow: 'hidden',
     },
     progressBarFill: {
         height: '100%',
-        borderRadius: '6px',
+        borderRadius: '8px',
         transition: 'width 0.5s ease-out',
+        background: `linear-gradient(90deg, ${COLORS.warning} 0%, #FFD700 100%)`,
     },
-    competenceValue: {
-        fontSize: '15px',
-        fontWeight: 'bold',
-        color: COLORS.primary,
-        minWidth: '40px',
-        textAlign: 'right',
-    },
-    overallProgressContainer: {
-        marginTop: '24px',
-        paddingTop: '24px',
-        borderTop: `1px solid ${COLORS.divider}`,
+    statFooter: {
         display: 'flex',
+        justifyContent: 'space-between',
         alignItems: 'center',
-        gap: '12px',
-    },
-    overallProgressLabel: {
         fontSize: '14px',
-        fontWeight: 500,
         color: COLORS.textSecondary,
-    },
-    overallProgressBar: {
-        flex: 1,
-        height: '10px',
-        backgroundColor: COLORS.divider,
-        borderRadius: '5px',
-        overflow: 'hidden',
-    },
-    overallProgressBarFill: {
-        height: '100%',
-        backgroundColor: COLORS.secondary,
-        borderRadius: '5px',
-        transition: 'width 0.5s ease-out',
-    },
-    overallProgressValue: {
-        fontSize: '14px',
-        fontWeight: 'bold',
-        color: COLORS.primary,
-    },
+        fontWeight: 500
+    }
 };

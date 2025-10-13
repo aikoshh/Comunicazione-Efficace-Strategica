@@ -57,12 +57,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectModule, onSelect
   const foundationalModules = MODULES.filter(m => m.category === 'Fondamentali' || !m.category);
   const sectoralPacks = MODULES.filter(m => m.category === 'Pacchetti Settoriali');
   
-  // This constant provides a default object for new users to ensure the analytics chart renders.
-  const progressDataForAnalytics: UserProgress = userProgress || {
-    scores: [],
-    competenceScores: { ascolto: 0, riformulazione: 0, assertivita: 0, gestione_conflitto: 0 }
-  };
-
   const handleModuleClick = (module: Module, isLocked: boolean) => {
       if (isLocked) {
           soundService.playStopRecording(); // A "denied" sound
@@ -150,7 +144,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectModule, onSelect
       
       {currentUser && <ProgressOverview user={currentUser} progress={userProgress} />}
       
-      {currentUser && <ProgressAnalytics userProgress={progressDataForAnalytics} />}
+      {currentUser && userProgress && <ProgressAnalytics userProgress={userProgress} />}
       
       <main style={currentUser ? {marginTop: '48px'} : {}}>
         
