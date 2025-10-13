@@ -57,7 +57,7 @@ const analysisSchema = {
                     score: { type: Type.NUMBER },
                     justification: { type: Type.STRING }
                 },
-                 required: ["criterion", "score", "justification"]
+                required: ["criterion", "score", "justification"]
             },
             description: "Valutazione dettagliata PRO. Compila questo campo SOLO se richiesto nelle istruzioni del prompt."
         },
