@@ -7,6 +7,7 @@ import { VoiceAnalysisReportScreen } from './components/VoiceAnalysisReportScree
 import { ApiKeyErrorScreen } from './components/ApiKeyErrorScreen';
 import CustomSetupScreen from './components/CustomSetupScreen';
 import { LoginScreen } from './components/LoginScreen';
+import { ApiKeySetupScreen } from './components/ApiKeySetupScreen';
 import { StrategicCheckupScreen } from './components/StrategicCheckupScreen';
 import { CommunicatorProfileScreen } from './components/CommunicatorProfileScreen';
 import { Header } from './components/Header';
@@ -216,10 +217,9 @@ const App: React.FC = () => {
       }
   };
 
-  const handleLogin = (email: string, pass: string, key: string) => {
+  const handleLogin = (email: string, pass: string) => {
     const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
     if (user && user.password === pass) {
-      if (key) setApiKey(key);
       setCurrentUser(user);
       setIsAuthenticated(true);
       setAppState({ screen: 'home' });
@@ -237,8 +237,7 @@ const App: React.FC = () => {
     setUsers(prevUsers => [...prevUsers, userToSave]);
   };
   
-  const handleGuestAccess = (key: string) => {
-    if (key) setApiKey(key);
+  const handleGuestAccess = () => {
     setCurrentUser(null);
     setIsAuthenticated(true);
     setAppState({ screen: 'home' });
@@ -465,6 +464,10 @@ const App: React.FC = () => {
             return [homeCrumb];
     }
   };
+
+  if (!apiKey) {
+      return <ApiKeySetupScreen onKeySubmit={(key) => setApiKey(key)} />;
+  }
 
   if (!isAuthenticated) {
     return <LoginScreen onLogin={handleLogin} onRegister={handleRegister} onGuestAccess={handleGuestAccess} />;
