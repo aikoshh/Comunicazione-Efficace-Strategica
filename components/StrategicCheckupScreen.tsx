@@ -1,55 +1,84 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Exercise, AnalysisResult, CommunicatorProfile } from '../types';
+import { Exercise, AnalysisResult, CommunicatorProfile, Entitlements } from '../types';
 import { STRATEGIC_CHECKUP_EXERCISES, COLORS } from '../constants';
-import { ExerciseScreen } from './ExerciseScreen';
-import { Loader } from './Loader';
+import { FullScreenLoader } from './Loader';
 import { generateCommunicatorProfile, analyzeResponse } from '../services/geminiService';
 import { Logo } from './Logo';
 import { HomeIcon, MicIcon } from './Icons';
 import { soundService } from '../services/soundService';
 import { useSpeech } from '../hooks/useSpeech';
+import { useToast } from '../hooks/useToast';
 
 interface StrategicCheckupScreenProps {
   onSelectExercise: (exercise: Exercise, isCheckup: boolean, checkupStep: number, totalCheckupSteps: number) => void;
   onCompleteCheckup: (profile: CommunicatorProfile) => void;
   onApiKeyError: (error: string) => void;
   onBack: () => void;
+  entitlements: Entitlements | null;
+  apiKey: string | null;
 }
 
-export const StrategicCheckupScreen: React.FC<StrategicCheckupScreenProps> = ({ onSelectExercise, onCompleteCheckup, onApiKeyError, onBack }) => {
+export const StrategicCheckupScreen: React.FC<StrategicCheckupScreenProps> = ({ onSelectExercise, onCompleteCheckup, onApiKeyError, onBack, entitlements, apiKey }) => {
   const [currentStep, setCurrentStep] = useState(0);
-  const [analysisResults, setAnalysisResults] = useState<{ exerciseId: string; analysis: AnalysisResult }[]>([]);
+  const [userResponses, setUserResponses] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { addToast } = useToast();
+  const stepContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    // From the second step onwards, scroll to the top of the step container
+    if (currentStep > 0 && stepContainerRef.current) {
+        stepContainerRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [currentStep]);
 
   const totalSteps = STRATEGIC_CHECKUP_EXERCISES.length;
 
-  const handleCompleteExercise = async (response: string) => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const exercise = STRATEGIC_CHECKUP_EXERCISES[currentStep];
-      const result = await analyzeResponse(response, exercise.scenario, exercise.task, false);
-      const newResults = [...analysisResults, { exerciseId: exercise.id, analysis: result }];
-      setAnalysisResults(newResults);
+  const handleFinalAnalysisAndProfileGeneration = async (finalResponses: string[]) => {
+      setIsLoading(true);
+      try {
+        // Step 1: Run all analyses in parallel
+        const analysisPromises = finalResponses.map((response, index) => {
+          const exercise = STRATEGIC_CHECKUP_EXERCISES[index];
+          return analyzeResponse(response, exercise.scenario, exercise.task, entitlements, false, undefined, apiKey);
+        });
+        
+        const allAnalysisResults = await Promise.all(analysisPromises);
+        
+        const formattedResults = allAnalysisResults.map((analysis, index) => ({
+          exerciseId: STRATEGIC_CHECKUP_EXERCISES[index].id,
+          analysis,
+        }));
 
-      if (currentStep < totalSteps - 1) {
-        setCurrentStep(currentStep + 1);
-      } else {
-        // Last step completed, generate profile
-        const profile = await generateCommunicatorProfile(newResults);
+        // Step 2: Generate profile with all results
+        const profile = await generateCommunicatorProfile(formattedResults, apiKey);
+        
+        // Step 3: Complete the checkup
         onCompleteCheckup(profile);
+      } catch (e: any) {
+        if (e.message.includes('API_KEY') || e.message.includes('API key')) {
+          onApiKeyError(e.message);
+        } else {
+          addToast(e.message || "Si è verificato un errore durante l'analisi finale.", 'error');
+        }
+        // If there's an error, stay on the last step to allow retry, don't lose progress.
+      } finally {
+        setIsLoading(false);
       }
-    } catch (e: any) {
-      if (e.message.includes('API_KEY')) {
-        onApiKeyError(e.message);
-      } else {
-        setError(e.message || "An unknown error occurred.");
-      }
-    } finally {
-      setIsLoading(false);
+  };
+  
+  const handleStepSubmit = (response: string) => {
+    const newResponses = [...userResponses, response];
+    setUserResponses(newResponses);
+
+    if (currentStep < totalSteps - 1) {
+      setCurrentStep(currentStep + 1);
+    } else {
+      // This was the last step, proceed to final analysis
+      handleFinalAnalysisAndProfileGeneration(newResponses);
     }
   };
+
 
   const handleBackClick = () => {
     soundService.playClick();
@@ -57,13 +86,11 @@ export const StrategicCheckupScreen: React.FC<StrategicCheckupScreenProps> = ({ 
   };
 
   if (isLoading) {
-    return <Loader />;
+    return <FullScreenLoader estimatedTime={30} />;
   }
   
   const currentExercise = STRATEGIC_CHECKUP_EXERCISES[currentStep];
 
-  // Since ExerciseScreen is complex, we re-use it in a simplified form.
-  // We'll wrap it or create a simplified version for the checkup.
   const StandaloneExercise: React.FC = () => {
     const [userResponse, setUserResponse] = useState('');
     const { isListening, transcript, startListening, stopListening, isSupported } = useSpeech();
@@ -78,10 +105,10 @@ export const StrategicCheckupScreen: React.FC<StrategicCheckupScreenProps> = ({ 
     const handleSubmit = () => {
         soundService.playClick();
         if (!userResponse.trim()) {
-            setError("La risposta non può essere vuota.");
+            addToast("La risposta non può essere vuota.", 'error');
             return;
         }
-        handleCompleteExercise(userResponse);
+        handleStepSubmit(userResponse);
     }
 
     const handleToggleDictation = () => {
@@ -118,15 +145,16 @@ export const StrategicCheckupScreen: React.FC<StrategicCheckupScreenProps> = ({ 
                 </button>
             )}
             <button onClick={handleSubmit} style={styles.button}>
-                {currentStep < totalSteps - 1 ? 'Avanti e Conferma' : 'Completa e Genera Profilo'}
+                {currentStep < totalSteps - 1 ? 'Avanti al prossimo step' : 'Completa e Genera Profilo'}
             </button>
-            {error && <p style={{color: COLORS.error, marginTop: '12px'}}>{error}</p>}
             <button onClick={handleBackClick} style={styles.exitButton}>
                 Esci dal Check Up
             </button>
         </div>
     );
   }
+  
+  const titleParts = currentExercise.title.split(': ');
 
   return (
     <div style={styles.container}>
@@ -139,14 +167,18 @@ export const StrategicCheckupScreen: React.FC<StrategicCheckupScreenProps> = ({ 
             </p>
         </header>
         
-        <div style={styles.progressContainer}>
+        <div style={styles.progressContainer} ref={stepContainerRef}>
             <div style={styles.progressBar}>
                 <div style={{...styles.progressBarFill, width: `${((currentStep + 1) / totalSteps) * 100}%`}}></div>
             </div>
             <span style={styles.progressText}>Passo {currentStep + 1} di {totalSteps}</span>
         </div>
 
-        <h2 style={styles.exerciseTitle}>{currentExercise.title}</h2>
+        <h2 style={styles.exerciseTitle}>
+            {titleParts[0]}:
+            <br />
+            <span style={{ fontWeight: 400 }}>{titleParts[1]}</span>
+        </h2>
         <StandaloneExercise />
 
       </div>
@@ -214,10 +246,11 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
   exerciseTitle: {
       fontSize: '22px',
-      fontWeight: '600',
+      fontWeight: 600,
       color: COLORS.textPrimary,
       marginBottom: '16px',
-      textAlign: 'center'
+      textAlign: 'center',
+      lineHeight: 1.4,
   },
   exerciseContainer: {
       backgroundColor: COLORS.cardDark,
@@ -243,6 +276,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     border: `1px solid ${COLORS.divider}`,
     fontFamily: 'inherit',
     resize: 'vertical',
+    backgroundColor: COLORS.card,
   },
   button: {
     display: 'block',

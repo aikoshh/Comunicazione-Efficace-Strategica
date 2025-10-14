@@ -1,11 +1,9 @@
 import React, { useState } from 'react';
-import type { User, Breadcrumb, SaveState } from '../types';
+import type { User, Breadcrumb } from '../types';
 import { COLORS } from '../constants';
 import { Logo } from './Logo';
-import { HomeIcon, ChevronRightIcon, SpeakerIcon, SpeakerOffIcon, SaveIcon, CheckIcon } from './Icons';
+import { HomeIcon, ChevronRightIcon } from './Icons';
 import { hasProAccess } from '../services/monetizationService';
-import { useSound } from '../hooks/useSound';
-import { Spinner } from './Loader';
 
 
 interface HeaderProps {
@@ -14,8 +12,6 @@ interface HeaderProps {
   onLogout: () => void;
   onGoToPaywall: () => void;
   isPro: boolean;
-  onManualSave: () => void;
-  saveState: SaveState;
 }
 
 const hoverStyle = `
@@ -32,29 +28,13 @@ const hoverStyle = `
     transform: translateY(-2px);
     box-shadow: 0 4px 10px rgba(88, 166, 166, 0.3);
   }
-  .icon-button:hover {
-    background-color: ${COLORS.cardDark};
-  }
 `;
 
-export const Header: React.FC<HeaderProps> = ({ currentUser, breadcrumbs, onLogout, onGoToPaywall, isPro, onManualSave, saveState }) => {
+export const Header: React.FC<HeaderProps> = ({ currentUser, breadcrumbs, onLogout, onGoToPaywall, isPro }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { isMuted, toggleMute } = useSound();
   
   const getInitials = (user: User) => {
     return `${user.firstName[0]}${user.lastName[0]}`.toUpperCase();
-  };
-  
-  const renderSaveButton = () => {
-    switch(saveState) {
-        case 'saving':
-            return <Spinner size={20} color={COLORS.primary} />;
-        case 'saved':
-            return <CheckIcon color={COLORS.success} />;
-        case 'idle':
-        default:
-            return <SaveIcon />;
-    }
   };
 
   return (
@@ -89,17 +69,6 @@ export const Header: React.FC<HeaderProps> = ({ currentUser, breadcrumbs, onLogo
                     Sblocca PRO
                 </button>
             )}
-
-            <button onClick={toggleMute} style={styles.iconButton} className="icon-button" aria-label={isMuted ? "Attiva audio" : "Disattiva audio"}>
-                {isMuted ? <SpeakerOffIcon/> : <SpeakerIcon/>}
-            </button>
-            
-            {currentUser && (
-                <button onClick={onManualSave} disabled={saveState !== 'idle'} style={styles.iconButton} className="icon-button" aria-label="Salva progresso">
-                    {renderSaveButton()}
-                </button>
-            )}
-
             {currentUser && (
               <div style={styles.userMenuContainer}>
                 <button 
@@ -193,18 +162,6 @@ const styles: { [key: string]: React.CSSProperties } = {
     cursor: 'pointer',
     transition: 'all 0.2s ease',
     boxShadow: '0 2px 5px rgba(88, 166, 166, 0.2)',
-  },
-  iconButton: {
-    background: 'none',
-    border: 'none',
-    cursor: 'pointer',
-    padding: '8px',
-    borderRadius: '50%',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    color: COLORS.textSecondary,
-    transition: 'background-color 0.2s ease',
   },
   userMenuContainer: {
     position: 'relative',

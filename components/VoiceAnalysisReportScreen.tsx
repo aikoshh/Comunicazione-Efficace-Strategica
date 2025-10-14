@@ -1,15 +1,19 @@
 import React, { useEffect, useState } from 'react';
-import { VoiceAnalysisResult, Exercise } from '../types';
+import { VoiceAnalysisResult, Exercise, Entitlements } from '../types';
 import { COLORS, VOICE_RUBRIC_CRITERIA } from '../constants';
 import { useSpeech } from '../hooks/useSpeech';
-import { CheckCircleIcon, XCircleIcon, RetryIcon, HomeIcon, LightbulbIcon, TargetIcon, SpeakerIcon, SpeakerOffIcon } from './Icons';
+import { CheckCircleIcon, XCircleIcon, RetryIcon, HomeIcon, LightbulbIcon, TargetIcon, SpeakerIcon, SpeakerOffIcon, NextIcon } from './Icons';
 import { soundService } from '../services/soundService';
+import { hasProAccess } from '../services/monetizationService';
 
 interface VoiceAnalysisReportScreenProps {
   result: VoiceAnalysisResult;
   exercise: Exercise;
   onRetry: () => void;
-  onNext: () => void;
+  onNextExercise: () => void;
+  nextExerciseLabel: string;
+  entitlements: Entitlements | null;
+  onNavigateToPaywall: () => void;
 }
 
 const KEYWORDS = [
@@ -113,10 +117,14 @@ const AnnotatedText: React.FC<{ text: string }> = ({ text }) => {
     );
 };
 
-export const VoiceAnalysisReportScreen: React.FC<VoiceAnalysisReportScreenProps> = ({ result, exercise, onRetry, onNext }) => {
+export const VoiceAnalysisReportScreen: React.FC<VoiceAnalysisReportScreenProps> = ({ result, exercise, onRetry, onNextExercise, nextExerciseLabel, entitlements, onNavigateToPaywall }) => {
   const { speak, isSpeaking, stopSpeaking } = useSpeech();
   
-  const averageScore = Math.round(result.scores.reduce((acc, s) => acc + s.score, 0) / result.scores.length * 10);
+  const averageScore = result.scores.length > 0
+    ? Math.round(result.scores.reduce((acc, s) => acc + s.score, 0) / result.scores.length * 10)
+    : 0;
+
+  const isPro = hasProAccess(entitlements);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -134,11 +142,16 @@ export const VoiceAnalysisReportScreen: React.FC<VoiceAnalysisReportScreenProps>
   
   const handleNext = () => {
     soundService.playClick();
-    onNext();
+    onNextExercise();
   };
   
   const handleStrategicReplay = () => {
     soundService.playClick();
+    if (!isPro) {
+        onNavigateToPaywall();
+        return;
+    }
+
     if (isSpeaking) {
         stopSpeaking();
     } else {
@@ -147,12 +160,12 @@ export const VoiceAnalysisReportScreen: React.FC<VoiceAnalysisReportScreenProps>
   };
 
   const hoverStyle = `
-    .primary-button:hover, .secondary-button:hover {
+    .primary-button:hover, .secondary-button:hover, .replay-button:hover:not(:disabled) {
       transform: translateY(-2px);
       filter: brightness(1.1);
     }
-     .primary-button:active, .secondary-button:active {
-      transform: translateY(0);
+     .primary-button:active, .secondary-button:active, .replay-button:active:not(:disabled) {
+      transform: translateY(0) scale(0.98);
       filter: brightness(0.95);
     }
   `;
@@ -224,9 +237,9 @@ export const VoiceAnalysisReportScreen: React.FC<VoiceAnalysisReportScreenProps>
         <div style={{...styles.suggestedDeliveryContainer, animation: 'fadeInUp 0.5s 0.8s ease-out both'}}>
           <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px'}}>
               <h2 style={styles.sectionTitle}>Risposta Consigliata</h2>
-              <button onClick={handleStrategicReplay} style={styles.replayButton} className="secondary-button">
+              <button onClick={handleStrategicReplay} style={!isPro ? styles.replayButtonLocked : styles.replayButton} className="replay-button">
                   {isSpeaking ? <SpeakerOffIcon/> : <SpeakerIcon/>}
-                  {isSpeaking ? 'Ferma Ascolto' : 'Ascolta Versione Ideale'}
+                  {isSpeaking ? 'Ferma Ascolto' : (isPro ? 'Ascolta Versione Ideale' : 'Sblocca PRO')}
               </button>
           </div>
           <p style={styles.deliveryInstructions}><HighlightText text={result.suggested_delivery.instructions}/></p>
@@ -238,7 +251,7 @@ export const VoiceAnalysisReportScreen: React.FC<VoiceAnalysisReportScreenProps>
             <RetryIcon /> Riprova Esercizio
           </button>
           <button onClick={handleNext} style={styles.primaryButton} className="primary-button">
-            Menu Principale <HomeIcon />
+            {nextExerciseLabel} <NextIcon />
           </button>
         </div>
       </div>
@@ -249,7 +262,7 @@ export const VoiceAnalysisReportScreen: React.FC<VoiceAnalysisReportScreenProps>
 const styles: { [key: string]: React.CSSProperties } = {
     container: {
         backgroundColor: COLORS.base,
-        minHeight: '100vh',
+        minHeight: 'calc(100vh - 64px)',
         padding: '40px 20px',
         display: 'flex',
         justifyContent: 'center',
@@ -320,6 +333,20 @@ const styles: { [key: string]: React.CSSProperties } = {
         border: `1px solid ${COLORS.primary}`,
         backgroundColor: 'transparent',
         color: COLORS.primary,
+        borderRadius: '8px',
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        fontWeight: 600,
+        transition: 'all 0.2s ease',
+    },
+    replayButtonLocked: {
+        padding: '10px 18px',
+        fontSize: '15px',
+        border: `1px solid ${COLORS.warning}`,
+        backgroundColor: 'rgba(255, 193, 7, 0.15)',
+        color: COLORS.textAccent,
         borderRadius: '8px',
         cursor: 'pointer',
         display: 'flex',

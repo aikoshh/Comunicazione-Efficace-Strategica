@@ -10,14 +10,17 @@ export const ApiKeyErrorScreen: React.FC<ApiKeyErrorScreenProps> = ({ error }) =
   return (
     <div style={styles.container}>
       <WarningIcon width={48} height={48} color={COLORS.error} />
-      <h1 style={styles.title}>Errore di Configurazione</h1>
+      <h1 style={styles.title}>Errore di Configurazione API</h1>
       <p style={styles.message}>
-        L'applicazione non è configurata correttamente. Impossibile comunicare con i servizi di analisi.
+        L'applicazione non può comunicare con i servizi di analisi.
       </p>
       <p style={styles.errorMessage}>Dettaglio: {error}</p>
       <p style={styles.message}>
-        Assicurati che la chiave API sia stata impostata correttamente nell'ambiente di esecuzione come variabile d'ambiente `API_KEY`.
+        Assicurati che la chiave API sia valida. Puoi inserirla nella schermata di login o configurarla come variabile d'ambiente `API_KEY`.
       </p>
+      <button onClick={() => window.location.reload()} style={styles.reloadButton}>
+        Ricarica e Riprova
+      </button>
     </div>
   );
 };
@@ -61,4 +64,15 @@ const styles: { [key: string]: React.CSSProperties } = {
         margin: '16px 0',
         textAlign: 'left',
     },
+    reloadButton: {
+        marginTop: '24px',
+        padding: '12px 24px',
+        fontSize: '16px',
+        fontWeight: 'bold',
+        color: 'white',
+        background: COLORS.primary,
+        border: 'none',
+        borderRadius: '8px',
+        cursor: 'pointer',
+    }
 };

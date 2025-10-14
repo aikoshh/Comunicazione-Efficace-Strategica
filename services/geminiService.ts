@@ -1,16 +1,6 @@
 import { GoogleGenAI, Type } from "@google/genai";
-import type { AnalysisResult, ImprovementArea, VoiceAnalysisResult, VoiceScore, CommunicatorProfile } from '../types';
-
-// ATTENZIONE: Inserire le chiavi API direttamente nel codice client-side è un grave rischio per la sicurezza.
-// Questa chiave è visibile a chiunque ispezioni il codice sorgente dell'applicazione.
-const API_KEY = "AIzaSyCPKmoJbTg3jhxo9oJIcY7DKPYXKj1kA_c";
-
-const getAI = () => {
-    if (!API_KEY) {
-        throw new Error("API_KEY non configurata nel codice sorgente.");
-    }
-    return new GoogleGenAI({ apiKey: API_KEY });
-};
+import type { AnalysisResult, ImprovementArea, VoiceAnalysisResult, VoiceScore, CommunicatorProfile, Entitlements, DetailedRubricScore } from '../types';
+import { hasProAccess } from './monetizationService';
 
 const analysisSchema = {
     type: Type.OBJECT,
@@ -55,6 +45,31 @@ const analysisSchema = {
                 }
             },
             required: ["short", "long"]
+        },
+        // --- PRO Schema Fields ---
+        detailedRubric: {
+            type: Type.ARRAY,
+            nullable: true,
+            items: {
+                type: Type.OBJECT,
+                properties: {
+                    criterion: { type: Type.STRING, enum: ['Chiarezza', 'Tono ed Empatia', 'Orientamento alla Soluzione', 'Assertività', 'Struttura'] },
+                    score: { type: Type.NUMBER },
+                    justification: { type: Type.STRING }
+                },
+                 required: ["criterion", "score", "justification"]
+            },
+            description: "Valutazione dettagliata PRO. Compila questo campo SOLO se richiesto nelle istruzioni del prompt."
+        },
+        utilityScore: {
+            type: Type.NUMBER,
+            nullable: true,
+            description: "Punteggio da 1 a 10 sull'utilità della domanda posta. Compila questo campo SOLO se richiesto."
+        },
+        clarityScore: {
+            type: Type.NUMBER,
+            nullable: true,
+            description: "Punteggio da 1 a 10 sulla chiarezza della domanda posta. Compila questo campo SOLO se richiesto."
         }
     },
     required: ["score", "strengths", "areasForImprovement", "suggestedResponse"]
@@ -65,11 +80,34 @@ export const analyzeResponse = async (
   userResponse: string,
   scenario: string,
   task: string,
+  entitlements: Entitlements | null,
   isVerbal: boolean,
   customObjective?: string,
+  apiKey?: string | null
 ): Promise<AnalysisResult> => {
   try {
-    const ai = getAI();
+    const keyToUse = apiKey || process.env.API_KEY;
+    if (!keyToUse) {
+        throw new Error("API key non trovata. Per favore, inseriscila nella schermata di login o configurala come variabile d'ambiente.");
+    }
+    const ai = new GoogleGenAI({ apiKey: keyToUse });
+
+    const isPro = hasProAccess(entitlements);
+    const isQuestionTask = task.toLowerCase().includes('domand');
+
+    let proInstructions = '';
+    if (isPro) {
+        proInstructions += `
+          **Funzionalità PRO ATTIVA: Valutazione Dettagliata.**
+          DEVI fornire una valutazione dettagliata per ciascuno dei 5 criteri chiave (Chiarezza, Tono ed Empatia, Orientamento alla Soluzione, Assertività, Struttura). Per ogni criterio, fornisci un punteggio da 1 a 10 e una breve motivazione. Popola il campo 'detailedRubric' nel JSON.
+        `;
+        if (isQuestionTask) {
+            proInstructions += `
+            **Funzionalità PRO ATTIVA: Metriche Domande.**
+            L'utente sta formulando una domanda. Valutala secondo due metriche specifiche: 'utilityScore' (quanto la domanda è utile per raggiungere l'obiettivo) e 'clarityScore' (quanto la domanda è chiara e non ambigua), entrambe con un punteggio da 1 a 10. Popola i campi 'utilityScore' and 'clarityScore' nel JSON.
+            `;
+        }
+    }
 
     const verbalContext = isVerbal 
         ? "La risposta dell'utente è stata fornita verbalmente. Considera fattori come la concisione e la chiarezza adatti alla comunicazione parlata. Ignora eventuali errori di trascrizione o di battitura."
@@ -104,6 +142,8 @@ export const analyzeResponse = async (
       **Risposta dell'utente:** "${userResponse}"
 
       **Contesto di analisi:** ${verbalContext}
+      
+      ${proInstructions}
 
       Analizza la risposta dell'utente secondo le direttive fornite nella tua istruzione di sistema e genera il feedback strutturato in formato JSON.
     `;
@@ -151,7 +191,7 @@ export const analyzeResponse = async (
   } catch (error: any) {
     console.error("Errore durante l'analisi della risposta con Gemini:", error);
     if (error.message.includes('API key') || error.message.includes('API_KEY')) {
-         throw new Error("La chiave API fornita nel codice non è valida o è scaduta. Controlla il file geminiService.ts.");
+         throw new Error("La chiave API fornita non è valida o è scaduta. Controlla la chiave inserita o la variabile d'ambiente.");
     }
     throw new Error("Impossibile ottenere l'analisi dal servizio. Riprova più tardi.");
   }
@@ -209,10 +249,15 @@ const paraverbalAnalysisSchema = {
 export const analyzeParaverbalResponse = async (
   transcript: string,
   scenario: string,
-  task: string
+  task: string,
+  apiKey?: string | null
 ): Promise<VoiceAnalysisResult> => {
     try {
-        const ai = getAI();
+        const keyToUse = apiKey || process.env.API_KEY;
+        if (!keyToUse) {
+            throw new Error("API key non trovata. Per favore, inseriscila nella schermata di login o configurala come variabile d'ambiente.");
+        }
+        const ai = new GoogleGenAI({ apiKey: keyToUse });
 
         const systemInstruction = `
             Sei **CES Coach Engine** esteso con il modulo **Voce Strategica (Paraverbale)**. Valuta e allena il paraverbale per rendere più efficace il messaggio secondo i principi della Comunicazione Efficace Strategica®.
@@ -288,7 +333,7 @@ export const analyzeParaverbalResponse = async (
     } catch (error: any) {
         console.error("Errore durante l'analisi paraverbale con Gemini:", error);
         if (error.message.includes('API key') || error.message.includes('API_KEY')) {
-             throw new Error("La chiave API fornita nel codice non è valida o è scaduta. Controlla il file geminiService.ts.");
+             throw new Error("La chiave API fornita non è valida o è scaduta. Controlla la chiave inserita o la variabile d'ambiente.");
         }
         throw new Error("Impossibile ottenere l'analisi vocale dal servizio. Riprova più tardi.");
     }
@@ -322,10 +367,15 @@ const communicatorProfileSchema = {
 
 
 export const generateCommunicatorProfile = async (
-    analysisResults: { exerciseId: string; analysis: AnalysisResult }[]
+    analysisResults: { exerciseId: string; analysis: AnalysisResult }[],
+    apiKey?: string | null,
 ): Promise<CommunicatorProfile> => {
     try {
-        const ai = getAI();
+        const keyToUse = apiKey || process.env.API_KEY;
+        if (!keyToUse) {
+            throw new Error("API key non trovata. Per favore, inseriscila nella schermata di login o configurala come variabile d'ambiente.");
+        }
+        const ai = new GoogleGenAI({ apiKey: keyToUse });
         const systemInstruction = `
             Sei un esperto di profilazione della comunicazione basato sulla metodologia CES. Il tuo compito è analizzare una serie di analisi di esercizi di check-up e sintetizzarle in un profilo di comunicazione conciso, incoraggiante e strategico.
             Identifica i pattern ricorrenti, sia positivi che negativi, attraverso le diverse risposte per delineare uno stile di comunicazione complessivo.
@@ -374,7 +424,7 @@ export const generateCommunicatorProfile = async (
     } catch (error: any) {
         console.error("Errore durante la generazione del profilo comunicatore:", error);
         if (error.message.includes('API key') || error.message.includes('API_KEY')) {
-             throw new Error("La chiave API fornita nel codice non è valida o è scaduta. Controlla il file geminiService.ts.");
+             throw new Error("La chiave API fornita non è valida o è scaduta. Controlla la chiave inserita o la variabile d'ambiente.");
         }
         throw new Error("Impossibile generare il profilo comunicatore.");
     }
