@@ -14,6 +14,8 @@ interface VoiceAnalysisReportScreenProps {
   nextExerciseLabel: string;
   entitlements: Entitlements | null;
   onNavigateToPaywall: () => void;
+  userResponse?: string;
+  isReview?: boolean;
 }
 
 const KEYWORDS = [
@@ -117,7 +119,7 @@ const AnnotatedText: React.FC<{ text: string }> = ({ text }) => {
     );
 };
 
-export const VoiceAnalysisReportScreen: React.FC<VoiceAnalysisReportScreenProps> = ({ result, exercise, onRetry, onNextExercise, nextExerciseLabel, entitlements, onNavigateToPaywall }) => {
+export const VoiceAnalysisReportScreen: React.FC<VoiceAnalysisReportScreenProps> = ({ result, exercise, onRetry, onNextExercise, nextExerciseLabel, entitlements, onNavigateToPaywall, userResponse, isReview }) => {
   const { speak, isSpeaking, stopSpeaking } = useSpeech();
   
   const averageScore = result.scores.length > 0
@@ -127,13 +129,15 @@ export const VoiceAnalysisReportScreen: React.FC<VoiceAnalysisReportScreenProps>
   const isPro = hasProAccess(entitlements);
 
   useEffect(() => {
+    if(!isReview) {
+        soundService.playScoreSound(averageScore);
+    }
     window.scrollTo(0, 0);
-    soundService.playScoreSound(averageScore);
     
     return () => {
         stopSpeaking(); // Cleanup speech synthesis on component unmount
     }
-  }, [averageScore, stopSpeaking]);
+  }, [averageScore, stopSpeaking, isReview]);
   
   const handleRetry = () => {
     soundService.playClick();
@@ -175,6 +179,13 @@ export const VoiceAnalysisReportScreen: React.FC<VoiceAnalysisReportScreenProps>
       <style>{hoverStyle}</style>
       <div style={styles.card}>
         <h1 style={styles.title}>Report Voce & Paraverbale</h1>
+
+        {isReview && userResponse && (
+            <div style={styles.userResponseContainer}>
+                <h2 style={{...styles.sectionTitle, color: COLORS.textAccent}}>La Tua Risposta Precedente</h2>
+                <p style={styles.userResponseText}>"{userResponse}"</p>
+            </div>
+        )}
         
         <ScoreCircle score={averageScore} />
         
@@ -247,12 +258,25 @@ export const VoiceAnalysisReportScreen: React.FC<VoiceAnalysisReportScreenProps>
         </div>
 
         <div style={styles.buttonContainer}>
-          <button onClick={handleRetry} style={styles.secondaryButton} className="secondary-button">
-            <RetryIcon /> Riprova Esercizio
-          </button>
-          <button onClick={handleNext} style={styles.primaryButton} className="primary-button">
-            {nextExerciseLabel} <NextIcon />
-          </button>
+          {isReview ? (
+             <>
+                <button onClick={handleRetry} style={styles.secondaryButton} className="secondary-button">
+                    <RetryIcon /> Riprova Esercizio
+                </button>
+                <button onClick={handleNext} style={styles.primaryButton} className="primary-button">
+                    <HomeIcon /> {nextExerciseLabel}
+                </button>
+            </>
+          ) : (
+            <>
+                <button onClick={handleRetry} style={styles.secondaryButton} className="secondary-button">
+                    <RetryIcon /> Riprova Esercizio
+                </button>
+                <button onClick={handleNext} style={styles.primaryButton} className="primary-button">
+                    {nextExerciseLabel} <NextIcon />
+                </button>
+            </>
+          )}
         </div>
       </div>
     </div>
@@ -283,6 +307,20 @@ const styles: { [key: string]: React.CSSProperties } = {
         color: COLORS.textPrimary,
         marginBottom: '24px',
         textAlign: 'center',
+    },
+    userResponseContainer: {
+        backgroundColor: COLORS.cardDark,
+        padding: '20px',
+        borderRadius: '12px',
+        marginBottom: '24px',
+        borderLeft: `5px solid ${COLORS.accentBeige}`,
+    },
+    userResponseText: {
+        fontSize: '16px',
+        fontStyle: 'italic',
+        color: COLORS.textSecondary,
+        lineHeight: 1.7,
+        margin: 0,
     },
     scoreContainer: {
         position: 'relative',

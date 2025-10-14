@@ -11,8 +11,8 @@ import { StrategicCheckupScreen } from './components/StrategicCheckupScreen';
 import { CommunicatorProfileScreen } from './components/CommunicatorProfileScreen';
 import { Header } from './components/Header';
 import { PaywallScreen } from './components/PaywallScreen';
-import type { Module, Exercise, AnalysisResult, VoiceAnalysisResult, DifficultyLevel, User, UserProgress, CommunicatorProfile, Breadcrumb, Entitlements, Product } from './types';
-import { MODULES, COLORS } from './constants';
+import type { Module, Exercise, AnalysisResult, VoiceAnalysisResult, DifficultyLevel, User, UserProgress, CommunicatorProfile, Breadcrumb, Entitlements, Product, AnalysisHistoryEntry } from './types';
+import { MODULES, COLORS, STRATEGIC_CHECKUP_EXERCISES } from './constants';
 import { initialUserDatabase } from './database';
 import { soundService } from './services/soundService';
 import { getUserEntitlements, purchaseProduct, restorePurchases, hasProAccess } from './services/monetizationService';
@@ -24,8 +24,8 @@ type AppState =
   | { screen: 'module'; module: Module }
   | { screen: 'custom_setup'; module: Module }
   | { screen: 'exercise'; exercise: Exercise; isCheckup?: boolean; checkupStep?: number; totalCheckupSteps?: number }
-  | { screen: 'report'; result: AnalysisResult; exercise: Exercise; nextExercise?: Exercise; currentModule?: Module }
-  | { screen: 'voice_report'; result: VoiceAnalysisResult; exercise: Exercise; nextExercise?: Exercise; currentModule?: Module }
+  | { screen: 'report'; result: AnalysisResult; exercise: Exercise; nextExercise?: Exercise; currentModule?: Module; userResponse?: string; isReview?: boolean }
+  | { screen: 'voice_report'; result: VoiceAnalysisResult; exercise: Exercise; nextExercise?: Exercise; currentModule?: Module; userResponse?: string; isReview?: boolean }
   | { screen: 'api_key_error'; error: string }
   | { screen: 'strategic_checkup' }
   | { screen: 'communicator_profile' }
@@ -80,6 +80,14 @@ const findNextExerciseInModule = (currentExerciseId: string): { currentModule?: 
     return { currentModule, nextExercise };
 };
 
+const findExerciseById = (exerciseId: string): Exercise | undefined => {
+    for (const mod of MODULES) {
+        const ex = mod.exercises.find(e => e.id === exerciseId);
+        if (ex) return ex;
+    }
+    return STRATEGIC_CHECKUP_EXERCISES.find(e => e.id === exerciseId);
+};
+
 
 const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -104,6 +112,15 @@ const App: React.FC = () => {
   const [appState, setAppState] = useState<AppState>({ screen: 'home' });
   const [returnToState, setReturnToState] = useState<AppState | null>(null);
   const [apiKey, setApiKey] = useState<string | null>(null);
+  const [isSoundEnabled, setIsSoundEnabled] = useState(true);
+
+  useEffect(() => {
+    soundService.toggleSound(isSoundEnabled);
+  }, [isSoundEnabled]);
+
+  const handleToggleSound = () => {
+    setIsSoundEnabled(prev => !prev);
+  };
 
   useEffect(() => {
       // Session Persistence: Restore session on initial load
@@ -164,6 +181,7 @@ const App: React.FC = () => {
               completedExerciseIds: [], 
               skippedExerciseIds: [],
               completedModuleIds: [],
+              analysisHistory: [],
               competenceScores: { ascolto: 0, riformulazione: 0, assertivita: 0, gestione_conflitto: 0 } 
           };
           return {
@@ -276,6 +294,49 @@ const App: React.FC = () => {
     setAppState({ screen: 'exercise', exercise, isCheckup, checkupStep, totalCheckupSteps });
   };
 
+  const handleReviewExercise = (exerciseId: string) => {
+    if (!currentUser) return;
+    const progress = userProgress[currentUser.email];
+    if (!progress?.analysisHistory) return;
+
+    const historyEntry = [...progress.analysisHistory]
+        .reverse()
+        .find(h => h.exerciseId === exerciseId);
+    
+    if (!historyEntry) {
+        addToast("Nessun risultato precedente trovato per questo esercizio.", 'info');
+        return;
+    }
+    
+    const exercise = findExerciseById(exerciseId);
+    if (!exercise) {
+        addToast("Dettagli dell'esercizio non trovati.", 'error');
+        return;
+    }
+
+    const { currentModule } = findNextExerciseInModule(exerciseId);
+
+    if (historyEntry.type === 'written') {
+        setAppState({ 
+            screen: 'report', 
+            result: historyEntry.result as AnalysisResult, 
+            exercise: exercise,
+            userResponse: historyEntry.userResponse,
+            isReview: true,
+            currentModule: currentModule 
+        });
+    } else {
+         setAppState({ 
+            screen: 'voice_report', 
+            result: historyEntry.result as VoiceAnalysisResult, 
+            exercise: exercise,
+            userResponse: historyEntry.userResponse,
+            isReview: true,
+            currentModule: currentModule 
+        });
+    }
+  };
+
   const handleStartCustomExercise = (scenario: string, task: string, customObjective?: string) => {
     const customExercise: Exercise = {
         id: 'custom-' + Date.now(),
@@ -288,10 +349,10 @@ const App: React.FC = () => {
     setAppState({ screen: 'exercise', exercise: customExercise });
   };
 
-  const processExerciseCompletion = (exerciseId: string, result: AnalysisResult) => {
+  const processExerciseCompletion = (exerciseId: string, result: AnalysisResult, userResponse: string) => {
       if (!currentUser) return;
       
-      const { score, areasForImprovement } = result;
+      const { score } = result;
       const userEmail = currentUser.email;
       const currentProgress = userProgress[userEmail] || { 
           scores: [], 
@@ -304,7 +365,13 @@ const App: React.FC = () => {
       
       const newScores = [...currentProgress.scores, score];
       const newCompletedIds = [...new Set([...(currentProgress.completedExerciseIds || []), exerciseId])];
-      const newAnalysisHistory = [...(currentProgress.analysisHistory || []), { exerciseId, areasForImprovement, score }];
+      const newAnalysisHistory: AnalysisHistoryEntry[] = [...(currentProgress.analysisHistory || []), { 
+          exerciseId, 
+          userResponse,
+          result,
+          type: 'written',
+          timestamp: new Date().toISOString()
+      }];
       
       const newCompetenceScores = updateCompetenceScores(
         currentProgress.competenceScores,
@@ -332,24 +399,31 @@ const App: React.FC = () => {
       });
   };
   
-  const handleCompleteWrittenExercise = (result: AnalysisResult) => {
+  const handleCompleteWrittenExercise = (result: AnalysisResult, userResponse: string) => {
     if (appState.screen === 'exercise') {
       if (!appState.isCheckup) {
-        processExerciseCompletion(appState.exercise.id, result);
+        processExerciseCompletion(appState.exercise.id, result, userResponse);
         const { currentModule, nextExercise } = findNextExerciseInModule(appState.exercise.id);
-        setAppState({ screen: 'report', result, exercise: appState.exercise, nextExercise, currentModule });
+        setAppState({ screen: 'report', result, exercise: appState.exercise, nextExercise, currentModule, userResponse });
       }
     }
   };
 
-  const handleCompleteVerbalExercise = (result: VoiceAnalysisResult) => {
+  const handleCompleteVerbalExercise = (result: VoiceAnalysisResult, userResponse: string) => {
       if (appState.screen === 'exercise') {
           const averageScore = Math.round(result.scores.reduce((acc, s) => acc + s.score, 0) / result.scores.length * 10);
           if (!appState.isCheckup && currentUser) {
                 const userEmail = currentUser.email;
-                const currentProgress = userProgress[userEmail] || { scores: [], completedExerciseIds: [], skippedExerciseIds: [], completedModuleIds: [] };
+                const currentProgress = userProgress[userEmail] || { scores: [], completedExerciseIds: [], skippedExerciseIds: [], completedModuleIds: [], analysisHistory: [] };
                 const newScores = [...currentProgress.scores, averageScore];
                 const newCompletedIds = [...new Set([...(currentProgress.completedExerciseIds || []), appState.exercise.id])];
+                const newAnalysisHistory: AnalysisHistoryEntry[] = [...(currentProgress.analysisHistory || []), {
+                    exerciseId: appState.exercise.id,
+                    userResponse,
+                    result,
+                    type: 'verbal',
+                    timestamp: new Date().toISOString()
+                }];
                 
                 const newCompetenceScores = updateCompetenceScores(
                     currentProgress.competenceScores,
@@ -360,11 +434,12 @@ const App: React.FC = () => {
                 updateUserProgress(userEmail, {
                     scores: newScores,
                     completedExerciseIds: newCompletedIds,
+                    analysisHistory: newAnalysisHistory,
                     competenceScores: newCompetenceScores,
                 });
           }
           const { currentModule, nextExercise } = findNextExerciseInModule(appState.exercise.id);
-          setAppState({ screen: 'voice_report', result, exercise: appState.exercise, nextExercise, currentModule });
+          setAppState({ screen: 'voice_report', result, exercise: appState.exercise, nextExercise, currentModule, userResponse });
       }
   };
 
@@ -484,6 +559,7 @@ const App: React.FC = () => {
       screenContent = <ModuleScreen 
                         module={appState.module} 
                         onSelectExercise={handleSelectExercise} 
+                        onReviewExercise={handleReviewExercise}
                         onBack={handleBack} 
                         completedExerciseIds={completedExerciseIds} 
                         entitlements={entitlements}
@@ -511,22 +587,46 @@ const App: React.FC = () => {
         break;
     case 'report':
     case 'voice_report':
-        const { nextExercise, currentModule } = appState;
+        const { nextExercise, currentModule, isReview, userResponse } = appState;
         const onNextExercise = () => {
-            if (nextExercise) {
+            if (isReview && currentModule) {
+                handleSelectModule(currentModule);
+            } else if (nextExercise) {
                 handleSelectExercise(nextExercise);
             } else if (currentModule) {
                 handleSelectModule(currentModule);
+            } else {
+                setAppState({ screen: 'home' });
             }
         };
-        const nextExerciseLabel = nextExercise ? 'Prossimo Esercizio' : 'Torna al Modulo';
+        const nextExerciseLabel = isReview ? 'Torna al Modulo' : (nextExercise ? 'Prossimo Esercizio' : 'Torna al Modulo');
         
         if (appState.screen === 'report') {
             screenKey = `report-${appState.exercise.id}`;
-            screenContent = <AnalysisReportScreen result={appState.result} exercise={appState.exercise} onRetry={handleRetryExercise} onNextExercise={onNextExercise} nextExerciseLabel={nextExerciseLabel} entitlements={entitlements} onNavigateToPaywall={navigateToPaywall} />;
+            screenContent = <AnalysisReportScreen 
+                result={appState.result} 
+                exercise={appState.exercise} 
+                onRetry={handleRetryExercise} 
+                onNextExercise={onNextExercise} 
+                nextExerciseLabel={nextExerciseLabel} 
+                entitlements={entitlements} 
+                onNavigateToPaywall={navigateToPaywall} 
+                userResponse={userResponse}
+                isReview={isReview}
+            />;
         } else {
             screenKey = `voice-report-${appState.exercise.id}`;
-            screenContent = <VoiceAnalysisReportScreen result={appState.result} exercise={appState.exercise} onRetry={handleRetryExercise} onNextExercise={onNextExercise} nextExerciseLabel={nextExerciseLabel} entitlements={entitlements} onNavigateToPaywall={navigateToPaywall}/>;
+            screenContent = <VoiceAnalysisReportScreen 
+                result={appState.result} 
+                exercise={appState.exercise} 
+                onRetry={handleRetryExercise} 
+                onNextExercise={onNextExercise} 
+                nextExerciseLabel={nextExerciseLabel} 
+                entitlements={entitlements} 
+                onNavigateToPaywall={navigateToPaywall}
+                userResponse={userResponse}
+                isReview={isReview}
+            />;
         }
         break;
     case 'api_key_error':
@@ -558,7 +658,15 @@ const App: React.FC = () => {
 
   return (
     <div>
-        {showHeader && <Header currentUser={currentUser} breadcrumbs={generateBreadcrumbs()} onLogout={handleLogout} onGoToPaywall={navigateToPaywall} isPro={isPro} />}
+        {showHeader && <Header 
+            currentUser={currentUser} 
+            breadcrumbs={generateBreadcrumbs()} 
+            onLogout={handleLogout} 
+            onGoToPaywall={navigateToPaywall} 
+            isPro={isPro}
+            isSoundEnabled={isSoundEnabled}
+            onToggleSound={handleToggleSound}
+        />}
         <main style={showHeader ? styles.mainContent : {}}>
             <div key={screenKey} style={{ animation: 'fadeInUp 0.5s ease-out' }}>
                 {screenContent}

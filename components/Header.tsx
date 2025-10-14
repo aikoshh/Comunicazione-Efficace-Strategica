@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import type { User, Breadcrumb } from '../types';
 import { COLORS } from '../constants';
 import { Logo } from './Logo';
-import { HomeIcon, ChevronRightIcon } from './Icons';
+import { HomeIcon, ChevronRightIcon, SpeakerIcon, SpeakerOffIcon } from './Icons';
 import { hasProAccess } from '../services/monetizationService';
 
 
@@ -12,13 +12,15 @@ interface HeaderProps {
   onLogout: () => void;
   onGoToPaywall: () => void;
   isPro: boolean;
+  isSoundEnabled: boolean;
+  onToggleSound: () => void;
 }
 
 const hoverStyle = `
   .header-link:hover {
     color: ${COLORS.secondary};
   }
-  .user-menu-button:hover {
+  .user-menu-button:hover, .sound-button:hover {
     background-color: ${COLORS.cardDark};
   }
   .logout-button:hover {
@@ -30,7 +32,7 @@ const hoverStyle = `
   }
 `;
 
-export const Header: React.FC<HeaderProps> = ({ currentUser, breadcrumbs, onLogout, onGoToPaywall, isPro }) => {
+export const Header: React.FC<HeaderProps> = ({ currentUser, breadcrumbs, onLogout, onGoToPaywall, isPro, isSoundEnabled, onToggleSound }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   
   const getInitials = (user: User) => {
@@ -64,6 +66,15 @@ export const Header: React.FC<HeaderProps> = ({ currentUser, breadcrumbs, onLogo
           </div>
 
           <div style={styles.userSection}>
+            <button 
+                onClick={onToggleSound} 
+                style={styles.soundButton}
+                className="sound-button"
+                aria-label={isSoundEnabled ? "Disattiva suoni" : "Attiva suoni"}
+            >
+                {isSoundEnabled ? <SpeakerIcon /> : <SpeakerOffIcon />}
+            </button>
+
             {!isPro && (
                 <button style={styles.proButton} className="pro-button" onClick={onGoToPaywall}>
                     Sblocca PRO
@@ -150,6 +161,18 @@ const styles: { [key: string]: React.CSSProperties } = {
     display: 'flex',
     alignItems: 'center',
     gap: '16px'
+  },
+  soundButton: {
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    padding: '8px',
+    borderRadius: '50%',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    color: COLORS.textSecondary,
+    transition: 'background-color 0.2s ease',
   },
   proButton: {
     backgroundColor: COLORS.secondary,

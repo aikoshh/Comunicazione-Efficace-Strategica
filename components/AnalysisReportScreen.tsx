@@ -18,6 +18,8 @@ interface AnalysisReportScreenProps {
   nextExerciseLabel: string;
   entitlements: Entitlements | null;
   onNavigateToPaywall: () => void;
+  userResponse?: string;
+  isReview?: boolean;
 }
 
 const KEYWORDS = [
@@ -135,7 +137,7 @@ const QuestionMetrics: React.FC<{ utility: number; clarity: number }> = ({ utili
 );
 
 
-export const AnalysisReportScreen: React.FC<AnalysisReportScreenProps> = ({ result, exercise, onRetry, onNextExercise, nextExerciseLabel, entitlements, onNavigateToPaywall }) => {
+export const AnalysisReportScreen: React.FC<AnalysisReportScreenProps> = ({ result, exercise, onRetry, onNextExercise, nextExerciseLabel, entitlements, onNavigateToPaywall, userResponse, isReview }) => {
   const [activeTab, setActiveTab] = useState<'short' | 'long'>('short');
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [reportHtml, setReportHtml] = useState<string | null>(null);
@@ -148,9 +150,11 @@ export const AnalysisReportScreen: React.FC<AnalysisReportScreenProps> = ({ resu
   const reportCardId = `report-card-${exercise.id}`;
 
   useEffect(() => {
-    soundService.playScoreSound(result.score);
+    if(!isReview) {
+        soundService.playScoreSound(result.score);
+    }
     window.scrollTo(0, 0);
-  }, [result.score]);
+  }, [result.score, isReview]);
   
   const handleRetry = () => { soundService.playClick(); onRetry(); };
   const handleNext = () => { soundService.playClick(); onNextExercise(); };
@@ -206,6 +210,13 @@ export const AnalysisReportScreen: React.FC<AnalysisReportScreenProps> = ({ resu
             )}
         </div>
         
+        {isReview && userResponse && (
+            <div style={styles.userResponseContainer}>
+                <h2 style={{...styles.sectionTitle, color: COLORS.textAccent}}>La Tua Risposta Precedente</h2>
+                <p style={styles.userResponseText}>"{userResponse}"</p>
+            </div>
+        )}
+
         <ScoreCircle score={result.score} />
         
         <div style={styles.feedbackGrid}>
@@ -286,12 +297,25 @@ export const AnalysisReportScreen: React.FC<AnalysisReportScreenProps> = ({ resu
         )}
 
         <div style={styles.buttonContainer} className="no-print">
-          <button onClick={handleRetry} style={styles.secondaryButton} className="secondary-button">
-            <RetryIcon /> Riprova Esercizio
-          </button>
-          <button onClick={handleNext} style={styles.primaryButton} className="primary-button">
-            {nextExerciseLabel} <NextIcon />
-          </button>
+          {isReview ? (
+             <>
+              <button onClick={handleRetry} style={styles.secondaryButton} className="secondary-button">
+                <RetryIcon /> Riprova Esercizio
+              </button>
+              <button onClick={handleNext} style={styles.primaryButton} className="primary-button">
+                <HomeIcon /> {nextExerciseLabel}
+              </button>
+            </>
+          ) : (
+            <>
+              <button onClick={handleRetry} style={styles.secondaryButton} className="secondary-button">
+                <RetryIcon /> Riprova Esercizio
+              </button>
+              <button onClick={handleNext} style={styles.primaryButton} className="primary-button">
+                {nextExerciseLabel} <NextIcon />
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>
@@ -439,4 +463,18 @@ const styles: { [key: string]: React.CSSProperties } = {
     metricItem: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' },
     metricLabel: { fontSize: '15px', color: COLORS.textSecondary },
     metricValue: { fontSize: '24px', fontWeight: 'bold', color: COLORS.primary },
+    userResponseContainer: {
+        backgroundColor: COLORS.cardDark,
+        padding: '20px',
+        borderRadius: '12px',
+        marginBottom: '24px',
+        borderLeft: `5px solid ${COLORS.accentBeige}`,
+    },
+    userResponseText: {
+        fontSize: '16px',
+        fontStyle: 'italic',
+        color: COLORS.textSecondary,
+        lineHeight: 1.7,
+        margin: 0,
+    },
 };

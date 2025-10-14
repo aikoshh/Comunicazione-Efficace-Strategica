@@ -10,8 +10,8 @@ import { useToast } from '../hooks/useToast';
 
 interface ExerciseScreenProps {
   exercise: Exercise;
-  onCompleteWritten: (result: AnalysisResult) => void;
-  onCompleteVerbal: (result: VoiceAnalysisResult) => void;
+  onCompleteWritten: (result: AnalysisResult, userResponse: string) => void;
+  onCompleteVerbal: (result: VoiceAnalysisResult, userResponse: string) => void;
   onSkip: (exerciseId: string) => void;
   onBack: () => void;
   onApiKeyError: (error: string) => void;
@@ -120,10 +120,10 @@ export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({
     try {
       if(isVerbalExercise) {
         const result = await analyzeParaverbalResponse(userResponse, exercise.scenario, exercise.task, apiKey);
-        onCompleteVerbal(result);
+        onCompleteVerbal(result, userResponse);
       } else {
         const result = await analyzeResponse(userResponse, exercise.scenario, exercise.task, entitlements, false, exercise.customObjective, apiKey);
-        onCompleteWritten(result);
+        onCompleteWritten(result, userResponse);
       }
     } catch (e: any) {
       console.error(e);

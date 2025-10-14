@@ -115,6 +115,13 @@ export interface ScoreExplanation {
 export type CompetenceKey = "ascolto" | "riformulazione" | "assertivita" | "gestione_conflitto";
 export type CompetenceScores = Record<CompetenceKey, number>;
 
+export interface AnalysisHistoryEntry {
+  exerciseId: string;
+  userResponse: string;
+  result: AnalysisResult | VoiceAnalysisResult;
+  timestamp: string;
+  type: 'written' | 'verbal';
+}
 
 // New type for user progress tracking
 export interface UserProgress {
@@ -130,11 +137,7 @@ export interface UserProgress {
     profileTitle: string;
     profileDescription: string;
   };
-  analysisHistory?: {
-    exerciseId: string;
-    areasForImprovement: ImprovementArea[];
-    score: number;
-  }[];
+  analysisHistory?: AnalysisHistoryEntry[];
   // FIX: Corrected typo from Entitleaments to Entitlements.
   entitlements?: Entitlements;
   competenceScores?: CompetenceScores;

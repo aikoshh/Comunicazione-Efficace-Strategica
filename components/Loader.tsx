@@ -3,14 +3,26 @@ import { COLORS } from '../constants';
 
 const DEFAULT_ESTIMATED_TIME = 15; // Default time in seconds
 
+const QUOTES = [
+    { text: "La più grande abilità di un conversatore è quella di saper tacere.", author: "Proverbio Cinese" },
+    { text: "Il modo in cui comunichiamo con gli altri e con noi stessi, determina la qualità della nostra vita.", author: "Tony Robbins" },
+    { text: "La comunicazione efficace è il 20% ciò che sai e l'80% come ti senti riguardo a ciò che sai.", author: "Jim Rohn" },
+    { text: "Parla in modo tale che gli altri amino ascoltarti. Ascolta in modo tale che gli altri amino parlarti.", author: "Anonimo" },
+    { text: "Il singolo più grande problema nella comunicazione è l'illusione che essa abbia avuto luogo.", author: "George Bernard Shaw" }
+];
+
 interface LoaderProps {
   estimatedTime?: number;
 }
 
 export const FullScreenLoader: React.FC<LoaderProps> = ({ estimatedTime = DEFAULT_ESTIMATED_TIME }) => {
   const [timeLeft, setTimeLeft] = useState(estimatedTime);
+  const [quote, setQuote] = useState(QUOTES[0]);
 
   useEffect(() => {
+    // Select a random quote on mount
+    setQuote(QUOTES[Math.floor(Math.random() * QUOTES.length)]);
+
     // Resetta il timer se il componente viene ri-renderizzato con un nuovo tempo
     setTimeLeft(estimatedTime);
     
@@ -34,14 +46,24 @@ export const FullScreenLoader: React.FC<LoaderProps> = ({ estimatedTime = DEFAUL
                 0%, 100% { opacity: 1; }
                 50% { opacity: 0.4; }
             }
+             @keyframes rapid-blink {
+                0%, 100% { opacity: 1; }
+                50% { opacity: 0.2; }
+            }
         `}</style>
       <img
         src="https://i.gifer.com/ZNeT.gif"
         alt="Analisi in corso..."
         style={styles.gif}
       />
-      <p style={styles.text}>Analisi in corso...</p>
+      <p style={{...styles.text, animation: 'rapid-blink 1s infinite ease-in-out'}}>Analisi in corso...</p>
       <p style={styles.subtext}>L'AI sta elaborando la tua risposta, attendi qualche istante.</p>
+
+       <div style={styles.quoteContainer}>
+        <p style={styles.quoteText}>"{quote.text}"</p>
+        <p style={styles.quoteAuthor}>- {quote.author}</p>
+      </div>
+
       <div style={styles.countdownContainer}>
         {timeLeft > 0 ? (
           <p style={styles.countdownText}>
@@ -112,6 +134,31 @@ const styles: { [key: string]: React.CSSProperties } = {
     maxWidth: '320px',
     lineHeight: 1.5,
     margin: 0,
+  },
+   quoteContainer: {
+    marginTop: '32px',
+    padding: '20px',
+    borderRadius: '12px',
+    backgroundColor: COLORS.primary,
+    maxWidth: '500px',
+    width: '90%',
+    textAlign: 'center',
+    borderLeft: `5px solid ${COLORS.accentBeige}`,
+    boxShadow: '0 4px 15px rgba(0,0,0,0.1)',
+  },
+  quoteText: {
+    fontSize: '16px',
+    fontStyle: 'italic',
+    color: 'white',
+    margin: '0 0 12px 0',
+    lineHeight: 1.6,
+  },
+  quoteAuthor: {
+    fontSize: '14px',
+    fontWeight: 'bold',
+    color: COLORS.accentBeige,
+    margin: 0,
+    textAlign: 'right'
   },
   countdownContainer: {
     marginTop: '24px',

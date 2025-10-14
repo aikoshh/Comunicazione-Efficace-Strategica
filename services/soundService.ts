@@ -1,7 +1,7 @@
 // A simple sound service using the Web Audio API to avoid dealing with audio files.
 class SoundService {
   private audioCtx: AudioContext | null = null;
-  private isEnabled: boolean = true; // Could be controlled by a UI setting in the future
+  public isEnabled: boolean = true; // Could be controlled by a UI setting in the future
 
   private initializeAudioContext() {
     if (this.audioCtx || typeof window === 'undefined' || window.document.hidden) {
@@ -13,6 +13,16 @@ class SoundService {
     } catch (e) {
       console.error("Web Audio API is not supported in this browser.", e);
     }
+  }
+
+  public toggleSound(forceState?: boolean) {
+    if (forceState !== undefined) {
+      this.isEnabled = forceState;
+    } else {
+      this.isEnabled = !this.isEnabled;
+    }
+    // If turning sound off while it's playing, we should probably stop all sounds.
+    // For this simple implementation, we'll just prevent new sounds from starting.
   }
 
   private playSound(
@@ -85,7 +95,7 @@ class SoundService {
 
     // --- "Sparkle" / "Cheer" sound to simulate applause/compliments ---
     const playSparkle = (startTime: number) => {
-        if (!this.audioCtx) return;
+        if (!this.audioCtx || !this.isEnabled) return;
         const oscillator = this.audioCtx.createOscillator();
         const gainNode = this.audioCtx.createGain();
         oscillator.type = 'square';

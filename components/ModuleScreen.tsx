@@ -11,6 +11,7 @@ import { ExercisePreviewModal } from './ExercisePreviewModal';
 interface ModuleScreenProps {
   module: Module;
   onSelectExercise: (exercise: Exercise) => void;
+  onReviewExercise: (exerciseId: string) => void;
   onBack: () => void;
   completedExerciseIds: string[];
   entitlements: Entitlements | null;
@@ -41,7 +42,7 @@ const hoverStyle = `
   }
 `;
 
-export const ModuleScreen: React.FC<ModuleScreenProps> = ({ module, onSelectExercise, onBack, completedExerciseIds, entitlements }) => {
+export const ModuleScreen: React.FC<ModuleScreenProps> = ({ module, onSelectExercise, onReviewExercise, onBack, completedExerciseIds, entitlements }) => {
   const [isLibraryModalOpen, setLibraryModalOpen] = useState(false);
   const [isChecklistModalOpen, setChecklistModalOpen] = useState(false);
   const [previewingExercise, setPreviewingExercise] = useState<Exercise | null>(null);
@@ -50,6 +51,16 @@ export const ModuleScreen: React.FC<ModuleScreenProps> = ({ module, onSelectExer
     soundService.playClick();
     setPreviewingExercise(exercise);
   }
+
+  const handleCardClick = (exercise: Exercise) => {
+    const isCompleted = completedExerciseIds.includes(exercise.id);
+    if (isCompleted) {
+        soundService.playClick();
+        onReviewExercise(exercise.id);
+    } else {
+        handleExerciseClick(exercise);
+    }
+  };
 
   const handleStartExercise = (exercise: Exercise) => {
       setPreviewingExercise(null);
@@ -115,7 +126,7 @@ export const ModuleScreen: React.FC<ModuleScreenProps> = ({ module, onSelectExer
               key={exercise.id} 
               className={`exercise-card ${isCompleted ? 'completed' : ''}`}
               style={cardStyle} 
-              onClick={() => handleExerciseClick(exercise)}
+              onClick={() => handleCardClick(exercise)}
               onMouseEnter={() => soundService.playHover()}
             >
               <div style={styles.exerciseHeader}>
