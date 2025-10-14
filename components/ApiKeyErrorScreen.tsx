@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { WarningIcon } from './Icons';
 import { COLORS } from '../constants';
@@ -16,7 +17,7 @@ export const ApiKeyErrorScreen: React.FC<ApiKeyErrorScreenProps> = ({ error }) =
       </p>
       <p style={styles.errorMessage}>Dettaglio: {error}</p>
       <p style={styles.message}>
-        Assicurati che la chiave API sia valida. Puoi inserirla nella schermata di login o configurarla come variabile d'ambiente `API_KEY`.
+        Assicurati che la chiave API sia valida. Ricarica l'applicazione per inserire una nuova chiave API.
       </p>
       <button onClick={() => window.location.reload()} style={styles.reloadButton}>
         Ricarica e Riprova
