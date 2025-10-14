@@ -1,4 +1,3 @@
-
 import { GoogleGenAI, Type } from "@google/genai";
 import type { AnalysisResult, ImprovementArea, VoiceAnalysisResult, VoiceScore, CommunicatorProfile, Entitlements, DetailedRubricScore } from '../types';
 import { hasProAccess } from './monetizationService';
@@ -191,10 +190,11 @@ export const analyzeResponse = async (
 
   } catch (error: any) {
     console.error("Errore durante l'analisi della risposta con Gemini:", error);
-    if (error.message.includes('API key') || error.message.includes('API_KEY')) {
-         throw new Error("La chiave API fornita non è valida o è scaduta. Ricarica l'applicazione per provare con una nuova chiave.");
-    }
-    throw new Error("Impossibile ottenere l'analisi dal servizio. Riprova più tardi.");
+    // Strategia di fallback: si presume che qualsiasi errore API sia potenzialmente legato alla chiave,
+    // poiché è l'unico elemento che l'utente può correggere. Questo fornisce un percorso di risoluzione chiaro.
+    throw new Error(
+      "La tua chiave API potrebbe essere non valida, scaduta, senza quota disponibile o i servizi Google potrebbero essere temporaneamente irraggiungibili. Inserisci una nuova chiave API per continuare."
+    );
   }
 };
 
@@ -333,10 +333,11 @@ export const analyzeParaverbalResponse = async (
 
     } catch (error: any) {
         console.error("Errore durante l'analisi paraverbale con Gemini:", error);
-        if (error.message.includes('API key') || error.message.includes('API_KEY')) {
-             throw new Error("La chiave API fornita non è valida o è scaduta. Ricarica l'applicazione per provare con una nuova chiave.");
-        }
-        throw new Error("Impossibile ottenere l'analisi vocale dal servizio. Riprova più tardi.");
+        // Strategia di fallback: si presume che qualsiasi errore API sia potenzialmente legato alla chiave,
+        // poiché è l'unico elemento che l'utente può correggere. Questo fornisce un percorso di risoluzione chiaro.
+        throw new Error(
+          "La tua chiave API potrebbe essere non valida, scaduta, senza quota disponibile o i servizi Google potrebbero essere temporaneamente irraggiungibili. Inserisci una nuova chiave API per continuare."
+        );
     }
 };
 
@@ -424,9 +425,10 @@ export const generateCommunicatorProfile = async (
 
     } catch (error: any) {
         console.error("Errore durante la generazione del profilo comunicatore:", error);
-        if (error.message.includes('API key') || error.message.includes('API_KEY')) {
-             throw new Error("La chiave API fornita non è valida o è scaduta. Ricarica l'applicazione per provare con una nuova chiave.");
-        }
-        throw new Error("Impossibile generare il profilo comunicatore.");
+        // Strategia di fallback: si presume che qualsiasi errore API sia potenzialmente legato alla chiave,
+        // poiché è l'unico elemento che l'utente può correggere. Questo fornisce un percorso di risoluzione chiaro.
+        throw new Error(
+          "La tua chiave API potrebbe essere non valida, scaduta, senza quota disponibile o i servizi Google potrebbero essere temporaneamente irraggiungibili. Inserisci una nuova chiave API per continuare."
+        );
     }
 };
