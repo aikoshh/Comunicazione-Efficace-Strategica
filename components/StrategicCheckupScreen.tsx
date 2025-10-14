@@ -56,12 +56,10 @@ export const StrategicCheckupScreen: React.FC<StrategicCheckupScreenProps> = ({ 
         // Step 3: Complete the checkup
         onCompleteCheckup(profile);
       } catch (e: any) {
-        if (e.message.includes('API_KEY') || e.message.includes('API key')) {
-          onApiKeyError(e.message);
-        } else {
-          addToast(e.message || "Si è verificato un errore durante l'analisi finale.", 'error');
-        }
-        // If there's an error, stay on the last step to allow retry, don't lose progress.
+        console.error("Errore durante il checkup:", e);
+        // Qualsiasi errore dall'analisi viene trattato come un problema di chiave API
+        // per fornire all'utente un percorso di risoluzione chiaro.
+        onApiKeyError(e.message);
       } finally {
         setIsLoading(false);
       }
