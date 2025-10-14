@@ -1,3 +1,4 @@
+
 import { GoogleGenAI, Type } from "@google/genai";
 import type { AnalysisResult, ImprovementArea, VoiceAnalysisResult, VoiceScore, CommunicatorProfile, Entitlements, DetailedRubricScore } from '../types';
 import { hasProAccess } from './monetizationService';
@@ -86,9 +87,9 @@ export const analyzeResponse = async (
   apiKey?: string | null
 ): Promise<AnalysisResult> => {
   try {
-    const keyToUse = apiKey || process.env.API_KEY;
+    const keyToUse = apiKey;
     if (!keyToUse) {
-        throw new Error("API key non trovata. Per favore, inseriscila nella schermata di login o configurala come variabile d'ambiente.");
+        throw new Error("Chiave API non configurata. Ricarica l'applicazione per inserirla.");
     }
     const ai = new GoogleGenAI({ apiKey: keyToUse });
 
@@ -191,7 +192,7 @@ export const analyzeResponse = async (
   } catch (error: any) {
     console.error("Errore durante l'analisi della risposta con Gemini:", error);
     if (error.message.includes('API key') || error.message.includes('API_KEY')) {
-         throw new Error("La chiave API fornita non è valida o è scaduta. Controlla la chiave inserita o la variabile d'ambiente.");
+         throw new Error("La chiave API fornita non è valida o è scaduta. Ricarica l'applicazione per provare con una nuova chiave.");
     }
     throw new Error("Impossibile ottenere l'analisi dal servizio. Riprova più tardi.");
   }
@@ -253,9 +254,9 @@ export const analyzeParaverbalResponse = async (
   apiKey?: string | null
 ): Promise<VoiceAnalysisResult> => {
     try {
-        const keyToUse = apiKey || process.env.API_KEY;
+        const keyToUse = apiKey;
         if (!keyToUse) {
-            throw new Error("API key non trovata. Per favore, inseriscila nella schermata di login o configurala come variabile d'ambiente.");
+            throw new Error("Chiave API non configurata. Ricarica l'applicazione per inserirla.");
         }
         const ai = new GoogleGenAI({ apiKey: keyToUse });
 
@@ -333,7 +334,7 @@ export const analyzeParaverbalResponse = async (
     } catch (error: any) {
         console.error("Errore durante l'analisi paraverbale con Gemini:", error);
         if (error.message.includes('API key') || error.message.includes('API_KEY')) {
-             throw new Error("La chiave API fornita non è valida o è scaduta. Controlla la chiave inserita o la variabile d'ambiente.");
+             throw new Error("La chiave API fornita non è valida o è scaduta. Ricarica l'applicazione per provare con una nuova chiave.");
         }
         throw new Error("Impossibile ottenere l'analisi vocale dal servizio. Riprova più tardi.");
     }
@@ -371,9 +372,9 @@ export const generateCommunicatorProfile = async (
     apiKey?: string | null,
 ): Promise<CommunicatorProfile> => {
     try {
-        const keyToUse = apiKey || process.env.API_KEY;
+        const keyToUse = apiKey;
         if (!keyToUse) {
-            throw new Error("API key non trovata. Per favore, inseriscila nella schermata di login o configurala come variabile d'ambiente.");
+            throw new Error("Chiave API non configurata. Ricarica l'applicazione per inserirla.");
         }
         const ai = new GoogleGenAI({ apiKey: keyToUse });
         const systemInstruction = `
@@ -424,7 +425,7 @@ export const generateCommunicatorProfile = async (
     } catch (error: any) {
         console.error("Errore durante la generazione del profilo comunicatore:", error);
         if (error.message.includes('API key') || error.message.includes('API_KEY')) {
-             throw new Error("La chiave API fornita non è valida o è scaduta. Controlla la chiave inserita o la variabile d'ambiente.");
+             throw new Error("La chiave API fornita non è valida o è scaduta. Ricarica l'applicazione per provare con una nuova chiave.");
         }
         throw new Error("Impossibile generare il profilo comunicatore.");
     }
