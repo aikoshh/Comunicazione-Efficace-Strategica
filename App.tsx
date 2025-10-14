@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { HomeScreen } from './components/HomeScreen';
 import { ModuleScreen } from './components/ModuleScreen';
@@ -431,6 +432,8 @@ const App: React.FC = () => {
   };
 
   const handleApiKeyError = (error: string) => {
+      localStorage.removeItem(API_KEY_STORAGE_KEY);
+      setApiKey(null);
       setAppState({ screen: 'api_key_error', error });
   };
   
