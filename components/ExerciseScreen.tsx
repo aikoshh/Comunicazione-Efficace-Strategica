@@ -127,11 +127,9 @@ export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({
       }
     } catch (e: any) {
       console.error(e);
-      if (e.message.includes('API key') || e.message.includes('API_KEY')) {
-        onApiKeyError(e.message);
-      } else {
-        addToast(e.message || "Si è verificato un errore sconosciuto.", 'error');
-      }
+      // Dato che il geminiService ora uniforma gli errori API,
+      // li gestiamo sempre come un potenziale problema di chiave API per fornire all'utente un percorso di risoluzione.
+      onApiKeyError(e.message);
     } finally {
       setIsLoading(false);
     }
