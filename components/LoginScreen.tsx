@@ -7,9 +7,9 @@ import { Spinner } from './Loader';
 import { useToast } from '../hooks/useToast';
 
 interface LoginScreenProps {
-  onLogin: (email: string, pass: string) => void;
+  onLogin: (email: string, pass: string, apiKey: string) => void;
   onRegister: (newUser: Omit<User, 'password'> & { password: string }) => void;
-  onGuestAccess: () => void;
+  onGuestAccess: (apiKey: string) => void;
 }
 
 const RegistrationForm: React.FC<{
@@ -124,6 +124,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onRegister, o
   const [view, setView] = useState<'login' | 'register'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [apiKey, setApiKey] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { addToast } = useToast();
 
@@ -135,7 +136,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onRegister, o
     // Simulate network delay for better UX
     setTimeout(() => {
         try {
-          onLogin(email, password);
+          onLogin(email, password, apiKey);
           // On success, component will unmount, no need to setIsLoading(false)
         } catch (err: any) {
           addToast(err.message || "Errore sconosciuto.", 'error');
@@ -146,7 +147,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onRegister, o
 
   const handleGuestAccessClick = async () => {
       soundService.playClick();
-      onGuestAccess();
+      onGuestAccess(apiKey);
   };
   
   const dynamicStyles = `
@@ -189,6 +190,19 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onRegister, o
               <div style={styles.inputGroup}>
                 <label htmlFor="password" style={styles.label}>Password</label>
                 <input type="password" id="password" value={password} onChange={(e) => setPassword(e.target.value)} style={styles.input} className="login-input" placeholder="••••••••" required disabled={isLoading} />
+              </div>
+              <div style={styles.inputGroup}>
+                <label htmlFor="apiKey" style={styles.label}>Chiave API Gemini (Opzionale)</label>
+                <input 
+                  type="password" 
+                  id="apiKey" 
+                  value={apiKey} 
+                  onChange={(e) => setApiKey(e.target.value)} 
+                  style={styles.input} 
+                  className="login-input" 
+                  placeholder="Incolla qui la tua API Key..." 
+                  disabled={isLoading} 
+                />
               </div>
               <button type="submit" style={styles.loginButton} className="login-button" disabled={isLoading}>
                  {isLoading ? <Spinner color="white" /> : 'Accedi'}

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { WarningIcon } from './Icons';
 import { COLORS } from '../constants';
@@ -6,6 +5,13 @@ import { COLORS } from '../constants';
 interface ApiKeyErrorScreenProps {
   error: string;
 }
+
+const handleGoToLogin = () => {
+    // Pulisce le chiavi di persistenza della sessione per forzare il logout al ricaricamento
+    localStorage.removeItem('ces_coach_current_user_email');
+    localStorage.removeItem('ces_coach_app_state');
+    window.location.reload();
+};
 
 export const ApiKeyErrorScreen: React.FC<ApiKeyErrorScreenProps> = ({ error }) => {
   return (
@@ -17,10 +23,10 @@ export const ApiKeyErrorScreen: React.FC<ApiKeyErrorScreenProps> = ({ error }) =
       </p>
       <p style={styles.errorMessage}>Dettaglio: {error}</p>
       <p style={styles.message}>
-        Assicurati che la chiave API sia valida. Ricarica l'applicazione per inserire una nuova chiave API.
+        Assicurati che la chiave API inserita durante il login sia valida e non sia scaduta.
       </p>
-      <button onClick={() => window.location.reload()} style={styles.reloadButton}>
-        Ricarica e Riprova
+      <button onClick={handleGoToLogin} style={styles.reloadButton}>
+        Torna al Login
       </button>
     </div>
   );

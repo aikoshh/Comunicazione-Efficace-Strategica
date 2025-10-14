@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { HomeScreen } from './components/HomeScreen';
 import { ModuleScreen } from './components/ModuleScreen';
@@ -8,7 +7,6 @@ import { VoiceAnalysisReportScreen } from './components/VoiceAnalysisReportScree
 import { ApiKeyErrorScreen } from './components/ApiKeyErrorScreen';
 import CustomSetupScreen from './components/CustomSetupScreen';
 import { LoginScreen } from './components/LoginScreen';
-import { ApiKeySetupScreen } from './components/ApiKeySetupScreen';
 import { StrategicCheckupScreen } from './components/StrategicCheckupScreen';
 import { CommunicatorProfileScreen } from './components/CommunicatorProfileScreen';
 import { Header } from './components/Header';
@@ -37,7 +35,6 @@ const USERS_STORAGE_KEY = 'ces_coach_users';
 const PROGRESS_STORAGE_KEY = 'ces_coach_progress';
 const CURRENT_USER_EMAIL_KEY = 'ces_coach_current_user_email';
 const APP_STATE_KEY = 'ces_coach_app_state';
-const API_KEY_STORAGE_KEY = 'ces_coach_api_key';
 
 const parseDatabase = (dbString: string): User[] => {
     if (!dbString.trim()) return [];
@@ -106,7 +103,7 @@ const App: React.FC = () => {
 
   const [appState, setAppState] = useState<AppState>({ screen: 'home' });
   const [returnToState, setReturnToState] = useState<AppState | null>(null);
-  const [apiKey, setApiKey] = useState<string | null>(() => loadFromStorage<string>(API_KEY_STORAGE_KEY));
+  const [apiKey, setApiKey] = useState<string | null>(null);
 
   useEffect(() => {
       // Session Persistence: Restore session on initial load
@@ -135,14 +132,6 @@ const App: React.FC = () => {
   useEffect(() => {
     saveToStorage(PROGRESS_STORAGE_KEY, userProgress);
   }, [userProgress]);
-  
-  useEffect(() => {
-      if (apiKey) {
-          saveToStorage(API_KEY_STORAGE_KEY, apiKey);
-      } else {
-          localStorage.removeItem(API_KEY_STORAGE_KEY);
-      }
-  }, [apiKey]);
 
   useEffect(() => {
       // Session Persistence: Save state on change
@@ -218,9 +207,10 @@ const App: React.FC = () => {
       }
   };
 
-  const handleLogin = (email: string, pass: string) => {
+  const handleLogin = (email: string, pass: string, key: string) => {
     const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
     if (user && user.password === pass) {
+      if (key) setApiKey(key);
       setCurrentUser(user);
       setIsAuthenticated(true);
       setAppState({ screen: 'home' });
@@ -238,7 +228,8 @@ const App: React.FC = () => {
     setUsers(prevUsers => [...prevUsers, userToSave]);
   };
   
-  const handleGuestAccess = () => {
+  const handleGuestAccess = (key: string) => {
+    if (key) setApiKey(key);
     setCurrentUser(null);
     setIsAuthenticated(true);
     setAppState({ screen: 'home' });
@@ -250,6 +241,7 @@ const App: React.FC = () => {
     localStorage.removeItem(APP_STATE_KEY);
     setIsAuthenticated(false);
     setCurrentUser(null);
+    setApiKey(null);
     setAppState({ screen: 'home' });
   };
   
@@ -432,8 +424,6 @@ const App: React.FC = () => {
   };
 
   const handleApiKeyError = (error: string) => {
-      localStorage.removeItem(API_KEY_STORAGE_KEY);
-      setApiKey(null);
       setAppState({ screen: 'api_key_error', error });
   };
   
@@ -467,10 +457,6 @@ const App: React.FC = () => {
             return [homeCrumb];
     }
   };
-
-  if (!apiKey) {
-      return <ApiKeySetupScreen onKeySubmit={(key) => setApiKey(key)} />;
-  }
 
   if (!isAuthenticated) {
     return <LoginScreen onLogin={handleLogin} onRegister={handleRegister} onGuestAccess={handleGuestAccess} />;

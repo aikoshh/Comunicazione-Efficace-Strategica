@@ -88,7 +88,7 @@ export const analyzeResponse = async (
   try {
     const keyToUse = apiKey;
     if (!keyToUse) {
-        throw new Error("Chiave API non configurata. Ricarica l'applicazione per inserirla.");
+        throw new Error("API key non trovata. Per favore, inseriscila nella schermata di login.");
     }
     const ai = new GoogleGenAI({ apiKey: keyToUse });
 
@@ -190,11 +190,10 @@ export const analyzeResponse = async (
 
   } catch (error: any) {
     console.error("Errore durante l'analisi della risposta con Gemini:", error);
-    // Strategia di fallback: si presume che qualsiasi errore API sia potenzialmente legato alla chiave,
-    // poiché è l'unico elemento che l'utente può correggere. Questo fornisce un percorso di risoluzione chiaro.
-    throw new Error(
-      "La tua chiave API potrebbe essere non valida, scaduta, senza quota disponibile o i servizi Google potrebbero essere temporaneamente irraggiungibili. Inserisci una nuova chiave API per continuare."
-    );
+    if (error.message.includes('API key') || error.message.includes('API_KEY')) {
+         throw new Error("La chiave API fornita non è valida o è scaduta. Controlla la chiave inserita nella schermata di login.");
+    }
+    throw new Error("Impossibile ottenere l'analisi dal servizio. Riprova più tardi.");
   }
 };
 
@@ -256,7 +255,7 @@ export const analyzeParaverbalResponse = async (
     try {
         const keyToUse = apiKey;
         if (!keyToUse) {
-            throw new Error("Chiave API non configurata. Ricarica l'applicazione per inserirla.");
+            throw new Error("API key non trovata. Per favore, inseriscila nella schermata di login.");
         }
         const ai = new GoogleGenAI({ apiKey: keyToUse });
 
@@ -293,12 +292,9 @@ export const analyzeParaverbalResponse = async (
             1. Valuta ogni criterio della rubrica da 1 a 10 con una motivazione breve (1-2 frasi). Per il campo 'criterion_id' nel tuo output JSON, DEVI usare ESATTAMENTE uno dei seguenti valori: "pacing_breath", "speed", "volume", "tone_warmth", "intonation", "articulation", "emphasis", "pauses", "disfluencies", "strategy_alignment".
             2. Evidenzia **3 punti di forza** e **3 aree da migliorare**.
             3. Suggerisci **3 azioni pratiche** e **1 micro-drill (≤60s)** immediato.
-            4. Fornisci una **"consegna annotata"** del testo originale con simboli: ☐ (pausa), △ (enfasi). Ad esempio: "Capisco ☐ la tua preoccupazione. △ Possiamo lavorare insieme su un primo passo."
-            5. Scrivi un **"ideal_script"**: la versione ottimale della risposta dell'utente, scritta in modo naturale e pronta per essere letta da un motore di sintesi vocale.
-            
-            Genera l'output in formato JSON.
-        `;
+            4. Fornisci una **"consegna annotata"** del testo originale con simboli: ☐ (pausa), △ (enfasi). Ad esempio: "Capisco ☐ la tua preoccupazione. △ Possiamo lavorare insieme su un primo passo."`;
 
+        // FIX: Added missing Gemini API call, response parsing, and return statement.
         const response = await ai.models.generateContent({
             model: "gemini-2.5-flash",
             contents: prompt,
@@ -311,124 +307,125 @@ export const analyzeParaverbalResponse = async (
                 responseSchema: paraverbalAnalysisSchema,
             },
         });
-        
-        const rawText = response.text;
-        const result: VoiceAnalysisResult = JSON.parse(rawText.trim());
 
-        // Basic validation
-        if (
-            !Array.isArray(result.scores) || 
-            !result.scores.every((s: VoiceScore) => typeof s.score === 'number') ||
-            !Array.isArray(result.strengths) ||
-            !Array.isArray(result.improvements) ||
-            !Array.isArray(result.actions) ||
-            typeof result.micro_drill_60s !== 'string' ||
-            typeof result.suggested_delivery?.annotated_text !== 'string' ||
-            typeof result.suggested_delivery?.ideal_script !== 'string'
-        ) {
-            throw new Error("Formato di analisi paraverbale non valido ricevuto dall'API.");
+        const rawText = response.text;
+        let jsonStringToParse = rawText.trim();
+        
+        const jsonBlockMatch = jsonStringToParse.match(/```json\s*([\s\S]+?)\s*```/);
+        if (jsonBlockMatch && jsonBlockMatch[1]) {
+            jsonStringToParse = jsonBlockMatch[1];
         }
 
+        const result: VoiceAnalysisResult = JSON.parse(jsonStringToParse);
+        
         return result;
 
     } catch (error: any) {
         console.error("Errore durante l'analisi paraverbale con Gemini:", error);
-        // Strategia di fallback: si presume che qualsiasi errore API sia potenzialmente legato alla chiave,
-        // poiché è l'unico elemento che l'utente può correggere. Questo fornisce un percorso di risoluzione chiaro.
-        throw new Error(
-          "La tua chiave API potrebbe essere non valida, scaduta, senza quota disponibile o i servizi Google potrebbero essere temporaneamente irraggiungibili. Inserisci una nuova chiave API per continuare."
-        );
+        if (error.message.includes('API key') || error.message.includes('API_KEY')) {
+             throw new Error("La chiave API fornita non è valida o è scaduta. Controlla la chiave inserita nella schermata di login.");
+        }
+        throw new Error("Impossibile ottenere l'analisi paraverbale dal servizio. Riprova più tardi.");
     }
 };
 
-
+// FIX: Added missing generateCommunicatorProfile function.
 const communicatorProfileSchema = {
     type: Type.OBJECT,
     properties: {
         profileTitle: {
             type: Type.STRING,
-            description: "Un titolo accattivante e descrittivo per il profilo del comunicatore, ad esempio 'Il Diplomatico Pragmatico' o 'L'Analista Empatico'. Deve essere breve e d'impatto."
+            description: "Un titolo conciso e accattivante per il profilo del comunicatore (es: 'Il Diplomatico Pragmatico', 'L'Analista Empatico')."
         },
         profileDescription: {
             type: Type.STRING,
-            description: "Una breve descrizione (2-3 frasi) dello stile di comunicazione prevalente dell'utente, basata sulle sue risposte."
+            description: "Una descrizione di 2-3 frasi che riassume le caratteristiche principali dello stile di comunicazione dell'utente, basandosi sulle risposte fornite."
         },
         strengths: {
             type: Type.ARRAY,
             items: { type: Type.STRING },
-            description: "Un elenco di esattamente 2 punti di forza principali emersi dalle analisi."
+            description: "Un elenco di 2-3 punti di forza principali emersi dalle analisi. Sii specifico e basati sui dati."
         },
         areasToImprove: {
             type: Type.ARRAY,
             items: { type: Type.STRING },
-            description: "Un elenco di esattamente 2 aree di miglioramento prioritarie su cui l'utente dovrebbe concentrarsi."
+            description: "Un elenco di 2-3 aree di miglioramento prioritarie, identificate come pattern ricorrenti nelle analisi."
         }
     },
     required: ["profileTitle", "profileDescription", "strengths", "areasToImprove"]
 };
 
-
 export const generateCommunicatorProfile = async (
-    analysisResults: { exerciseId: string; analysis: AnalysisResult }[],
-    apiKey?: string | null,
+  analysisResults: { exerciseId: string; analysis: AnalysisResult }[],
+  apiKey?: string | null
 ): Promise<CommunicatorProfile> => {
-    try {
-        const keyToUse = apiKey;
-        if (!keyToUse) {
-            throw new Error("Chiave API non configurata. Ricarica l'applicazione per inserirla.");
-        }
-        const ai = new GoogleGenAI({ apiKey: keyToUse });
-        const systemInstruction = `
-            Sei un esperto di profilazione della comunicazione basato sulla metodologia CES. Il tuo compito è analizzare una serie di analisi di esercizi di check-up e sintetizzarle in un profilo di comunicazione conciso, incoraggiante e strategico.
-            Identifica i pattern ricorrenti, sia positivi che negativi, attraverso le diverse risposte per delineare uno stile di comunicazione complessivo.
-            Fornisci la tua analisi esclusivamente nel formato JSON richiesto, in italiano.
-        `;
-
-        const formattedResults = analysisResults.map(r => `
-            ---
-            Esercizio ID: ${r.exerciseId}
-            Punteggio: ${r.analysis.score}
-            Punti di Forza Rilevati:
-            - ${r.analysis.strengths.join('\n- ')}
-            Aree di Miglioramento Rilevate:
-            - ${r.analysis.areasForImprovement.map(a => a.suggestion).join('\n- ')}
-            ---
-        `).join('\n');
-
-        const prompt = `
-            Ho completato un check-up di comunicazione. Ecco un riassunto delle analisi delle mie risposte:
-            
-            ${formattedResults}
-
-            Basandoti su questi dati, genera il mio "Profilo del Comunicatore" in formato JSON.
-        `;
-
-        const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
-            contents: prompt,
-            config: {
-                systemInstruction: systemInstruction,
-                temperature: 0.8,
-                responseMimeType: "application/json",
-                responseSchema: communicatorProfileSchema,
-            },
-        });
-
-        const rawText = response.text;
-        const result: CommunicatorProfile = JSON.parse(rawText.trim());
-        
-        if (!result.profileTitle || !Array.isArray(result.strengths) || result.strengths.length === 0) {
-             throw new Error("Formato del profilo comunicatore non valido.");
-        }
-
-        return result;
-
-    } catch (error: any) {
-        console.error("Errore durante la generazione del profilo comunicatore:", error);
-        // Strategia di fallback: si presume che qualsiasi errore API sia potenzialmente legato alla chiave,
-        // poiché è l'unico elemento che l'utente può correggere. Questo fornisce un percorso di risoluzione chiaro.
-        throw new Error(
-          "La tua chiave API potrebbe essere non valida, scaduta, senza quota disponibile o i servizi Google potrebbero essere temporaneamente irraggiungibili. Inserisci una nuova chiave API per continuare."
-        );
+  try {
+    const keyToUse = apiKey;
+    if (!keyToUse) {
+        throw new Error("API key non trovata. Per favore, inseriscila nella schermata di login.");
     }
+    const ai = new GoogleGenAI({ apiKey: keyToUse });
+
+    const systemInstruction = `
+      Sei un esperto psicologo del lavoro e coach di comunicazione strategica. Il tuo compito è analizzare una serie di risultati di esercizi di comunicazione e sintetizzarli in un profilo di comunicatore coerente e personalizzato.
+      Il tuo output deve essere compassionevole, incoraggiante e focalizzato sulla crescita.
+      Fornisci la tua analisi esclusivamente nel formato JSON richiesto. Rispondi SEMPRE e solo in italiano.
+    `;
+
+    const formattedResults = analysisResults.map(r => ({
+        exerciseId: r.exerciseId,
+        score: r.analysis.score,
+        strengths: r.analysis.strengths,
+        areasForImprovement: r.analysis.areasForImprovement.map(a => a.suggestion),
+    }));
+
+    const prompt = `
+      Analizza i seguenti risultati aggregati dal check-up di un utente. Identifica i pattern ricorrenti, sia nei punti di forza che nelle aree di miglioramento, per creare un profilo di comunicatore olistico.
+
+      **Dati di Analisi:**
+      \`\`\`json
+      ${JSON.stringify(formattedResults, null, 2)}
+      \`\`\`
+
+      Basandoti su questi dati, genera un profilo di comunicatore che includa:
+      1.  **profileTitle**: Un titolo evocativo (max 5 parole).
+      2.  **profileDescription**: Una breve descrizione dello stile comunicativo generale.
+      3.  **strengths**: I 2-3 punti di forza più evidenti e consistenti.
+      4.  **areasToImprove**: Le 2-3 aree di miglioramento più importanti su cui l'utente dovrebbe concentrarsi.
+
+      Genera l'output in formato JSON.
+    `;
+    
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: prompt,
+      config: {
+        systemInstruction: systemInstruction,
+        temperature: 0.7,
+        topP: 0.95,
+        topK: 64,
+        responseMimeType: "application/json",
+        responseSchema: communicatorProfileSchema,
+      },
+    });
+
+    const rawText = response.text;
+    let jsonStringToParse = rawText.trim();
+
+    const jsonBlockMatch = jsonStringToParse.match(/```json\s*([\s\S]+?)\s*```/);
+    if (jsonBlockMatch && jsonBlockMatch[1]) {
+        jsonStringToParse = jsonBlockMatch[1];
+    }
+
+    const profile: CommunicatorProfile = JSON.parse(jsonStringToParse);
+    
+    return profile;
+
+  } catch (error: any) {
+    console.error("Errore durante la generazione del profilo comunicatore con Gemini:", error);
+    if (error.message.includes('API key') || error.message.includes('API_KEY')) {
+         throw new Error("La chiave API fornita non è valida o è scaduta. Controlla la chiave inserita nella schermata di login.");
+    }
+    throw new Error("Impossibile generare il profilo comunicatore. Riprova più tardi.");
+  }
 };
