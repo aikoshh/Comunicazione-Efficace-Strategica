@@ -11,13 +11,14 @@ import { StrategicCheckupScreen } from './components/StrategicCheckupScreen';
 import { CommunicatorProfileScreen } from './components/CommunicatorProfileScreen';
 import { Header } from './components/Header';
 import { PaywallScreen } from './components/PaywallScreen';
+import { AdminScreen } from './components/AdminScreen';
 import type { Module, Exercise, AnalysisResult, VoiceAnalysisResult, DifficultyLevel, User, UserProgress, CommunicatorProfile, Breadcrumb, Entitlements, Product, AnalysisHistoryEntry } from './types';
 import { MODULES, COLORS, STRATEGIC_CHECKUP_EXERCISES } from './constants';
-import { initialUserDatabase } from './database';
 import { soundService } from './services/soundService';
 import { getUserEntitlements, purchaseProduct, restorePurchases, hasProAccess } from './services/monetizationService';
 import { useToast } from './hooks/useToast';
 import { updateCompetenceScores } from './services/competenceService';
+import { userService } from './services/userService';
 
 type AppState =
   | { screen: 'home' }
@@ -29,20 +30,12 @@ type AppState =
   | { screen: 'api_key_error'; error: string }
   | { screen: 'strategic_checkup' }
   | { screen: 'communicator_profile' }
-  | { screen: 'paywall' };
+  | { screen: 'paywall' }
+  | { screen: 'admin' };
 
-const USERS_STORAGE_KEY = 'ces_coach_users';
 const PROGRESS_STORAGE_KEY = 'ces_coach_progress';
 const CURRENT_USER_EMAIL_KEY = 'ces_coach_current_user_email';
 const APP_STATE_KEY = 'ces_coach_app_state';
-
-const parseDatabase = (dbString: string): User[] => {
-    if (!dbString.trim()) return [];
-    return dbString.split('\n').map(line => {
-        const [email, password, firstName, lastName] = line.split(',');
-        return { email, password, firstName, lastName };
-    });
-};
 
 const saveToStorage = <T,>(key: string, value: T) => {
     try {
@@ -95,16 +88,6 @@ const App: React.FC = () => {
   const [entitlements, setEntitlements] = useState<Entitlements | null>(null);
   const { addToast } = useToast();
   
-  const [users, setUsers] = useState<User[]>(() => {
-    const storedUsers = loadFromStorage<User[]>(USERS_STORAGE_KEY);
-    if (storedUsers && storedUsers.length > 0) {
-        return storedUsers;
-    }
-    const initialUsers = parseDatabase(initialUserDatabase);
-    saveToStorage(USERS_STORAGE_KEY, initialUsers);
-    return initialUsers;
-  });
-
   const [userProgress, setUserProgress] = useState<Record<string, UserProgress>>(() => {
     return loadFromStorage<Record<string, UserProgress>>(PROGRESS_STORAGE_KEY) || {};
   });
@@ -113,6 +96,9 @@ const App: React.FC = () => {
   const [returnToState, setReturnToState] = useState<AppState | null>(null);
   const [apiKey, setApiKey] = useState<string | null>(null);
   const [isSoundEnabled, setIsSoundEnabled] = useState(true);
+
+  // A state to force re-render when user list changes in admin panel
+  const [adminUserListVersion, setAdminUserListVersion] = useState(0);
 
   useEffect(() => {
     soundService.toggleSound(isSoundEnabled);
@@ -126,12 +112,15 @@ const App: React.FC = () => {
       // Session Persistence: Restore session on initial load
       const savedUserEmail = loadFromStorage<string>(CURRENT_USER_EMAIL_KEY);
       if (savedUserEmail) {
-          const user = users.find(u => u.email === savedUserEmail);
+          const user = userService.getUser(savedUserEmail);
           if (user) {
               setCurrentUser(user);
               setIsAuthenticated(true);
               const savedState = loadFromStorage<AppState>(APP_STATE_KEY);
-              if (savedState) {
+              // Prevent being stuck on admin page if not an admin anymore
+              if (savedState?.screen === 'admin' && !user.isAdmin) {
+                  setAppState({ screen: 'home' });
+              } else if (savedState) {
                   setAppState(savedState);
               }
           } else {
@@ -140,11 +129,7 @@ const App: React.FC = () => {
               localStorage.removeItem(APP_STATE_KEY);
           }
       }
-  }, [users]);
-
-  useEffect(() => {
-    saveToStorage(USERS_STORAGE_KEY, users);
-  }, [users]);
+  }, []);
 
   useEffect(() => {
     saveToStorage(PROGRESS_STORAGE_KEY, userProgress);
@@ -225,25 +210,23 @@ const App: React.FC = () => {
       }
   };
 
-  const handleLogin = (email: string, pass: string, key: string) => {
-    const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
-    if (user && user.password === pass) {
+  const handleLogin = async (email: string, pass: string, key: string) => {
+    const { user, expired } = await userService.authenticate(email, pass);
+    if (user) {
       if (key) setApiKey(key);
       setCurrentUser(user);
       setIsAuthenticated(true);
       setAppState({ screen: 'home' });
+    } else if (expired) {
+      throw new Error("Il tuo periodo di prova è terminato oppure l'account è sospeso.");
     } else {
-      throw new Error("Email o password non validi.");
+      throw new Error("Credenziali non valide.");
     }
   };
   
-  const handleRegister = (newUser: Omit<User, 'password'> & { password: string }) => {
-    const userExists = users.some(u => u.email.toLowerCase() === newUser.email.toLowerCase());
-    if (userExists) {
-        throw new Error("Un utente con questa email è già registrato.");
-    }
-    const userToSave: User = { ...newUser };
-    setUsers(prevUsers => [...prevUsers, userToSave]);
+  const handleRegister = async (newUser: { firstName: string; lastName: string; email: string; password: string }) => {
+    await userService.addUser(newUser.email, newUser.password, newUser.firstName, newUser.lastName);
+    setAdminUserListVersion(v => v + 1);
   };
   
   const handleGuestAccess = (key: string) => {
@@ -470,6 +453,7 @@ const App: React.FC = () => {
   };
   
   const handleBack = () => {
+    soundService.playClick();
     if (appState.screen === 'paywall') {
         if (returnToState) {
             setAppState(returnToState);
@@ -479,7 +463,7 @@ const App: React.FC = () => {
         }
         return;
     }
-    if (appState.screen === 'module' || appState.screen === 'custom_setup' || appState.screen === 'communicator_profile' || appState.screen === 'strategic_checkup') {
+    if (appState.screen === 'module' || appState.screen === 'custom_setup' || appState.screen === 'communicator_profile' || appState.screen === 'strategic_checkup' || appState.screen === 'admin') {
       setAppState({ screen: 'home' });
     }
     if (appState.screen === 'exercise') {
@@ -528,9 +512,16 @@ const App: React.FC = () => {
             return [homeCrumb, { label: 'Profilo Comunicatore' }];
         case 'paywall':
             return [homeCrumb, { label: 'Sblocca PRO' }];
+        case 'admin':
+            return [homeCrumb, { label: 'Pannello Admin' }];
         default:
             return [homeCrumb];
     }
+  };
+
+  // --- Admin Panel Handlers ---
+  const handleAdminUpdate = () => {
+    setAdminUserListVersion(v => v + 1);
   };
 
   if (!isAuthenticated) {
@@ -652,6 +643,14 @@ const App: React.FC = () => {
         screenKey = 'paywall';
         screenContent = <PaywallScreen entitlements={entitlements!} onPurchase={handlePurchase} onRestore={handleRestore} onBack={handleBack} />;
         break;
+    case 'admin':
+        screenKey = 'admin';
+        screenContent = <AdminScreen 
+            key={adminUserListVersion}
+            onBack={handleBack}
+            onUsersUpdate={handleAdminUpdate}
+        />;
+        break;
     default:
         screenContent = <HomeScreen 
                  onSelectModule={handleSelectModule} 
@@ -668,7 +667,8 @@ const App: React.FC = () => {
             currentUser={currentUser} 
             breadcrumbs={generateBreadcrumbs()} 
             onLogout={handleLogout} 
-            onGoToPaywall={navigateToPaywall} 
+            onGoToPaywall={navigateToPaywall}
+            onGoToAdmin={() => setAppState({ screen: 'admin' })}
             isPro={isPro}
             isSoundEnabled={isSoundEnabled}
             onToggleSound={handleToggleSound}

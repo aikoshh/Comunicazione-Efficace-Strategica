@@ -91,7 +91,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontSize: '15px',
     fontWeight: 'bold',
     border: 'none',
-    backgroundColor: COLORS.secondary,
+    backgroundColor: '#FF6B6B',
     color: 'white',
     borderRadius: '8px',
     cursor: 'pointer',

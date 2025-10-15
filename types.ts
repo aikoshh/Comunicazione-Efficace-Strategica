@@ -12,10 +12,14 @@ export enum ExerciseType {
 }
 
 export interface User {
+  email: string;
+  passwordHash: string;
   firstName: string;
   lastName: string;
-  email: string;
-  password: string;
+  createdAt: string; // ISO 8601 string
+  expiryDate: string | null; // ISO 8601 string or null
+  isAdmin: boolean;
+  enabled: boolean;
 }
 
 export interface Exercise {

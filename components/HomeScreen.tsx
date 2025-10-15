@@ -5,7 +5,7 @@ import { smilingPerson, dailyChallengePerson } from '../assets';
 import { ProgressOverview } from './ProgressOverview';
 import { ProgressAnalytics } from './ProgressAnalytics';
 import { getDailyChallenge } from '../services/progressionService';
-import { CheckCircleIcon, TargetIcon, LockIcon } from './Icons';
+import { CheckCircleIcon, TargetIcon, LockIcon, SettingsIcon } from './Icons';
 import { soundService } from '../services/soundService';
 
 interface HomeScreenProps {
@@ -235,6 +235,27 @@ const styles: { [key: string]: React.CSSProperties } = {
     subtitle: { fontSize: '16px', color: COLORS.textSecondary, maxWidth: '600px', lineHeight: 1.6, margin: 0 },
     sectionTitle: { fontSize: '24px', fontWeight: 'bold', color: COLORS.primary, marginBottom: '24px', borderBottom: `3px solid ${COLORS.secondary}`, paddingBottom: '8px' },
     categoryTitle: { fontSize: '20px', fontWeight: 'bold', color: COLORS.textSecondary, marginTop: '24px', marginBottom: '16px' },
+    adminPanelPrompt: {
+        background: `linear-gradient(135deg, ${COLORS.primary} 0%, #1a5f8e 100%)`,
+        color: 'white',
+        padding: '24px',
+        borderRadius: '12px',
+        cursor: 'pointer',
+        transition: 'all 0.3s ease',
+        boxShadow: '0 4px 15px rgba(14, 58, 93, 0.2)',
+        marginBottom: '48px',
+        textAlign: 'center',
+    },
+    adminTitle: {
+        margin: '8px 0',
+        fontSize: '18px',
+        fontWeight: 600,
+    },
+    adminText: {
+        margin: 0,
+        fontSize: '15px',
+        opacity: 0.9,
+    },
     checkupPrompt: {
         background: `linear-gradient(135deg, ${COLORS.secondary} 0%, #73B5B5 100%)`,
         color: 'white',

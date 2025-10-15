@@ -8,7 +8,22 @@ const QUOTES = [
     { text: "Il modo in cui comunichiamo con gli altri e con noi stessi, determina la qualità della nostra vita.", author: "Tony Robbins" },
     { text: "La comunicazione efficace è il 20% ciò che sai e l'80% come ti senti riguardo a ciò che sai.", author: "Jim Rohn" },
     { text: "Parla in modo tale che gli altri amino ascoltarti. Ascolta in modo tale che gli altri amino parlarti.", author: "Anonimo" },
-    { text: "Il singolo più grande problema nella comunicazione è l'illusione che essa abbia avuto luogo.", author: "George Bernard Shaw" }
+    { text: "Il singolo più grande problema nella comunicazione è l'illusione che essa abbia avuto luogo.", author: "George Bernard Shaw" },
+    { text: "Le parole gentili possono essere brevi e facili da dire, ma i loro echi sono veramente infiniti.", author: "Madre Teresa" },
+    { text: "La comunicazione è una competenza che puoi imparare. È come andare in bicicletta. Se sei disposto a lavorarci, puoi migliorare rapidamente la qualità di ogni parte della tua vita.", author: "Brian Tracy" },
+    { text: "La cosa più importante nella comunicazione è ascoltare ciò che non viene detto.", author: "Peter Drucker" },
+    { text: "Per comunicare efficacemente, dobbiamo renderci conto che siamo tutti diversi nel modo in cui percepiamo il mondo e usare questa comprensione come guida.", author: "Tony Robbins" },
+    { text: "L'arte della comunicazione è il linguaggio della leadership.", author: "James Humes" },
+    { text: "Non parlare, a meno che tu non possa migliorare il silenzio.", author: "Jorge Luis Borges" },
+    { text: "Molti tentativi di comunicare sono vanificati da parole che nascondono i pensieri invece di rivelarli.", author: "Abraham Lincoln" },
+    { text: "La precisione del comunicare è la prima virtù dello stile.", author: "Aristotele" },
+    { text: "L'informazione è dare; la comunicazione è ottenere.", author: "Sydney J. Harris" },
+    { text: "Il silenzio è una delle arti più grandi della conversazione.", author: "William Hazlitt" },
+    { text: "La saggezza è la ricompensa per una vita di ascolto, quando avresti preferito parlare.", author: "Doug Larson" },
+    { text: "Quando le persone parlano, ascolta attentamente. La maggior parte delle persone non ascolta mai.", author: "Ernest Hemingway" },
+    { text: "Il dialogo genuino richiede di ascoltare con l'intenzione di comprendere, non con l'intenzione di rispondere.", author: "Stephen R. Covey" },
+    { text: "Le parole hanno il potere di distruggere e di guarire. Quando le parole sono sia vere che gentili, possono cambiare il nostro mondo.", author: "Buddha" },
+    { text: "Parlare è argento, ascoltare è oro.", author: "Proverbio" }
 ];
 
 interface LoaderProps {

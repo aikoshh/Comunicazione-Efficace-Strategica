@@ -1,19 +1,25 @@
 import React, { useState, useMemo } from 'react';
 import { COLORS } from '../constants';
 import { cesLogoUrl, loginBackground } from '../assets';
-import type { User } from '../types';
 import { soundService } from '../services/soundService';
 import { Spinner } from './Loader';
 import { useToast } from '../hooks/useToast';
 
+interface RegistrationData {
+  firstName: string;
+  lastName: string;
+  email: string;
+  password: string;
+}
+
 interface LoginScreenProps {
-  onLogin: (email: string, pass: string, apiKey: string) => void;
-  onRegister: (newUser: Omit<User, 'password'> & { password: string }) => void;
+  onLogin: (email: string, pass: string, apiKey: string) => Promise<void>;
+  onRegister: (data: RegistrationData) => Promise<void>;
   onGuestAccess: (apiKey: string) => void;
 }
 
 const RegistrationForm: React.FC<{
-    onRegister: (newUser: Omit<User, 'password'> & { password: string }) => void;
+    onRegister: (data: RegistrationData) => Promise<void>;
     setView: (view: 'login') => void;
 }> = ({ onRegister, setView }) => {
     const [firstName, setFirstName] = useState('');
@@ -58,20 +64,17 @@ const RegistrationForm: React.FC<{
         }
         
         setIsLoading(true);
-        // Simulate network delay
-        setTimeout(() => {
-            try {
-                onRegister({ firstName, lastName, email, password });
-                addToast("Registrazione completata! Ora puoi accedere.", 'success');
-                setTimeout(() => {
-                    setView('login');
-                }, 2000);
-            } catch (err: any) {
-                addToast(err.message || "Si è verificato un errore durante la registrazione.", 'error');
-            } finally {
-                setIsLoading(false);
-            }
-        }, 1500);
+        try {
+            await onRegister({ firstName, lastName, email, password });
+            addToast("Registrazione completata! Ora puoi accedere.", 'success');
+            setTimeout(() => {
+                setView('login');
+            }, 1500);
+        } catch (err: any) {
+            addToast(err.message || "Si è verificato un errore durante la registrazione.", 'error');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
@@ -133,16 +136,13 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onRegister, o
     soundService.playClick();
     setIsLoading(true);
 
-    // Simulate network delay for better UX
-    setTimeout(() => {
-        try {
-          onLogin(email, password, apiKey);
-          // On success, component will unmount, no need to setIsLoading(false)
-        } catch (err: any) {
-          addToast(err.message || "Errore sconosciuto.", 'error');
-          setIsLoading(false); // Only set loading to false on error
-        }
-    }, 1000);
+    try {
+        await onLogin(email, password, apiKey);
+        // On success, App component will switch screens, unmounting this one.
+    } catch (err: any) {
+        addToast(err.message || "Errore sconosciuto.", 'error');
+        setIsLoading(false);
+    }
   };
 
   const handleGuestAccessClick = async () => {

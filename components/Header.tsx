@@ -10,6 +10,7 @@ interface HeaderProps {
   breadcrumbs: Breadcrumb[];
   onLogout: () => void;
   onGoToPaywall: () => void;
+  onGoToAdmin: () => void;
   isPro: boolean;
   isSoundEnabled: boolean;
   onToggleSound: () => void;
@@ -32,9 +33,22 @@ const hoverStyle = `
   .pro-panel-button:hover {
     filter: brightness(1.1);
   }
+  .admin-button:hover {
+    background-color: ${COLORS.cardDark};
+  }
 `;
 
-export const Header: React.FC<HeaderProps> = ({ currentUser, breadcrumbs, onLogout, onGoToPaywall, isPro, isSoundEnabled, onToggleSound }) => {
+const scrollbarStyle = `
+  .breadcrumbs-container::-webkit-scrollbar {
+    display: none; /* For Chrome, Safari, and Opera */
+  }
+  .breadcrumbs-container {
+    -ms-overflow-style: none;  /* For Internet Explorer and Edge */
+    scrollbar-width: none;  /* For Firefox */
+  }
+`;
+
+export const Header: React.FC<HeaderProps> = ({ currentUser, breadcrumbs, onLogout, onGoToPaywall, onGoToAdmin, isPro, isSoundEnabled, onToggleSound }) => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   
   const getInitials = (user: User) => {
@@ -50,9 +64,14 @@ export const Header: React.FC<HeaderProps> = ({ currentUser, breadcrumbs, onLogo
     setIsSettingsOpen(false);
   };
 
+  const handleGoToAdminClick = () => {
+    onGoToAdmin();
+    setIsSettingsOpen(false);
+  };
+
   const handleToggleSoundClick = () => {
     onToggleSound();
-    setIsSettingsOpen(false);
+    // Keep settings open when toggling sound
   };
 
   const handleLogoutClick = () => {
@@ -62,11 +81,11 @@ export const Header: React.FC<HeaderProps> = ({ currentUser, breadcrumbs, onLogo
 
   return (
     <>
-      <style>{hoverStyle}</style>
+      <style>{hoverStyle}{scrollbarStyle}</style>
       <header style={styles.header}>
         <nav style={styles.nav}>
           <div style={styles.navContent}>
-              <div style={styles.breadcrumbs}>
+              <div style={styles.breadcrumbs} className="breadcrumbs-container">
                 {breadcrumbs.map((crumb, index) => (
                   <React.Fragment key={index}>
                     <span
@@ -122,6 +141,44 @@ export const Header: React.FC<HeaderProps> = ({ currentUser, breadcrumbs, onLogo
                                 <span style={styles.userEmail}>{currentUser.email}</span>
                             </div>
                         </div>
+                    )}
+
+                    {currentUser && currentUser.expiryDate && (() => {
+                        const expiry = new Date(currentUser.expiryDate);
+                        const now = new Date();
+                        const created = new Date(currentUser.createdAt);
+                        
+                        const totalDuration = expiry.getTime() - created.getTime();
+                        const elapsed = Math.max(0, now.getTime() - created.getTime());
+                        const progressPercentage = totalDuration > 0 ? Math.min(100, (elapsed / totalDuration) * 100) : 100;
+
+                        const diffTime = expiry.getTime() - now.getTime();
+                        const daysRemaining = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+
+                        let barColor = COLORS.success;
+                        if (daysRemaining <= 3) {
+                            barColor = COLORS.error;
+                        } else if (daysRemaining <= 7) {
+                            barColor = COLORS.warning;
+                        }
+
+                        return (
+                            <div style={styles.subscriptionStatus}>
+                                <div style={styles.statusHeader}>
+                                    <span style={styles.statusTitle}>Stato Abbonamento</span>
+                                    <span style={styles.statusDays}>{daysRemaining > 0 ? `${daysRemaining} giorni rimasti` : 'Scaduto'}</span>
+                                </div>
+                                <div style={styles.progressBar}>
+                                    <div style={{ ...styles.progressBarFill, width: `${progressPercentage}%`, backgroundColor: barColor }} />
+                                </div>
+                            </div>
+                        );
+                    })()}
+
+                    {currentUser?.isAdmin && (
+                        <button onClick={handleGoToAdminClick} style={{...styles.settingsPanelButton, ...styles.adminButton}} className="admin-button">
+                            Pannello di Amministrazione
+                        </button>
                     )}
 
                     {!isPro && (
@@ -185,8 +242,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     alignItems: 'center',
     gap: '8px',
     whiteSpace: 'nowrap',
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
+    overflowX: 'auto',
     minWidth: 0,
   },
   crumb: {
@@ -333,6 +389,38 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontSize: '14px',
     color: COLORS.textSecondary,
   },
+  subscriptionStatus: {
+    paddingBottom: '16px',
+    marginBottom: '8px',
+    borderBottom: `1px solid ${COLORS.divider}`,
+  },
+  statusHeader: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: '8px',
+  },
+  statusTitle: {
+      fontSize: '14px',
+      fontWeight: 500,
+      color: COLORS.textSecondary,
+  },
+  statusDays: {
+      fontSize: '14px',
+      fontWeight: 'bold',
+      color: COLORS.textPrimary,
+  },
+  progressBar: {
+      height: '6px',
+      backgroundColor: COLORS.divider,
+      borderRadius: '3px',
+      overflow: 'hidden',
+  },
+  progressBarFill: {
+      height: '100%',
+      borderRadius: '3px',
+      transition: 'width 0.5s ease-in-out',
+  },
   settingsOption: {
       display: 'flex',
       justifyContent: 'space-between',
@@ -364,6 +452,13 @@ const styles: { [key: string]: React.CSSProperties } = {
     cursor: 'pointer',
     borderRadius: '8px',
     transition: 'background-color 0.2s ease',
+  },
+  adminButton: {
+    backgroundColor: COLORS.cardDark,
+    color: COLORS.primary,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    border: `1px solid ${COLORS.primary}`,
   },
   proPanelButton: {
     backgroundColor: COLORS.secondary,
