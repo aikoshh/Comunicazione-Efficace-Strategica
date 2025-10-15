@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { COLORS } from '../constants';
 import { CloseIcon } from './Icons';
 import { soundService } from '../services/soundService';
@@ -11,6 +11,23 @@ interface PrintPreviewModalProps {
 }
 
 export const PrintPreviewModal: React.FC<PrintPreviewModalProps> = ({ isOpen, onClose, htmlContent, onPrint }) => {
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      modalRef.current?.focus();
+      const handleKeyDown = (event: KeyboardEvent) => {
+        if (event.key === 'Escape') {
+          onClose();
+        }
+      };
+      document.addEventListener('keydown', handleKeyDown);
+      return () => {
+        document.removeEventListener('keydown', handleKeyDown);
+      };
+    }
+  }, [isOpen, onClose]);
+
   if (!isOpen || !htmlContent) return null;
 
   const handlePrintClick = () => {
@@ -20,9 +37,17 @@ export const PrintPreviewModal: React.FC<PrintPreviewModalProps> = ({ isOpen, on
 
   return (
     <div style={styles.overlay} onClick={onClose}>
-      <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
+      <div 
+        style={styles.modal} 
+        onClick={(e) => e.stopPropagation()}
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="print-preview-title"
+        tabIndex={-1}
+      >
         <header style={styles.header}>
-          <h2 style={styles.title}>Anteprima di Stampa</h2>
+          <h2 id="print-preview-title" style={styles.title}>Anteprima di Stampa</h2>
           <button onClick={onClose} style={styles.closeButton} aria-label="Chiudi Anteprima">
             <CloseIcon />
           </button>
@@ -68,6 +93,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     animation: 'popIn 0.3s ease-out',
     display: 'flex',
     flexDirection: 'column',
+    outline: 'none',
   },
   header: {
     padding: '16px 24px',

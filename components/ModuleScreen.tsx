@@ -69,6 +69,11 @@ export const ModuleScreen: React.FC<ModuleScreenProps> = ({ module, onSelectExer
   
   const showProFeatures = module.id === 'm3' && hasProAccess(entitlements);
 
+  const completedCount = module.exercises.filter(e => completedExerciseIds.includes(e.id)).length;
+  const totalCount = module.exercises.length;
+  const progressPercentage = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
+
+
   return (
     <>
     <div style={styles.container}>
@@ -80,6 +85,18 @@ export const ModuleScreen: React.FC<ModuleScreenProps> = ({ module, onSelectExer
         </div>
         <p style={styles.description}>{module.description}</p>
       </header>
+
+      {totalCount > 0 && (
+        <div style={styles.progressSection}>
+            <div style={styles.progressInfo}>
+                <span style={styles.progressLabel}>Progresso Modulo</span>
+                <span style={styles.progressValue}>{completedCount} / {totalCount} completati</span>
+            </div>
+            <div style={styles.moduleProgressBar}>
+                <div style={{...styles.moduleProgressBarFill, width: `${progressPercentage}%`}}/>
+            </div>
+        </div>
+      )}
       
       {showProFeatures && (
           <div style={styles.proFeaturesContainer}>
@@ -176,7 +193,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     minHeight: 'calc(100vh - 64px)',
   },
   header: {
-    marginBottom: '48px',
+    marginBottom: '24px',
     textAlign: 'center',
   },
   titleContainer: {
@@ -195,6 +212,41 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontSize: '18px',
     color: COLORS.textSecondary,
     lineHeight: 1.6
+  },
+  progressSection: {
+      backgroundColor: COLORS.cardDark,
+      padding: '16px 20px',
+      borderRadius: '12px',
+      marginBottom: '32px',
+      animation: 'fadeInUp 0.4s ease-out both',
+  },
+  progressInfo: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: '8px',
+  },
+  progressLabel: {
+      fontSize: '16px',
+      fontWeight: 600,
+      color: COLORS.textPrimary,
+  },
+  progressValue: {
+      fontSize: '14px',
+      fontWeight: 500,
+      color: COLORS.textSecondary,
+  },
+  moduleProgressBar: {
+      height: '8px',
+      backgroundColor: COLORS.divider,
+      borderRadius: '4px',
+      overflow: 'hidden',
+  },
+  moduleProgressBarFill: {
+      height: '100%',
+      backgroundColor: COLORS.secondary,
+      borderRadius: '4px',
+      transition: 'width 0.5s ease-in-out',
   },
   proFeaturesContainer: {
       display: 'flex',

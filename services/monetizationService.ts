@@ -1,5 +1,4 @@
 import type { Entitlements, Product, User } from '../types';
-import { PRODUCTS } from '../products';
 
 const ENTITLEMENTS_STORAGE_KEY_PREFIX = 'ces_coach_entitlements_';
 

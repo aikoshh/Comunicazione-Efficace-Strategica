@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type } from "@google/genai";
-import type { AnalysisResult, ImprovementArea, VoiceAnalysisResult, VoiceScore, CommunicatorProfile, Entitlements, DetailedRubricScore } from '../types';
+import type { AnalysisResult, ImprovementArea, VoiceAnalysisResult, VoiceScore, CommunicatorProfile, Entitlements, DetailedRubricScore, PersonalizationData } from '../types';
 import { hasProAccess } from './monetizationService';
 
 const analysisSchema = {
@@ -427,5 +427,86 @@ export const generateCommunicatorProfile = async (
          throw new Error("La chiave API fornita non è valida o è scaduta. Controlla la chiave inserita nella schermata di login.");
     }
     throw new Error("Impossibile generare il profilo comunicatore. Riprova più tardi.");
+  }
+};
+
+const customExerciseSchema = {
+    type: Type.OBJECT,
+    properties: {
+        scenario: {
+            type: Type.STRING,
+            description: "Un scenario di comunicazione realistico, dettagliato e sfidante, lungo circa 3-4 frasi, basato sul profilo dell'utente."
+        },
+        task: {
+            type: Type.STRING,
+            description: "Un compito chiaro e specifico (1-2 frasi) che l'utente deve completare per risolvere la situazione descritta nello scenario."
+        }
+    },
+    required: ["scenario", "task"]
+};
+
+export const generateCustomExercise = async (
+  personalizationData: PersonalizationData,
+  apiKey?: string | null
+): Promise<{ scenario: string, task: string }> => {
+  try {
+    const keyToUse = apiKey;
+    if (!keyToUse) {
+        throw new Error("API key non trovata. Per favore, inseriscila nella schermata di login.");
+    }
+    const ai = new GoogleGenAI({ apiKey: keyToUse });
+
+    const systemInstruction = `
+      Sei un coach di Comunicazione Efficace Strategica (CES) di livello mondiale e un esperto instructional designer. Il tuo compito è creare esercizi di allenamento altamente personalizzati e realistici.
+      Usa il profilo utente fornito per costruire uno scenario credibile e un compito sfidante che lo aiuti a migliorare nella sua sfida principale.
+      Lo scenario deve essere descrittivo e immergere l'utente nella situazione. Il compito deve essere una richiesta chiara e attuabile.
+      Fornisci la tua analisi esclusivamente nel formato JSON richiesto. Rispondi SEMPRE e solo in italiano.
+    `;
+
+    const prompt = `
+      Crea un esercizio di allenamento personalizzato basato sul seguente profilo utente:
+
+      - **Professione:** ${personalizationData.professione}
+      - **Livello di Carriera:** ${personalizationData.livelloCarriera}
+      - **Età (fascia):** ${personalizationData.eta}
+      - **Contesto Comunicativo Principale:** ${personalizationData.contestoComunicativo}
+      - **Sfida Principale da Allenare:** "${personalizationData.sfidaPrincipale}"
+
+      Genera un oggetto JSON con le chiavi "scenario" e "task".
+    `;
+    
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: prompt,
+      config: {
+        systemInstruction: systemInstruction,
+        temperature: 0.9,
+        topP: 0.95,
+        topK: 64,
+        responseMimeType: "application/json",
+        responseSchema: customExerciseSchema,
+      },
+    });
+
+    const rawText = response.text;
+    let jsonStringToParse = rawText.trim();
+    const jsonBlockMatch = jsonStringToParse.match(/```json\s*([\s\S]+?)\s*```/);
+    if (jsonBlockMatch && jsonBlockMatch[1]) {
+        jsonStringToParse = jsonBlockMatch[1];
+    }
+    const result: { scenario: string, task: string } = JSON.parse(jsonStringToParse);
+    
+    if (typeof result.scenario !== 'string' || typeof result.task !== 'string' || !result.scenario.trim() || !result.task.trim()) {
+        throw new Error("L'AI ha restituito un formato di esercizio non valido. Riprova.");
+    }
+
+    return result;
+
+  } catch (error: any) {
+    console.error("Errore durante la generazione dell'esercizio personalizzato con Gemini:", error);
+    if (error.message.includes('API key') || error.message.includes('API_KEY')) {
+         throw new Error("La chiave API fornita non è valida o è scaduta. Controlla la chiave inserita nella schermata di login.");
+    }
+    throw new Error("Impossibile generare l'esercizio personalizzato. Riprova più tardi.");
   }
 };

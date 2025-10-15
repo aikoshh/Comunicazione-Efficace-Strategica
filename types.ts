@@ -202,3 +202,12 @@ export interface ChecklistItem {
     id: string;
     text: string;
 }
+
+// --- Custom Training Types ---
+export interface PersonalizationData {
+  professione: string;
+  livelloCarriera: string;
+  eta: string;
+  contestoComunicativo: string;
+  sfidaPrincipale: string;
+}

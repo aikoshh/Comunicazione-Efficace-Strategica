@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { COLORS } from '../constants';
 import { PREPARATION_CHECKLIST } from '../proContent';
 import { CloseIcon, TargetIcon } from './Icons';
@@ -13,11 +13,22 @@ export const PreparationChecklistModal: React.FC<PreparationChecklistModalProps>
   const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set());
   const totalItems = PREPARATION_CHECKLIST.length;
   const progress = (checkedItems.size / totalItems) * 100;
+  const modalRef = useRef<HTMLDivElement>(null);
 
   // Reset state when modal is opened
   useEffect(() => {
     if (isOpen) {
       setCheckedItems(new Set());
+      modalRef.current?.focus();
+      const handleKeyDown = (event: KeyboardEvent) => {
+        if (event.key === 'Escape') {
+          handleClose();
+        }
+      };
+      document.addEventListener('keydown', handleKeyDown);
+      return () => {
+        document.removeEventListener('keydown', handleKeyDown);
+      };
     }
   }, [isOpen]);
 
@@ -41,9 +52,17 @@ export const PreparationChecklistModal: React.FC<PreparationChecklistModalProps>
 
   return (
     <div style={styles.overlay} onClick={handleClose}>
-      <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
+      <div 
+        style={styles.modal} 
+        onClick={(e) => e.stopPropagation()}
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="prep-checklist-title"
+        tabIndex={-1}
+      >
         <header style={styles.header}>
-            <h2 style={styles.title}><TargetIcon/> Checklist di Preparazione PRO</h2>
+            <h2 id="prep-checklist-title" style={styles.title}><TargetIcon/> Checklist di Preparazione PRO</h2>
             <button onClick={handleClose} style={styles.closeButton} aria-label="Chiudi modale">
               <CloseIcon />
             </button>
@@ -93,6 +112,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     display: 'flex', flexDirection: 'column',
     maxHeight: '90vh',
     border: `1px solid ${COLORS.divider}`,
+    outline: 'none',
   },
   header: {
     padding: '20px 24px',

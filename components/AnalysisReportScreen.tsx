@@ -248,11 +248,13 @@ export const AnalysisReportScreen: React.FC<AnalysisReportScreenProps> = ({ resu
                                 onClick={() => handleFeedback(index, 'like')} 
                                 style={{...styles.feedbackButton, ...(feedback[index] === 'like' ? styles.feedbackButtonActiveLike : {})}}
                                 aria-pressed={feedback[index] === 'like'}
+                                aria-label="Feedback positivo"
                             >👍</button>
                             <button 
                                 onClick={() => handleFeedback(index, 'dislike')} 
                                 style={{...styles.feedbackButton, ...(feedback[index] === 'dislike' ? styles.feedbackButtonActiveDislike : {})}}
                                 aria-pressed={feedback[index] === 'dislike'}
+                                aria-label="Feedback negativo"
                             >👎</button>
                         </div>
                       </div>

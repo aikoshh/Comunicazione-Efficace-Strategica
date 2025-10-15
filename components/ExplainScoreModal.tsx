@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { ScoreExplanation } from '../types';
 import { COLORS } from '../constants';
 import { CloseIcon } from './Icons';
@@ -18,16 +18,41 @@ const scoreComponentLabels: Record<keyof ScoreExplanation, string> = {
 };
 
 export const ExplainScoreModal: React.FC<ExplainScoreModalProps> = ({ isOpen, onClose, scoreData }) => {
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      modalRef.current?.focus();
+      const handleKeyDown = (event: KeyboardEvent) => {
+        if (event.key === 'Escape') {
+          onClose();
+        }
+      };
+      document.addEventListener('keydown', handleKeyDown);
+      return () => {
+        document.removeEventListener('keydown', handleKeyDown);
+      };
+    }
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   return (
     <div style={styles.overlay} onClick={onClose}>
-      <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
+      <div 
+        style={styles.modal} 
+        onClick={(e) => e.stopPropagation()}
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="explain-score-title"
+        tabIndex={-1}
+      >
         <button onClick={onClose} style={styles.closeButton} aria-label="Chiudi modale">
           <CloseIcon />
         </button>
         <div style={styles.modalContent}>
-            <h2 style={styles.title}>Come viene calcolato il tuo punteggio</h2>
+            <h2 id="explain-score-title" style={styles.title}>Come viene calcolato il tuo punteggio</h2>
             <p style={styles.description}>
               Il tuo punteggio di Allenamento Progressivo è una media ponderata di cinque fattori chiave,
               progettata per darti una visione olistica della tua performance.
@@ -81,6 +106,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     flexDirection: 'column',
     maxHeight: '90vh',
     border: `1px solid ${COLORS.divider}`,
+    outline: 'none',
   },
   modalContent: {
       overflowY: 'auto',

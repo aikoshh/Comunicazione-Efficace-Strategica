@@ -2,8 +2,7 @@ import React, { useState } from 'react';
 import type { User, Breadcrumb } from '../types';
 import { COLORS } from '../constants';
 import { Logo } from './Logo';
-import { HomeIcon, ChevronRightIcon, SpeakerIcon, SpeakerOffIcon } from './Icons';
-import { hasProAccess } from '../services/monetizationService';
+import { ChevronRightIcon, SpeakerIcon, SpeakerOffIcon, SettingsIcon, CloseIcon } from './Icons';
 
 
 interface HeaderProps {
@@ -20,7 +19,10 @@ const hoverStyle = `
   .header-link:hover {
     color: ${COLORS.secondary};
   }
-  .user-menu-button:hover, .sound-button:hover {
+  .settings-button:hover, .sound-button:hover, .settings-close-button:hover {
+    background-color: ${COLORS.cardDark};
+  }
+  .settings-panel-button:hover {
     background-color: ${COLORS.cardDark};
   }
   .logout-button:hover {
@@ -33,79 +35,102 @@ const hoverStyle = `
 `;
 
 export const Header: React.FC<HeaderProps> = ({ currentUser, breadcrumbs, onLogout, onGoToPaywall, isPro, isSoundEnabled, onToggleSound }) => {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   
   const getInitials = (user: User) => {
     return `${user.firstName[0]}${user.lastName[0]}`.toUpperCase();
   };
+
+  const handleToggleSettings = () => {
+      setIsSettingsOpen(!isSettingsOpen);
+  }
 
   return (
     <>
       <style>{hoverStyle}</style>
       <header style={styles.header}>
         <nav style={styles.nav}>
-          <div style={styles.breadcrumbs}>
-            {breadcrumbs.map((crumb, index) => (
-              <React.Fragment key={index}>
-                <span
-                  style={{
-                    ...styles.crumb,
-                    ...(crumb.onClick ? styles.crumbLink : {}),
-                  }}
-                  className={crumb.onClick ? 'header-link' : ''}
-                  onClick={crumb.onClick}
-                >
-                  {index === 0 && <HomeIcon style={styles.homeIcon}/>}
-                  {crumb.label}
-                </span>
-                {index < breadcrumbs.length - 1 && (
-                  <ChevronRightIcon style={styles.separator} />
-                )}
-              </React.Fragment>
-            ))}
-          </div>
-
-          <div style={styles.userSection}>
-            <button 
-                onClick={onToggleSound} 
-                style={styles.soundButton}
-                className="sound-button"
-                aria-label={isSoundEnabled ? "Disattiva suoni" : "Attiva suoni"}
-            >
-                {isSoundEnabled ? <SpeakerIcon /> : <SpeakerOffIcon />}
-            </button>
-
-            {!isPro && (
-                <button style={styles.proButton} className="pro-button" onClick={onGoToPaywall}>
-                    Sblocca PRO
-                </button>
-            )}
-            {currentUser && (
-              <div style={styles.userMenuContainer}>
-                <button 
-                    onClick={() => setIsMenuOpen(!isMenuOpen)} 
-                    style={styles.userMenuButton} 
-                    className="user-menu-button"
-                    aria-haspopup="true"
-                    aria-expanded={isMenuOpen}
-                >
-                  <div style={styles.avatar}>
-                    {getInitials(currentUser)}
-                  </div>
-                  <span style={styles.userName}>{currentUser.firstName}</span>
-                </button>
-                {isMenuOpen && (
-                  <div style={styles.dropdownMenu}>
-                    <button onClick={onLogout} style={styles.logoutButton} className="logout-button">
-                      Logout
-                    </button>
-                  </div>
-                )}
+          <div style={styles.navContent}>
+              <div style={styles.breadcrumbs}>
+                {breadcrumbs.map((crumb, index) => (
+                  <React.Fragment key={index}>
+                    <span
+                      style={{
+                        ...styles.crumb,
+                        ...(crumb.onClick ? styles.crumbLink : {}),
+                      }}
+                      className={crumb.onClick ? 'header-link' : ''}
+                      onClick={crumb.onClick}
+                    >
+                      {index === 0 && <Logo style={styles.logoIcon}/>}
+                      {crumb.label}
+                    </span>
+                    {index < breadcrumbs.length - 1 && (
+                      <ChevronRightIcon style={styles.separator} />
+                    )}
+                  </React.Fragment>
+                ))}
               </div>
-            )}
+
+              <div style={styles.userSection}>
+                {!isPro && (
+                    <button style={styles.proButton} className="pro-button" onClick={onGoToPaywall}>
+                        Sblocca PRO
+                    </button>
+                )}
+                {currentUser && (
+                    <div style={styles.userDisplay}>
+                        <div style={styles.avatar}>
+                            {getInitials(currentUser)}
+                        </div>
+                        <span style={styles.userName}>{currentUser.firstName}</span>
+                    </div>
+                )}
+                <button 
+                    onClick={handleToggleSettings} 
+                    style={styles.settingsButton}
+                    className="settings-button"
+                    aria-label="Apri impostazioni"
+                >
+                    <SettingsIcon />
+                </button>
+              </div>
           </div>
         </nav>
       </header>
+      
+      {isSettingsOpen && (
+          <>
+            <div style={styles.settingsOverlay} onClick={handleToggleSettings} />
+            <div style={styles.settingsPanel}>
+                <div style={styles.settingsHeader}>
+                    <h3 style={styles.settingsTitle}>Impostazioni</h3>
+                    <button onClick={handleToggleSettings} style={styles.settingsCloseButton} className="settings-close-button" aria-label="Chiudi impostazioni">
+                        <CloseIcon />
+                    </button>
+                </div>
+                <div style={styles.settingsContent}>
+                    <div style={styles.settingsOption}>
+                        <span>Audio applicazione</span>
+                        <button 
+                            onClick={onToggleSound} 
+                            style={styles.soundButton}
+                            className="sound-button"
+                            aria-label={isSoundEnabled ? "Disattiva suoni" : "Attiva suoni"}
+                        >
+                            {isSoundEnabled ? <SpeakerIcon /> : <SpeakerOffIcon />}
+                        </button>
+                    </div>
+
+                    {currentUser && (
+                         <button onClick={onLogout} style={{...styles.settingsPanelButton, ...styles.logoutButton}} className="logout-button">
+                            Logout
+                         </button>
+                    )}
+                </div>
+            </div>
+          </>
+      )}
     </>
   );
 };
@@ -128,13 +153,23 @@ const styles: { [key: string]: React.CSSProperties } = {
     maxWidth: '1200px',
     margin: '0 auto',
     display: 'flex',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    overflowX: 'auto',
+    scrollbarWidth: 'none', // For Firefox
+  },
+  navContent: {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'flex-start',
+      gap: '32px',
+      width: '100%',
+      minWidth: '500px', // Ensures content doesn't wrap and forces scroll on small screens
   },
   breadcrumbs: {
     display: 'flex',
     alignItems: 'center',
     gap: '8px',
+    whiteSpace: 'nowrap',
   },
   crumb: {
     display: 'flex',
@@ -148,9 +183,9 @@ const styles: { [key: string]: React.CSSProperties } = {
     cursor: 'pointer',
     transition: 'color 0.2s ease',
   },
-  homeIcon: {
-      width: '18px',
-      height: '18px',
+  logoIcon: {
+      width: '28px',
+      height: '28px',
   },
   separator: {
     width: '20px',
@@ -161,18 +196,6 @@ const styles: { [key: string]: React.CSSProperties } = {
     display: 'flex',
     alignItems: 'center',
     gap: '16px'
-  },
-  soundButton: {
-    background: 'none',
-    border: 'none',
-    cursor: 'pointer',
-    padding: '8px',
-    borderRadius: '50%',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    color: COLORS.textSecondary,
-    transition: 'background-color 0.2s ease',
   },
   proButton: {
     backgroundColor: COLORS.secondary,
@@ -185,22 +208,13 @@ const styles: { [key: string]: React.CSSProperties } = {
     cursor: 'pointer',
     transition: 'all 0.2s ease',
     boxShadow: '0 2px 5px rgba(88, 166, 166, 0.2)',
+    whiteSpace: 'nowrap'
   },
-  userMenuContainer: {
-    position: 'relative',
-    display: 'flex',
-    alignItems: 'center',
-  },
-  userMenuButton: {
+  userDisplay: {
     display: 'flex',
     alignItems: 'center',
     gap: '12px',
-    background: 'none',
-    border: 'none',
-    cursor: 'pointer',
-    padding: '6px 12px',
-    borderRadius: '8px',
-    transition: 'background-color 0.2s ease',
+    padding: '6px 0px',
   },
   avatar: {
     width: '32px',
@@ -219,27 +233,110 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontWeight: 500,
     color: COLORS.textPrimary,
   },
-  dropdownMenu: {
-    position: 'absolute',
-    top: 'calc(100% + 8px)',
-    right: 0,
-    backgroundColor: COLORS.card,
-    borderRadius: '8px',
-    boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
-    border: `1px solid ${COLORS.divider}`,
-    overflow: 'hidden',
-    animation: 'fadeInUp 0.2s ease-out'
+  settingsButton: {
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    padding: '8px',
+    borderRadius: '50%',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    color: COLORS.textPrimary,
+    transition: 'background-color 0.2s ease',
   },
-  logoutButton: {
+  settingsOverlay: {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    zIndex: 101,
+    animation: 'fadeIn 0.3s ease-out'
+  },
+  settingsPanel: {
+    position: 'fixed',
+    top: 0,
+    right: 0,
+    width: '320px',
+    maxWidth: '90vw',
+    height: '100%',
+    backgroundColor: COLORS.card,
+    boxShadow: '-5px 0 25px rgba(0,0,0,0.15)',
+    zIndex: 102,
+    display: 'flex',
+    flexDirection: 'column',
+    animation: 'slideIn 0.3s cubic-bezier(0.25, 1, 0.5, 1)',
+  },
+  settingsHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '20px 24px',
+    borderBottom: `1px solid ${COLORS.divider}`,
+    flexShrink: 0,
+  },
+  settingsTitle: {
+      margin: 0,
+      fontSize: '18px',
+      fontWeight: 'bold',
+      color: COLORS.textPrimary,
+  },
+  settingsCloseButton: {
+      background: 'none',
+      border: 'none',
+      cursor: 'pointer',
+      padding: '8px',
+      borderRadius: '50%',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      color: COLORS.textSecondary,
+      transition: 'background-color 0.2s ease',
+  },
+  settingsContent: {
+      padding: '24px',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '16px',
+      flex: 1,
+  },
+  settingsOption: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      fontSize: '16px',
+      color: COLORS.textPrimary,
+      padding: '8px 0',
+  },
+  soundButton: {
+    background: 'none',
+    border: `1px solid ${COLORS.divider}`,
+    cursor: 'pointer',
+    padding: '8px',
+    borderRadius: '50%',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    color: COLORS.textSecondary,
+    transition: 'background-color 0.2s ease',
+  },
+  settingsPanelButton: {
     display: 'block',
     width: '100%',
     padding: '12px 20px',
-    fontSize: '15px',
-    border: 'none',
+    fontSize: '16px',
+    border: `1px solid ${COLORS.divider}`,
     background: 'none',
     textAlign: 'left',
     cursor: 'pointer',
-    color: COLORS.error,
+    borderRadius: '8px',
     transition: 'background-color 0.2s ease',
+    marginTop: 'auto',
+  },
+  logoutButton: {
+    color: COLORS.error,
+    fontWeight: 500,
   },
 };

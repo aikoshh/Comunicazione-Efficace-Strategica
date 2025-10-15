@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Exercise, ExerciseType } from '../types';
 import { COLORS, EXERCISE_TYPE_ICONS } from '../constants';
 import { CloseIcon } from './Icons';
@@ -11,6 +11,22 @@ interface ExercisePreviewModalProps {
 }
 
 export const ExercisePreviewModal: React.FC<ExercisePreviewModalProps> = ({ exercise, onClose, onStart }) => {
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (exercise) {
+      modalRef.current?.focus();
+      const handleKeyDown = (event: KeyboardEvent) => {
+        if (event.key === 'Escape') {
+          handleClose();
+        }
+      };
+      document.addEventListener('keydown', handleKeyDown);
+      return () => {
+        document.removeEventListener('keydown', handleKeyDown);
+      };
+    }
+  }, [exercise]);
 
   const handleStart = () => {
     soundService.playClick();
@@ -27,11 +43,19 @@ export const ExercisePreviewModal: React.FC<ExercisePreviewModalProps> = ({ exer
 
   return (
     <div style={styles.overlay} onClick={handleClose}>
-      <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
+      <div 
+        style={styles.modal} 
+        onClick={(e) => e.stopPropagation()}
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="exercise-preview-title"
+        tabIndex={-1}
+      >
         <header style={styles.header}>
             <div style={styles.titleContainer}>
                 <ExerciseIcon style={styles.icon}/>
-                <h2 style={styles.title}>{exercise.title}</h2>
+                <h2 id="exercise-preview-title" style={styles.title}>{exercise.title}</h2>
             </div>
             <button onClick={handleClose} style={styles.closeButton} aria-label="Chiudi anteprima">
               <CloseIcon />
@@ -74,6 +98,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     display: 'flex', flexDirection: 'column',
     maxHeight: '90vh',
     border: `1px solid ${COLORS.divider}`,
+    outline: 'none',
   },
   header: {
     padding: '20px 24px',

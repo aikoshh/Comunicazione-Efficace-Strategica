@@ -567,7 +567,13 @@ const App: React.FC = () => {
       break;
     case 'custom_setup':
       screenKey = 'custom_setup';
-      screenContent = <CustomSetupScreen module={appState.module} onStart={handleStartCustomExercise} onBack={handleBack} />;
+      screenContent = <CustomSetupScreen 
+                        module={appState.module} 
+                        onStart={handleStartCustomExercise} 
+                        onBack={handleBack} 
+                        apiKey={apiKey}
+                        onApiKeyError={handleApiKeyError}
+                      />;
       break;
     case 'exercise':
         screenKey = appState.exercise.id;
@@ -675,9 +681,9 @@ const App: React.FC = () => {
         {appState.screen !== 'api_key_error' && (
             <footer style={styles.footer}>
                  <div style={styles.footerLinks}>
-                    <a href="#" style={styles.footerLink}>Privacy Policy</a>
+                    <a href="#" onClick={(e) => e.preventDefault()} title="Link alla Privacy Policy (non implementato)" style={styles.footerLink}>Privacy Policy</a>
                     <span style={styles.footerSeparator}>|</span>
-                    <a href="#" style={styles.footerLink}>Termini di Servizio</a>
+                    <a href="#" onClick={(e) => e.preventDefault()} title="Link ai Termini di Servizio (non implementato)" style={styles.footerLink}>Termini di Servizio</a>
                 </div>
                 <div style={styles.copyrightContainer}>
                     <p style={styles.copyrightText}>

@@ -5,7 +5,7 @@ import { smilingPerson, dailyChallengePerson } from '../assets';
 import { ProgressOverview } from './ProgressOverview';
 import { ProgressAnalytics } from './ProgressAnalytics';
 import { getDailyChallenge } from '../services/progressionService';
-import { CheckCircleIcon, TargetIcon } from './Icons';
+import { CheckCircleIcon, TargetIcon, LockIcon } from './Icons';
 import { soundService } from '../services/soundService';
 
 interface HomeScreenProps {
@@ -54,6 +54,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectModule, onSelect
   }, []);
 
   const completedModuleIds = userProgress?.completedModuleIds || [];
+  const completedExerciseIds = userProgress?.completedExerciseIds || [];
   const foundationalModules = MODULES.filter(m => m.category === 'Fondamentali' || !m.category);
   const sectoralPacks = MODULES.filter(m => m.category === 'Pacchetti Settoriali');
   
@@ -91,6 +92,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectModule, onSelect
         const prerequisites = module.prerequisites || [];
         const isLocked = prerequisites.length > 0 && !prerequisites.every(id => completedModuleIds.includes(id));
         const isCompleted = !isLocked && completedModuleIds.includes(module.id);
+        const completedExercisesInModule = module.exercises.filter(e => completedExerciseIds.includes(e.id)).length;
+        const totalExercisesInModule = module.exercises.length;
+
         
         const cardStyle = {
           ...styles.moduleCard,
@@ -109,7 +113,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectModule, onSelect
             >
             {isLocked && (
                 <div style={styles.lockOverlay}>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                    <LockIcon width={48} height={48} color="white" />
                     <span style={styles.lockText}>Completa i moduli propedeutici per sbloccare</span>
                 </div>
             )}
@@ -120,7 +124,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectModule, onSelect
                 </div>
             )}
             <div style={{ ...styles.cardImageContainer, filter: isLocked ? 'grayscale(80%)' : 'none' }}>
-                {module.cardImage && <img src={module.cardImage} alt={module.title} style={styles.cardImage} className="card-image"/>}
+                {module.cardImage && <img src={module.cardImage} alt={module.title} style={styles.cardImage} className="card-image" loading="lazy"/>}
             </div>
             <div style={styles.cardContent}>
               <div style={styles.cardHeader}>
@@ -128,6 +132,16 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectModule, onSelect
                 <h2 style={styles.cardTitle}>{module.title}</h2>
               </div>
               <p style={styles.cardDescription}>{module.description}</p>
+              {!isLocked && totalExercisesInModule > 0 && (
+                  <div style={styles.progressBarContainer}>
+                    <div style={styles.progressText}>
+                      Progresso: {completedExercisesInModule} / {totalExercisesInModule}
+                    </div>
+                    <div style={styles.moduleProgressBar}>
+                      <div style={{...styles.moduleProgressBarFill, width: `${(completedExercisesInModule / totalExercisesInModule) * 100}%` }}/>
+                    </div>
+                  </div>
+              )}
             </div>
           </div>
         )
@@ -337,4 +351,27 @@ const styles: { [key: string]: React.CSSProperties } = {
     cardIcon: { width: '32px', height: '32px', color: 'white', flexShrink: 0 },
     cardTitle: { fontSize: '20px', fontWeight: '600', color: 'white', margin: 0 },
     cardDescription: { fontSize: '15px', color: 'white', lineHeight: 1.6, flexGrow: 1, margin: 0 },
+    progressBarContainer: {
+        marginTop: '16px',
+        paddingTop: '12px',
+        borderTop: `1px solid rgba(255, 255, 255, 0.2)`
+    },
+    progressText: {
+        color: 'white',
+        fontSize: '13px',
+        fontWeight: 500,
+        marginBottom: '6px',
+    },
+    moduleProgressBar: {
+        height: '6px',
+        backgroundColor: 'rgba(255, 255, 255, 0.3)',
+        borderRadius: '3px',
+        overflow: 'hidden',
+    },
+    moduleProgressBarFill: {
+        height: '100%',
+        backgroundColor: '#FFFFFF',
+        borderRadius: '3px',
+        transition: 'width 0.5s ease-in-out',
+    },
 };
