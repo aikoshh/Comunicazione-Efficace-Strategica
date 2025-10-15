@@ -187,11 +187,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectModule, onSelect
             <section style={{marginBottom: '48px'}}>
                  <h2 style={styles.sectionTitle}>Sfida del Giorno</h2>
                  <div style={styles.dailyChallenge} className="daily-challenge" onClick={handleDailyChallengeClick} onMouseEnter={() => soundService.playHover()}>
-                    <img src={dailyChallengePerson} alt="Persona sorridente per la sfida del giorno" style={styles.challengeImage} />
                     <div style={styles.challengeTextContainer}>
                         <h3 style={styles.challengeTitle}>{dailyChallenge.task}</h3>
-                        <p style={styles.challengeScenario}>Scenario: {dailyChallenge.scenario.substring(0,100)}...</p>
                     </div>
+                    <img src={dailyChallengePerson} alt="Persona sorridente per la sfida del giorno" style={styles.challengeImage} />
                     {isDailyChallengeCompleted() && (
                         <div style={styles.completedBadge}>
                             <CheckCircleIcon color="white"/>
@@ -268,36 +267,44 @@ const styles: { [key: string]: React.CSSProperties } = {
     dailyChallenge: {
         background: COLORS.primaryGradient,
         color: 'white',
-        padding: '24px',
-        borderRadius: '12px',
+        borderRadius: '16px',
         cursor: 'pointer',
         transition: 'all 0.3s ease',
         boxShadow: '0 4px 15px rgba(14, 58, 93, 0.15)',
         display: 'flex',
-        alignItems: 'center',
-        gap: '20px',
+        alignItems: 'stretch',
+        overflow: 'hidden',
+        position: 'relative',
+        minHeight: '180px',
     },
     challengeImage: {
-        width: '80px',
-        height: '80px',
-        borderRadius: '50%',
+        width: '220px',
+        flexShrink: 0,
         objectFit: 'cover',
-        border: '3px solid rgba(255, 255, 255, 0.5)',
+        clipPath: 'polygon(25% 0, 100% 0, 100% 100%, 0% 100%)',
     },
     challengeTextContainer: {
         flex: 1,
+        padding: '24px 32px',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
     },
-    challengeTitle: { margin: '0 0 8px 0', fontSize: '18px', fontWeight: 600 },
+    challengeTitle: { margin: 0, fontSize: '18px', fontWeight: 600 },
     challengeScenario: { margin: 0, fontSize: '15px', opacity: 0.9, lineHeight: 1.5 },
     completedBadge: {
+        position: 'absolute',
+        top: '16px',
+        right: '16px',
         display: 'flex',
         alignItems: 'center',
         gap: '8px',
-        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+        backgroundColor: 'rgba(0, 0, 0, 0.4)',
+        color: 'white',
         padding: '8px 16px',
         borderRadius: '20px',
         fontWeight: 500,
-        flexShrink: 0
+        zIndex: 2,
     },
     moduleGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px' },
     moduleCard: {

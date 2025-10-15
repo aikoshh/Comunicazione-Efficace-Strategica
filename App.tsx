@@ -681,9 +681,9 @@ const App: React.FC = () => {
         {appState.screen !== 'api_key_error' && (
             <footer style={styles.footer}>
                  <div style={styles.footerLinks}>
-                    <a href="#" onClick={(e) => e.preventDefault()} title="Link alla Privacy Policy (non implementato)" style={styles.footerLink}>Privacy Policy</a>
+                    <a href="https://www.centroclinicaformazionestrategica.it/CES-APP/pdf/privacy_policy.pdf" target="_blank" rel="noopener noreferrer" title="Leggi la Privacy Policy" style={styles.footerLink}>Privacy Policy</a>
                     <span style={styles.footerSeparator}>|</span>
-                    <a href="#" onClick={(e) => e.preventDefault()} title="Link ai Termini di Servizio (non implementato)" style={styles.footerLink}>Termini di Servizio</a>
+                    <a href="https://www.centroclinicaformazionestrategica.it/CES-APP/pdf/terms_of_service.pdf" target="_blank" rel="noopener noreferrer" title="Leggi i Termini di Servizio" style={styles.footerLink}>Termini di Servizio</a>
                 </div>
                 <div style={styles.copyrightContainer}>
                     <p style={styles.copyrightText}>

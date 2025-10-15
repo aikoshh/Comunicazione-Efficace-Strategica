@@ -26,11 +26,11 @@ const hoverStyle = `
     background-color: ${COLORS.cardDark};
   }
   .logout-button:hover {
-    background-color: ${COLORS.divider};
+    background-color: #F8AD66;
+    filter: brightness(0.98);
   }
-  .pro-button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 10px rgba(88, 166, 166, 0.3);
+  .pro-panel-button:hover {
+    filter: brightness(1.1);
   }
 `;
 
@@ -44,6 +44,21 @@ export const Header: React.FC<HeaderProps> = ({ currentUser, breadcrumbs, onLogo
   const handleToggleSettings = () => {
       setIsSettingsOpen(!isSettingsOpen);
   }
+
+  const handleGoToPaywallClick = () => {
+    onGoToPaywall();
+    setIsSettingsOpen(false);
+  };
+
+  const handleToggleSoundClick = () => {
+    onToggleSound();
+    setIsSettingsOpen(false);
+  };
+
+  const handleLogoutClick = () => {
+    onLogout();
+    setIsSettingsOpen(false);
+  };
 
   return (
     <>
@@ -73,19 +88,6 @@ export const Header: React.FC<HeaderProps> = ({ currentUser, breadcrumbs, onLogo
               </div>
 
               <div style={styles.userSection}>
-                {!isPro && (
-                    <button style={styles.proButton} className="pro-button" onClick={onGoToPaywall}>
-                        Sblocca PRO
-                    </button>
-                )}
-                {currentUser && (
-                    <div style={styles.userDisplay}>
-                        <div style={styles.avatar}>
-                            {getInitials(currentUser)}
-                        </div>
-                        <span style={styles.userName}>{currentUser.firstName}</span>
-                    </div>
-                )}
                 <button 
                     onClick={handleToggleSettings} 
                     style={styles.settingsButton}
@@ -104,16 +106,33 @@ export const Header: React.FC<HeaderProps> = ({ currentUser, breadcrumbs, onLogo
             <div style={styles.settingsOverlay} onClick={handleToggleSettings} />
             <div style={styles.settingsPanel}>
                 <div style={styles.settingsHeader}>
-                    <h3 style={styles.settingsTitle}>Impostazioni</h3>
+                    <h3 style={styles.settingsTitle}>Impostazioni e Profilo</h3>
                     <button onClick={handleToggleSettings} style={styles.settingsCloseButton} className="settings-close-button" aria-label="Chiudi impostazioni">
                         <CloseIcon />
                     </button>
                 </div>
                 <div style={styles.settingsContent}>
+                    {currentUser && (
+                        <div style={styles.settingsUserDisplay}>
+                            <div style={styles.avatar}>
+                                {getInitials(currentUser)}
+                            </div>
+                            <div style={styles.userInfoText}>
+                                <span style={styles.userName}>{currentUser.firstName} {currentUser.lastName}</span>
+                                <span style={styles.userEmail}>{currentUser.email}</span>
+                            </div>
+                        </div>
+                    )}
+
+                    {!isPro && (
+                        <button onClick={handleGoToPaywallClick} style={{...styles.settingsPanelButton, ...styles.proPanelButton}} className="pro-panel-button">
+                            Sblocca PRO
+                        </button>
+                    )}
                     <div style={styles.settingsOption}>
                         <span>Audio applicazione</span>
                         <button 
-                            onClick={onToggleSound} 
+                            onClick={handleToggleSoundClick} 
                             style={styles.soundButton}
                             className="sound-button"
                             aria-label={isSoundEnabled ? "Disattiva suoni" : "Attiva suoni"}
@@ -123,7 +142,7 @@ export const Header: React.FC<HeaderProps> = ({ currentUser, breadcrumbs, onLogo
                     </div>
 
                     {currentUser && (
-                         <button onClick={onLogout} style={{...styles.settingsPanelButton, ...styles.logoutButton}} className="logout-button">
+                         <button onClick={handleLogoutClick} style={{...styles.settingsPanelButton, ...styles.logoutButton}} className="logout-button">
                             Logout
                          </button>
                     )}
@@ -154,22 +173,21 @@ const styles: { [key: string]: React.CSSProperties } = {
     margin: '0 auto',
     display: 'flex',
     alignItems: 'center',
-    overflowX: 'auto',
-    scrollbarWidth: 'none', // For Firefox
   },
   navContent: {
       display: 'flex',
       alignItems: 'center',
-      justifyContent: 'flex-start',
-      gap: '32px',
+      justifyContent: 'space-between',
       width: '100%',
-      minWidth: '500px', // Ensures content doesn't wrap and forces scroll on small screens
   },
   breadcrumbs: {
     display: 'flex',
     alignItems: 'center',
     gap: '8px',
     whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    minWidth: 0,
   },
   crumb: {
     display: 'flex',
@@ -191,11 +209,13 @@ const styles: { [key: string]: React.CSSProperties } = {
     width: '20px',
     height: '20px',
     color: COLORS.divider,
+    flexShrink: 0,
   },
   userSection: {
     display: 'flex',
     alignItems: 'center',
-    gap: '16px'
+    gap: '16px',
+    flexShrink: 0,
   },
   proButton: {
     backgroundColor: COLORS.secondary,
@@ -210,15 +230,9 @@ const styles: { [key: string]: React.CSSProperties } = {
     boxShadow: '0 2px 5px rgba(88, 166, 166, 0.2)',
     whiteSpace: 'nowrap'
   },
-  userDisplay: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '12px',
-    padding: '6px 0px',
-  },
   avatar: {
-    width: '32px',
-    height: '32px',
+    width: '40px',
+    height: '40px',
     borderRadius: '50%',
     backgroundColor: COLORS.secondary,
     color: 'white',
@@ -226,11 +240,12 @@ const styles: { [key: string]: React.CSSProperties } = {
     justifyContent: 'center',
     alignItems: 'center',
     fontWeight: 'bold',
-    fontSize: '14px',
+    fontSize: '16px',
+    flexShrink: 0,
   },
   userName: {
-    fontSize: '15px',
-    fontWeight: 500,
+    fontSize: '16px',
+    fontWeight: 600,
     color: COLORS.textPrimary,
   },
   settingsButton: {
@@ -302,6 +317,22 @@ const styles: { [key: string]: React.CSSProperties } = {
       gap: '16px',
       flex: 1,
   },
+  settingsUserDisplay: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '16px',
+    paddingBottom: '16px',
+    marginBottom: '8px',
+    borderBottom: `1px solid ${COLORS.divider}`,
+  },
+  userInfoText: {
+    display: 'flex',
+    flexDirection: 'column',
+  },
+  userEmail: {
+    fontSize: '14px',
+    color: COLORS.textSecondary,
+  },
   settingsOption: {
       display: 'flex',
       justifyContent: 'space-between',
@@ -333,10 +364,19 @@ const styles: { [key: string]: React.CSSProperties } = {
     cursor: 'pointer',
     borderRadius: '8px',
     transition: 'background-color 0.2s ease',
-    marginTop: 'auto',
+  },
+  proPanelButton: {
+    backgroundColor: COLORS.secondary,
+    color: 'white',
+    fontWeight: 'bold',
+    textAlign: 'center',
+    transition: 'filter 0.2s ease',
   },
   logoutButton: {
-    color: COLORS.error,
-    fontWeight: 500,
+    backgroundColor: '#FABD7F',
+    color: 'white',
+    fontWeight: 'bold',
+    textAlign: 'center',
+    border: 'none',
   },
 };

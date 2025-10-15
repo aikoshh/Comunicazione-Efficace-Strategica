@@ -106,7 +106,7 @@ const RegistrationForm: React.FC<{
                  <div style={styles.termsContainer}>
                     <input type="checkbox" id="terms" checked={agreedToTerms} onChange={(e) => setAgreedToTerms(e.target.checked)} style={styles.checkbox} disabled={isLoading} />
                     <label htmlFor="terms" style={styles.termsLabel}>
-                        Accetto la <a href="#" onClick={(e) => e.preventDefault()} title="Link alla Privacy Policy (non implementato)" style={styles.link}>Privacy Policy</a> e i <a href="#" onClick={(e) => e.preventDefault()} title="Link ai Termini di Servizio (non implementato)" style={styles.link}>Termini di Servizio</a>.
+                        Accetto la <a href="https://www.centroclinicaformazionestrategica.it/CES-APP/pdf/privacy_policy.pdf" target="_blank" rel="noopener noreferrer" title="Leggi la Privacy Policy" style={styles.link}>Privacy Policy</a> e i <a href="https://www.centroclinicaformazionestrategica.it/CES-APP/pdf/terms_of_service.pdf" target="_blank" rel="noopener noreferrer" title="Leggi i Termini di Servizio" style={styles.link}>Termini di Servizio</a>.
                     </label>
                 </div>
                 <button type="submit" style={styles.loginButton} className="login-button" disabled={isLoading || !agreedToTerms}>
@@ -220,9 +220,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onRegister, o
         )}
         <div style={styles.copyrightContainer}>
             <div style={styles.footerLinks}>
-                <a href="#" onClick={(e) => e.preventDefault()} title="Link alla Privacy Policy (non implementato)" style={styles.footerLink}>Privacy Policy</a>
+                <a href="https://www.centroclinicaformazionestrategica.it/CES-APP/pdf/privacy_policy.pdf" target="_blank" rel="noopener noreferrer" title="Leggi la Privacy Policy" style={styles.footerLink}>Privacy Policy</a>
                 <span style={styles.footerSeparator}>|</span>
-                <a href="#" onClick={(e) => e.preventDefault()} title="Link ai Termini di Servizio (non implementato)" style={styles.footerLink}>Termini di Servizio</a>
+                <a href="https://www.centroclinicaformazionestrategica.it/CES-APP/pdf/terms_of_service.pdf" target="_blank" rel="noopener noreferrer" title="Leggi i Termini di Servizio" style={styles.footerLink}>Termini di Servizio</a>
             </div>
             <p style={styles.copyrightText}>
                 CES Coach © Copyright 2025
