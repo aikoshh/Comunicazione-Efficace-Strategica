@@ -3,10 +3,10 @@ import { Product } from './types';
 export const PRODUCTS: Product[] = [
   {
     id: 'ces.pro.monthly',
-    type: 'subscription',
+    type: 'non-consumable',
     name: 'CES Coach PRO',
-    price: '€7,90/mese',
-    description: 'Sblocca l\'accesso completo a tutte le funzionalità avanzate di CES Coach per accelerare la tua crescita.',
+    price: '€9,90',
+    description: 'Attivazione una tantum per sbloccare in modo permanente tutte le funzionalità PRO. Richiede un abbonamento attivo all\'app.',
     benefits: [
         'Valutazione dettagliata PRO con 5 rubriche di analisi (Chiarezza, Tono, Soluzione, Assertività, Struttura)',
         'Analisi paraverbale completa con AI per tono, ritmo, pause e velocità',

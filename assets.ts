@@ -13,3 +13,4 @@ export const cesLogoUrl = 'https://www.centroclinicaformazionestrategica.it/wp-c
 export const smilingPerson = 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=400&auto=format&fit=crop';
 export const loginBackground = 'https://images.unsplash.com/photo-1590650516494-0c8e4a4dd67e?q=80&w=1200&auto=format&fit=crop';
 export const dailyChallengePerson = 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=400&auto=format&fit=crop';
+export const checkupImage = 'https://www.centroclinicaformazionestrategica.it/CES-APP/images/dialogo%20strategico.png';

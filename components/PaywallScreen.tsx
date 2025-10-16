@@ -58,6 +58,7 @@ export const PaywallScreen: React.FC<PaywallScreenProps> = ({ entitlements, onPu
         <div style={styles.container}>
             <header style={styles.header}>
                 <h1 style={styles.title}>Porta la tua CES al Livello PRO</h1>
+                <p style={styles.permanentActivationText}>Paga una sola volta e utilizzalo per sempre!</p>
                 <p style={styles.subtitle}>Sblocca le funzionalità avanzate per accelerare la tua crescita e padroneggiare ogni conversazione.</p>
             </header>
 
@@ -107,6 +108,7 @@ export const PaywallScreen: React.FC<PaywallScreenProps> = ({ entitlements, onPu
                                     {isLoading === product.id ? <Spinner size={20} color="white"/> : 'Sblocca Tutti i Vantaggi'}
                                 </button>
                             )}
+                            <p style={styles.oneTimePaymentText}>Pagamento "una tantum". Valido per sempre!</p>
                         </div>
                     </div>
                 </section>
@@ -116,7 +118,7 @@ export const PaywallScreen: React.FC<PaywallScreenProps> = ({ entitlements, onPu
                          {isLoading === 'restore' ? <Spinner size={20} /> : 'Ripristina Acquisti'}
                     </button>
                     <p style={styles.disclosure}>
-                        Questo è un ambiente di simulazione. Gli acquisti non comportano addebiti reali. Gli abbonamenti si rinnovano automaticamente salvo annullamento. Puoi annullare in qualsiasi momento.
+                        L'attivazione PRO è un acquisto una tantum, che non richiede ulteriori pagamenti in futuro, mentre l'accesso all'App richiede un abbonamento mensile attivo.
                     </p>
                 </footer>
             </main>
@@ -128,6 +130,12 @@ const styles: { [key: string]: React.CSSProperties } = {
     container: { maxWidth: '900px', margin: '0 auto', padding: '40px 20px', minHeight: 'calc(100vh - 64px)' },
     header: { textAlign: 'center', marginBottom: '48px' },
     title: { fontSize: '32px', fontWeight: 'bold', color: COLORS.textPrimary, marginBottom: '12px' },
+    permanentActivationText: {
+        fontSize: '18px',
+        color: COLORS.error,
+        fontWeight: 'bold',
+        margin: '0 auto 12px'
+    },
     subtitle: { fontSize: '18px', color: COLORS.textSecondary, lineHeight: 1.6, maxWidth: '600px', margin: '0 auto' },
     featuresSection: {
         display: 'grid',
@@ -217,6 +225,12 @@ const styles: { [key: string]: React.CSSProperties } = {
         marginTop: '24px',
         paddingTop: '24px',
         borderTop: `1px solid ${COLORS.divider}`
+    },
+    oneTimePaymentText: {
+        fontSize: '16px',
+        color: COLORS.error,
+        fontWeight: 'bold',
+        margin: '8px 0 0 0'
     },
     price: { fontSize: '28px', fontWeight: 'bold', color: COLORS.textPrimary },
     buyButton: { padding: '14px 28px', fontSize: '18px', fontWeight: 'bold', color: 'white', background: COLORS.primaryGradient, border: 'none', borderRadius: '8px', cursor: 'pointer', transition: 'all 0.2s ease', minWidth: '280px', minHeight: '52px' },

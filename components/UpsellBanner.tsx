@@ -43,7 +43,7 @@ export const UpsellBanner: React.FC<UpsellBannerProps> = ({ product, score, onUn
             </div>
             <div style={styles.actions}>
                 <button onClick={handleDetails} style={styles.secondaryButton} className="upsell-button-secondary">Dettagli</button>
-                <button onClick={handleUnlock} style={styles.primaryButton} className="upsell-button-primary">Sblocca ora - {product.price}</button>
+                <button onClick={handleUnlock} style={styles.primaryButton} className="upsell-button-primary">Sblocca (Una Tantum) - {product.price}</button>
             </div>
         </div>
     );

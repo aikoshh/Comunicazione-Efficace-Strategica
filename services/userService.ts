@@ -1,6 +1,6 @@
 import type { User } from '../types';
+import { databaseService } from './databaseService';
 
-const USERS_DB_KEY = 'users_db_v2'; // Use a new key to avoid conflicts with old plain-text db
 const DEFAULT_ADMIN_EMAIL = "aikos@libero.it";
 const DEFAULT_ADMIN_PASSWORD = "aaa";
 
@@ -9,8 +9,6 @@ class UserManager {
 
     constructor() {
         this.loadUsers();
-        // This is async, but constructor cannot be. We rely on it running quickly on startup.
-        // A more robust solution might use an explicit init() method.
         this.ensureAdminExists();
     }
 
@@ -19,42 +17,28 @@ class UserManager {
         const data = encoder.encode(password);
         const hashBuffer = await crypto.subtle.digest('SHA-256', data);
         const hashArray = Array.from(new Uint8Array(hashBuffer));
-        // Convert buffer to hex string
         return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
     }
 
     private loadUsers(): void {
-        try {
-            const dbString = localStorage.getItem(USERS_DB_KEY);
-            this.users = dbString ? JSON.parse(dbString) : [];
-        } catch (e) {
-            console.error("Failed to load users from storage", e);
-            this.users = [];
-        }
+        this.users = databaseService.getAllUsers();
     }
 
     private saveUsers(): void {
-        try {
-            localStorage.setItem(USERS_DB_KEY, JSON.stringify(this.users));
-        } catch (e) {
-            console.error("Failed to save users to storage", e);
-        }
+        databaseService.saveAllUsers(this.users);
     }
 
     private async ensureAdminExists(): Promise<void> {
-        // Run check only if user list is empty to avoid repeated checks
-        if (this.users.length === 0 || !this.getUser(DEFAULT_ADMIN_EMAIL)) {
-             const admin = this.getUser(DEFAULT_ADMIN_EMAIL);
-             if (!admin) {
-                await this.addUser(
-                    DEFAULT_ADMIN_EMAIL,
-                    DEFAULT_ADMIN_PASSWORD,
-                    'Amministratore',
-                    '',
-                    true // isAdmin
-                );
-                console.log('Default admin user created.');
-             }
+        const admin = this.getUser(DEFAULT_ADMIN_EMAIL);
+        if (!admin) {
+            await this.addUser(
+                DEFAULT_ADMIN_EMAIL,
+                DEFAULT_ADMIN_PASSWORD,
+                'Amministratore',
+                '',
+                true // isAdmin
+            );
+            console.log('Default admin user created.');
         }
     }
 

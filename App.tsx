@@ -19,6 +19,9 @@ import { getUserEntitlements, purchaseProduct, restorePurchases, hasProAccess } 
 import { useToast } from './hooks/useToast';
 import { updateCompetenceScores } from './services/competenceService';
 import { userService } from './services/userService';
+import { analyzeResponse } from './services/geminiService';
+import { FullScreenLoader } from './components/Loader';
+import { databaseService } from './services/databaseService';
 
 type AppState =
   | { screen: 'home' }
@@ -33,27 +36,8 @@ type AppState =
   | { screen: 'paywall' }
   | { screen: 'admin' };
 
-const PROGRESS_STORAGE_KEY = 'ces_coach_progress';
 const CURRENT_USER_EMAIL_KEY = 'ces_coach_current_user_email';
 const APP_STATE_KEY = 'ces_coach_app_state';
-
-const saveToStorage = <T,>(key: string, value: T) => {
-    try {
-        localStorage.setItem(key, JSON.stringify(value));
-    } catch (error) {
-        console.error("Failed to save to storage:", error);
-    }
-};
-
-const loadFromStorage = <T,>(key: string): T | null => {
-    try {
-        const item = localStorage.getItem(key);
-        return item ? JSON.parse(item) : null;
-    } catch (error) {
-        console.error("Failed to load from storage:", error);
-        return null;
-    }
-};
 
 const findNextExerciseInModule = (currentExerciseId: string): { currentModule?: Module; nextExercise?: Exercise } => {
     let currentModule: Module | undefined;
@@ -89,13 +73,14 @@ const App: React.FC = () => {
   const { addToast } = useToast();
   
   const [userProgress, setUserProgress] = useState<Record<string, UserProgress>>(() => {
-    return loadFromStorage<Record<string, UserProgress>>(PROGRESS_STORAGE_KEY) || {};
+    return databaseService.getAllUserProgress();
   });
 
   const [appState, setAppState] = useState<AppState>({ screen: 'home' });
   const [returnToState, setReturnToState] = useState<AppState | null>(null);
   const [apiKey, setApiKey] = useState<string | null>(null);
   const [isSoundEnabled, setIsSoundEnabled] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
 
   // A state to force re-render when user list changes in admin panel
   const [adminUserListVersion, setAdminUserListVersion] = useState(0);
@@ -110,13 +95,14 @@ const App: React.FC = () => {
 
   useEffect(() => {
       // Session Persistence: Restore session on initial load
-      const savedUserEmail = loadFromStorage<string>(CURRENT_USER_EMAIL_KEY);
+      const savedUserEmail = localStorage.getItem(CURRENT_USER_EMAIL_KEY);
       if (savedUserEmail) {
           const user = userService.getUser(savedUserEmail);
           if (user) {
               setCurrentUser(user);
               setIsAuthenticated(true);
-              const savedState = loadFromStorage<AppState>(APP_STATE_KEY);
+              const savedStateItem = localStorage.getItem(APP_STATE_KEY);
+              const savedState = savedStateItem ? JSON.parse(savedStateItem) : null;
               // Prevent being stuck on admin page if not an admin anymore
               if (savedState?.screen === 'admin' && !user.isAdmin) {
                   setAppState({ screen: 'home' });
@@ -132,14 +118,14 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    saveToStorage(PROGRESS_STORAGE_KEY, userProgress);
+    databaseService.saveAllUserProgress(userProgress);
   }, [userProgress]);
 
   useEffect(() => {
       // Session Persistence: Save state on change
       if (isAuthenticated && currentUser) {
-          saveToStorage(CURRENT_USER_EMAIL_KEY, currentUser.email);
-          saveToStorage(APP_STATE_KEY, appState);
+          localStorage.setItem(CURRENT_USER_EMAIL_KEY, currentUser.email);
+          localStorage.setItem(APP_STATE_KEY, JSON.stringify(appState));
       }
   }, [appState, isAuthenticated, currentUser]);
 
@@ -277,19 +263,25 @@ const App: React.FC = () => {
     setAppState({ screen: 'exercise', exercise, isCheckup, checkupStep, totalCheckupSteps });
   };
 
-  const handleReviewExercise = (exerciseId: string) => {
+  const handleReviewExercise = async (exerciseId: string) => {
     if (!currentUser) return;
     const progress = userProgress[currentUser.email];
     if (!progress?.analysisHistory) return;
 
-    const historyEntry = [...progress.analysisHistory]
-        .reverse()
-        .find(h => h.exerciseId === exerciseId);
-    
-    if (!historyEntry) {
+    let entryIndex = -1;
+    for (let i = progress.analysisHistory.length - 1; i >= 0; i--) {
+        if (progress.analysisHistory[i].exerciseId === exerciseId) {
+            entryIndex = i;
+            break;
+        }
+    }
+
+    if (entryIndex === -1) {
         addToast("Nessun risultato precedente trovato per questo esercizio.", 'info');
         return;
     }
+    
+    const historyEntry = progress.analysisHistory[entryIndex];
     
     const exercise = findExerciseById(exerciseId);
     if (!exercise) {
@@ -297,6 +289,56 @@ const App: React.FC = () => {
         return;
     }
 
+    const isPro = hasProAccess(entitlements);
+
+    // Check if the analysis needs to be upgraded to PRO version
+    if (isPro && historyEntry.type === 'written' && !(historyEntry.result as AnalysisResult).detailedRubric) {
+        addToast("Aggiornamento dell'analisi alla versione PRO...", 'info');
+        setIsLoading(true);
+        try {
+            const newResult = await analyzeResponse(
+                historyEntry.userResponse,
+                exercise.scenario,
+                exercise.task,
+                entitlements, // Current PRO entitlements
+                false, // isVerbal
+                exercise.customObjective,
+                apiKey
+            );
+
+            // Update the history entry with the new PRO result to cache it
+            const newAnalysisHistory = [...progress.analysisHistory];
+            newAnalysisHistory[entryIndex] = { ...historyEntry, result: newResult };
+            
+            updateUserProgress(currentUser.email, {
+                analysisHistory: newAnalysisHistory,
+            });
+
+            // Navigate to the report screen with the new, upgraded result
+            const { currentModule } = findNextExerciseInModule(exerciseId);
+            setAppState({ 
+                screen: 'report', 
+                result: newResult, 
+                exercise: exercise,
+                userResponse: historyEntry.userResponse,
+                isReview: true,
+                currentModule: currentModule 
+            });
+
+        } catch (e: any) {
+            console.error("Failed to upgrade analysis to PRO:", e);
+            if (e.message.includes('API key') || e.message.includes('API_KEY')) {
+              handleApiKeyError(e.message);
+            } else {
+              addToast(e.message || "Impossibile aggiornare l'analisi.", 'error');
+            }
+        } finally {
+            setIsLoading(false);
+        }
+        return;
+    }
+
+    // Original logic for viewing reports that don't need an upgrade
     const { currentModule } = findNextExerciseInModule(exerciseId);
 
     if (historyEntry.type === 'written') {
@@ -523,6 +565,10 @@ const App: React.FC = () => {
   const handleAdminUpdate = () => {
     setAdminUserListVersion(v => v + 1);
   };
+
+  if (isLoading) {
+    return <FullScreenLoader estimatedTime={20} />;
+  }
 
   if (!isAuthenticated) {
     return <LoginScreen onLogin={handleLogin} onRegister={handleRegister} onGuestAccess={handleGuestAccess} />;

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import type { Module, User, UserProgress, Exercise } from '../types';
 import { MODULES, COLORS, SAGE_PALETTE } from '../constants';
-import { smilingPerson, dailyChallengePerson } from '../assets';
+import { smilingPerson, dailyChallengePerson, checkupImage } from '../assets';
 import { ProgressOverview } from './ProgressOverview';
 import { ProgressAnalytics } from './ProgressAnalytics';
 import { getDailyChallenge } from '../services/progressionService';
@@ -169,17 +169,17 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectModule, onSelect
       <main style={currentUser ? {marginTop: '48px'} : {}}>
         
         {currentUser && !userProgress?.hasCompletedCheckup && (
-          <section style={styles.checkupPrompt} className="checkup-prompt" onClick={onStartCheckup}>
-            <div>
-              <h3 style={styles.checkupTitle}>Valuta il tuo Livello Iniziale</h3>
-              <p style={styles.checkupText}>
-                Completa il test di analisi per scoprire il tuo profilo di comunicatore e ricevere un percorso di allenamento personalizzato.
-              </p>
+          <section style={{marginBottom: '48px'}}>
+            <h2 style={styles.sectionTitle}>Valutazione Iniziale</h2>
+            <div style={styles.checkupCard} className="checkup-prompt" onClick={onStartCheckup}>
+              <div style={styles.checkupTextContainer}>
+                <h3 style={styles.checkupTitle}>Valuta il tuo Livello Iniziale</h3>
+                <p style={styles.checkupText}>
+                  Completa il test di analisi per scoprire il tuo profilo di comunicatore e ricevere un percorso di allenamento personalizzato.
+                </p>
+              </div>
+              <img src={checkupImage} alt="Analisi strategica della comunicazione" style={styles.checkupImage} />
             </div>
-            <button style={styles.checkupButton}>
-              <TargetIcon />
-              <span>Inizia il Test</span>
-            </button>
           </section>
         )}
 
@@ -256,35 +256,34 @@ const styles: { [key: string]: React.CSSProperties } = {
         fontSize: '15px',
         opacity: 0.9,
     },
-    checkupPrompt: {
+    checkupCard: {
         background: `linear-gradient(135deg, ${COLORS.secondary} 0%, #73B5B5 100%)`,
         color: 'white',
-        padding: '24px',
-        borderRadius: '12px',
+        borderRadius: '16px',
         cursor: 'pointer',
         transition: 'all 0.3s ease',
         boxShadow: '0 4px 15px rgba(88, 166, 166, 0.2)',
         display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        gap: '20px',
-        marginBottom: '48px',
-        animation: 'fadeInUp 0.5s ease-out'
+        alignItems: 'stretch',
+        overflow: 'hidden',
+        position: 'relative',
+        minHeight: '180px',
+    },
+    checkupTextContainer: {
+        flex: 1,
+        padding: '24px 32px',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+    },
+    checkupImage: {
+        width: '220px',
+        flexShrink: 0,
+        objectFit: 'cover',
+        clipPath: 'polygon(25% 0, 100% 0, 100% 100%, 0% 100%)',
     },
     checkupTitle: { margin: '0 0 8px 0', fontSize: '18px', fontWeight: 600 },
     checkupText: { margin: 0, fontSize: '15px', opacity: 0.9, lineHeight: 1.5 },
-    checkupButton: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        backgroundColor: '#FFFBEA',
-        color: COLORS.textAccent,
-        padding: '10px 18px',
-        borderRadius: '20px',
-        fontWeight: 600,
-        flexShrink: 0,
-        border: 'none',
-    },
     dailyChallenge: {
         background: COLORS.primaryGradient,
         color: 'white',

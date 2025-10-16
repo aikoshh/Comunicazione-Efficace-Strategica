@@ -190,6 +190,13 @@ export interface Entitlements {
     teamActive: boolean;
 }
 
+// Entitlements object structure for JSON serialization
+export interface StorableEntitlements {
+    productIDs: string[];
+    teamSeats: number;
+    teamActive: boolean;
+}
+
 // --- PRO Content Types ---
 export interface StrategicQuestion {
     question: string;
@@ -214,4 +221,11 @@ export interface PersonalizationData {
   eta: string;
   contestoComunicativo: string;
   sfidaPrincipale: string;
+}
+
+// --- Database Type ---
+export interface Database {
+  users: User[];
+  userProgress: Record<string, UserProgress>;
+  entitlements: Record<string, StorableEntitlements>;
 }
