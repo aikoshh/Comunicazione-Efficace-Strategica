@@ -563,6 +563,9 @@ const App: React.FC = () => {
 
   // --- Admin Panel Handlers ---
   const handleAdminUpdate = () => {
+    // This is the key fix: reload progress data from the single source of truth
+    // to prevent stale state from overwriting the imported data.
+    setUserProgress(databaseService.getAllUserProgress());
     setAdminUserListVersion(v => v + 1);
   };
 
@@ -654,6 +657,7 @@ const App: React.FC = () => {
                 nextExerciseLabel={nextExerciseLabel} 
                 entitlements={entitlements} 
                 onNavigateToPaywall={navigateToPaywall} 
+                onPurchase={handlePurchase}
                 userResponse={userResponse}
                 isReview={isReview}
             />;

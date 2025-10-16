@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { AnalysisResult, Exercise, Entitlements, DetailedRubricScore } from '../types';
+import { AnalysisResult, Exercise, Entitlements, DetailedRubricScore, Product } from '../types';
 import { COLORS } from '../constants';
 import { CheckCircleIcon, RetryIcon, HomeIcon, LightbulbIcon, NextIcon, TargetIcon } from './Icons';
 import { soundService } from '../services/soundService';
@@ -18,6 +18,7 @@ interface AnalysisReportScreenProps {
   nextExerciseLabel: string;
   entitlements: Entitlements | null;
   onNavigateToPaywall: () => void;
+  onPurchase: (product: Product) => Promise<void>;
   userResponse?: string;
   isReview?: boolean;
 }
@@ -137,7 +138,7 @@ const QuestionMetrics: React.FC<{ utility: number; clarity: number }> = ({ utili
 );
 
 
-export const AnalysisReportScreen: React.FC<AnalysisReportScreenProps> = ({ result, exercise, onRetry, onNextExercise, nextExerciseLabel, entitlements, onNavigateToPaywall, userResponse, isReview }) => {
+export const AnalysisReportScreen: React.FC<AnalysisReportScreenProps> = ({ result, exercise, onRetry, onNextExercise, nextExerciseLabel, entitlements, onNavigateToPaywall, onPurchase, userResponse, isReview }) => {
   const [activeTab, setActiveTab] = useState<'short' | 'long'>('short');
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [reportHtml, setReportHtml] = useState<string | null>(null);
@@ -293,7 +294,7 @@ export const AnalysisReportScreen: React.FC<AnalysisReportScreenProps> = ({ resu
             <UpsellBanner 
                 product={proProduct}
                 score={result.score}
-                onUnlock={onNavigateToPaywall}
+                onUnlock={onPurchase}
                 onDetails={onNavigateToPaywall}
             />
         )}

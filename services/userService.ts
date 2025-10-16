@@ -24,6 +24,11 @@ class UserManager {
         this.users = databaseService.getAllUsers();
     }
 
+    public reloadUsers(): void {
+        this.loadUsers();
+        this.ensureAdminExists();
+    }
+
     private saveUsers(): void {
         databaseService.saveAllUsers(this.users);
     }

@@ -159,7 +159,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectModule, onSelect
                 Seleziona la tua prossima sessione dalla Mappa delle Competenze o affronta la Sfida del Giorno.
             </p>
         </div>
-        <img src={smilingPerson} alt="Persona sorridente e sicura di sé" style={styles.headerImage} />
+        <img 
+            src={smilingPerson} 
+            alt="Ivano Cincinnato, fondatore di CES Coach" 
+            style={styles.headerImage}
+            loading="eager"
+            fetchpriority="high"
+        />
       </header>
       
       {currentUser && <ProgressOverview user={currentUser} progress={userProgress} />}

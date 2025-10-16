@@ -1,19 +1,27 @@
-import React from 'react';
+import React, { useState } from 'react';
 import type { Product } from '../types';
 import { COLORS } from '../constants';
 import { soundService } from '../services/soundService';
+import { Spinner } from './Loader';
 
 interface UpsellBannerProps {
   product: Product;
   score: number;
-  onUnlock: (product: Product) => void;
+  onUnlock: (product: Product) => Promise<void>;
   onDetails: (product: Product) => void;
 }
 
 export const UpsellBanner: React.FC<UpsellBannerProps> = ({ product, score, onUnlock, onDetails }) => {
-    const handleUnlock = () => {
+    const [isUnlocking, setIsUnlocking] = useState(false);
+
+    const handleUnlock = async () => {
         soundService.playClick();
-        onUnlock(product);
+        setIsUnlocking(true);
+        try {
+            await onUnlock(product);
+        } finally {
+            setIsUnlocking(false);
+        }
     };
 
     const handleDetails = () => {
@@ -22,10 +30,10 @@ export const UpsellBanner: React.FC<UpsellBannerProps> = ({ product, score, onUn
     };
 
     const hoverStyle = `
-      .upsell-button-primary:hover, .upsell-button-secondary:hover {
+      .upsell-button-primary:hover:not(:disabled), .upsell-button-secondary:hover:not(:disabled) {
         transform: translateY(-2px);
       }
-      .upsell-button-primary:active, .upsell-button-secondary:active {
+      .upsell-button-primary:active:not(:disabled), .upsell-button-secondary:active:not(:disabled) {
         transform: translateY(0) scale(0.98);
       }
     `;
@@ -42,8 +50,15 @@ export const UpsellBanner: React.FC<UpsellBannerProps> = ({ product, score, onUn
                 </p>
             </div>
             <div style={styles.actions}>
-                <button onClick={handleDetails} style={styles.secondaryButton} className="upsell-button-secondary">Dettagli</button>
-                <button onClick={handleUnlock} style={styles.primaryButton} className="upsell-button-primary">Sblocca (Una Tantum) - {product.price}</button>
+                <button onClick={handleDetails} style={styles.secondaryButton} className="upsell-button-secondary" disabled={isUnlocking}>Dettagli</button>
+                <button 
+                    onClick={handleUnlock} 
+                    style={{...styles.primaryButton, ...(isUnlocking ? styles.buttonDisabled : {})}} 
+                    className="upsell-button-primary" 
+                    disabled={isUnlocking}
+                >
+                    {isUnlocking ? <Spinner size={20} color="white"/> : `Sblocca (Una Tantum) - ${product.price}`}
+                </button>
             </div>
         </div>
     );
@@ -87,6 +102,9 @@ const styles: { [key: string]: React.CSSProperties } = {
     flexShrink: 0,
   },
   primaryButton: {
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
     padding: '10px 18px',
     fontSize: '15px',
     fontWeight: 'bold',
@@ -96,6 +114,8 @@ const styles: { [key: string]: React.CSSProperties } = {
     borderRadius: '8px',
     cursor: 'pointer',
     transition: 'all 0.2s ease',
+    minWidth: '220px',
+    minHeight: '41px',
   },
   secondaryButton: {
     padding: '10px 18px',
@@ -107,5 +127,9 @@ const styles: { [key: string]: React.CSSProperties } = {
     cursor: 'pointer',
     fontWeight: 500,
     transition: 'all 0.2s ease',
+  },
+  buttonDisabled: {
+      opacity: 0.7,
+      cursor: 'not-allowed',
   }
 };

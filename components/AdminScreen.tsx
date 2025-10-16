@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { User } from '../types';
 import { userService } from '../services/userService';
+import { databaseService } from '../services/databaseService';
 import { COLORS } from '../constants';
 import { BackIcon, SettingsIcon } from './Icons';
 import { useToast } from '../hooks/useToast';
@@ -29,6 +30,7 @@ const isoToDateTimeLocal = (isoString: string | null): string => {
 export const AdminScreen: React.FC<AdminScreenProps> = ({ onBack, onUsersUpdate }) => {
   const [users, setUsers] = useState<User[]>(() => userService.listUsers());
   const { addToast } = useToast();
+  const importInputRef = useRef<HTMLInputElement>(null);
 
   const [newEmail, setNewEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -38,6 +40,9 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({ onBack, onUsersUpdate 
 
   const [editingUserEmail, setEditingUserEmail] = useState<string | null>(null);
   const [editedUserData, setEditedUserData] = useState<EditableUserData>({});
+  
+  const [fileToImport, setFileToImport] = useState<File | null>(null);
+
 
   const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -142,6 +147,63 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({ onBack, onUsersUpdate 
         addToast("Impossibile trovare l'utente.", "error");
     }
   };
+  
+  const handleExport = () => {
+    soundService.playClick();
+    try {
+        const jsonString = databaseService.exportDatabase();
+        const blob = new Blob([jsonString], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `ces_coach_backup_${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        addToast("Database esportato con successo.", "success");
+    } catch (e) {
+        addToast("Errore durante l'esportazione del database.", "error");
+    }
+  };
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    setFileToImport(file || null);
+  };
+
+  const handleImport = () => {
+    if (!fileToImport) {
+        addToast("Nessun file selezionato per l'importazione.", "error");
+        return;
+    }
+
+    soundService.playClick();
+    if (!confirm("Sei sicuro di voler importare questo file? L'operazione sovrascriverà TUTTI i dati attuali (utenti, progressi, acquisti). Questa azione è irreversibile.")) {
+        setFileToImport(null);
+        if (importInputRef.current) importInputRef.current.value = '';
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        try {
+            const content = e.target?.result as string;
+            databaseService.importDatabase(content);
+            userService.reloadUsers();
+            setUsers(userService.listUsers());
+            onUsersUpdate();
+            addToast("Database importato con successo. La lista utenti è stata aggiornata.", "success");
+        } catch (error: any) {
+            addToast(error.message, 'error');
+        } finally {
+            setFileToImport(null);
+            if (importInputRef.current) importInputRef.current.value = '';
+        }
+    };
+    reader.readAsText(fileToImport);
+  };
+
 
   return (
     <div style={styles.container}>
@@ -197,6 +259,38 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({ onBack, onUsersUpdate 
         </form>
       </div>
 
+      <div style={styles.addUserForm}>
+        <h2 style={styles.formTitle}>Import / Export Dati</h2>
+        <div style={styles.importExportSection}>
+            <div style={styles.importExportActions}>
+                <button onClick={handleExport} style={{...styles.actionButton, ...styles.exportButton}}>
+                    Esporta Database (.json)
+                </button>
+                <button onClick={() => importInputRef.current?.click()} style={{...styles.actionButton, ...styles.importButton}}>
+                    Seleziona File di Backup...
+                </button>
+                <input
+                    type="file"
+                    ref={importInputRef}
+                    style={{ display: 'none' }}
+                    accept=".json,.txt"
+                    onChange={handleFileSelect}
+                />
+            </div>
+            {fileToImport && (
+                <div style={styles.fileSelectedContainer}>
+                    <span style={styles.fileName}>{fileToImport.name}</span>
+                    <button onClick={handleImport} style={{...styles.actionButton, ...styles.loadButton}}>
+                        Carica File
+                    </button>
+                </div>
+            )}
+        </div>
+        <p style={styles.importExportDescription}>
+            Esporta tutti i dati (utenti, progressi, acquisti) in un singolo file. Importa un file per ripristinare lo stato dell'applicazione.
+        </p>
+      </div>
+
       <div style={styles.userListHeader}>
         <h2 style={styles.userCount}>{users.length} Utenti Registrati</h2>
       </div>
@@ -231,11 +325,11 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({ onBack, onUsersUpdate 
                       </div>
                       <div style={styles.checkboxGroup}>
                           <label style={styles.checkboxLabel}>
-                              <input type="checkbox" checked={editedUserData.isAdmin} onChange={e => handleInputChange('isAdmin', e.target.checked)} />
+                              <input type="checkbox" checked={!!editedUserData.isAdmin} onChange={e => handleInputChange('isAdmin', e.target.checked)} />
                               Amministratore
                           </label>
                           <label style={styles.checkboxLabel}>
-                              <input type="checkbox" checked={editedUserData.enabled} onChange={e => handleInputChange('enabled', e.target.checked)} />
+                              <input type="checkbox" checked={!!editedUserData.enabled} onChange={e => handleInputChange('enabled', e.target.checked)} />
                               Abilitato
                           </label>
                       </div>
@@ -292,6 +386,51 @@ const styles: { [key: string]: React.CSSProperties } = {
         paddingBottom: '8px',
         borderBottom: `1px solid ${COLORS.divider}`
     },
+    importExportSection: {
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '16px',
+    },
+    importExportActions: {
+        display: 'flex',
+        gap: '16px',
+        flexWrap: 'wrap',
+    },
+    fileSelectedContainer: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '12px',
+        backgroundColor: COLORS.cardDark,
+        padding: '8px 12px',
+        borderRadius: '8px',
+        width: '100%',
+        boxSizing: 'border-box'
+    },
+    fileName: {
+        flex: 1,
+        fontSize: '14px',
+        color: COLORS.textSecondary,
+        fontStyle: 'italic',
+        whiteSpace: 'nowrap',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+    },
+    loadButton: {
+        backgroundColor: COLORS.success,
+        flexShrink: 0,
+    },
+    exportButton: {
+        backgroundColor: COLORS.primary,
+    },
+    importButton: {
+        backgroundColor: COLORS.secondary,
+    },
+    importExportDescription: {
+        fontSize: '14px',
+        color: COLORS.textSecondary,
+        marginTop: '16px',
+        lineHeight: 1.5,
+    },
     formGrid: {
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
@@ -335,7 +474,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     userEmail: { fontSize: '14px', color: COLORS.textSecondary },
     userDetails: { display: 'flex', gap: '16px', fontSize: '14px', color: COLORS.textSecondary, marginTop: '8px' },
     userExpiry: { fontSize: '13px', color: COLORS.textSecondary, fontStyle: 'italic', marginTop: '4px' },
-    userActions: { display: 'flex', gap: '12px', flexShrink: 0, alignSelf: 'flex-start' },
+    userActions: { display: 'flex', flexWrap: 'wrap', gap: '12px', flexShrink: 0, alignSelf: 'center' },
     actionButton: { padding: '8px 16px', fontSize: '14px', fontWeight: '500', border: 'none', borderRadius: '8px', cursor: 'pointer', color: 'white' },
     editButton: { backgroundColor: COLORS.secondary },
     deleteButton: { backgroundColor: COLORS.error },

@@ -40,6 +40,50 @@ class DatabaseService {
         }
     }
 
+    public exportDatabase(): string {
+        return JSON.stringify(this.db, null, 2);
+    }
+
+    public importDatabase(jsonString: string): void {
+        try {
+            const newDb = JSON.parse(jsonString);
+
+            if (typeof newDb !== 'object' || newDb === null) {
+                throw new Error("Il file non contiene un oggetto JSON valido.");
+            }
+    
+            const missingKeys: string[] = [];
+            if (!('users' in newDb)) missingKeys.push('users');
+            if (!('userProgress' in newDb)) missingKeys.push('userProgress');
+            if (!('entitlements' in newDb)) missingKeys.push('entitlements');
+    
+            if (missingKeys.length > 0) {
+                throw new Error(`Il file di database non è valido. Chiavi mancanti: ${missingKeys.join(', ')}.`);
+            }
+    
+            if (!Array.isArray(newDb.users)) {
+                throw new Error("La chiave 'users' nel database deve essere un array.");
+            }
+            if (typeof newDb.userProgress !== 'object' || Array.isArray(newDb.userProgress)) {
+                 throw new Error("La chiave 'userProgress' nel database deve essere un oggetto.");
+            }
+            if (typeof newDb.entitlements !== 'object' || Array.isArray(newDb.entitlements)) {
+                 throw new Error("La chiave 'entitlements' nel database deve essere un oggetto.");
+            }
+
+            this.db = newDb as Database;
+            this.saveDatabase();
+            
+        } catch (e: any) {
+            console.error("Errore durante l'importazione del database", e);
+            if (e instanceof SyntaxError) {
+                 throw new Error("Errore nel parsing del file di database. Assicurati che sia un file JSON valido.");
+            }
+            throw e;
+        }
+    }
+
+
     // --- Users ---
     public getAllUsers(): User[] {
         return this.db.users;
