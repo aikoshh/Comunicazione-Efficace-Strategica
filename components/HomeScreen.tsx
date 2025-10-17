@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type { Module, User, UserProgress, Exercise } from '../types';
-import { MODULES, COLORS, SAGE_PALETTE } from '../constants';
+import { MODULES, COLORS, MODULE_PALETTE } from '../constants';
 import { smilingPerson, dailyChallengePerson, checkupImage } from '../assets';
 import { ProgressOverview } from './ProgressOverview';
 import { ProgressAnalytics } from './ProgressAnalytics';
@@ -9,8 +9,8 @@ import { CheckCircleIcon, TargetIcon, LockIcon, SettingsIcon } from './Icons';
 import { soundService } from '../services/soundService';
 
 interface HomeScreenProps {
-  onSelectModule: (module: Module) => void;
-  onSelectExercise: (exercise: Exercise) => void;
+  onSelectModule: (module: Module, color: string) => void;
+  onSelectExercise: (exercise: Exercise, isCheckup?: boolean, checkupStep?: number, totalCheckupSteps?: number, moduleColor?: string) => void;
   onStartCheckup: () => void;
   currentUser: User | null;
   userProgress: UserProgress | undefined;
@@ -64,19 +64,30 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectModule, onSelect
     competenceScores: { ascolto: 0, riformulazione: 0, assertivita: 0, gestione_conflitto: 0 }
   };
 
-  const handleModuleClick = (module: Module, isLocked: boolean) => {
+  const handleModuleClick = (module: Module, isLocked: boolean, color: string) => {
       if (isLocked) {
           soundService.playStopRecording(); // A "denied" sound
       } else {
           soundService.playClick();
-          onSelectModule(module);
+          onSelectModule(module, color);
       }
   };
   
   const handleDailyChallengeClick = () => {
       if (dailyChallenge) {
           soundService.playClick();
-          onSelectExercise(dailyChallenge);
+          const moduleForExercise = MODULES.find(m => m.exercises.some(e => e.id === dailyChallenge.id));
+          let moduleColor = MODULE_PALETTE[0]; // Fallback color
+
+          if (moduleForExercise) {
+              const allModules = [...foundationalModules, ...sectoralPacks];
+              const moduleIndex = allModules.findIndex(m => m.id === moduleForExercise.id);
+              if (moduleIndex !== -1) {
+                  moduleColor = MODULE_PALETTE[moduleIndex % MODULE_PALETTE.length];
+              }
+          }
+          
+          onSelectExercise(dailyChallenge, false, 0, 0, moduleColor);
       }
   };
 
@@ -86,7 +97,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectModule, onSelect
       return completedIds.includes(dailyChallenge.id);
   };
 
-  const renderModuleGrid = (modules: Module[]) => (
+  const renderModuleGrid = (modules: Module[], colorOffset: number = 0) => (
     <div style={styles.moduleGrid}>
       {modules.map((module, index) => {
         const prerequisites = module.prerequisites || [];
@@ -94,11 +105,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectModule, onSelect
         const isCompleted = !isLocked && completedModuleIds.includes(module.id);
         const completedExercisesInModule = module.exercises.filter(e => completedExerciseIds.includes(e.id)).length;
         const totalExercisesInModule = module.exercises.length;
+        const moduleColor = MODULE_PALETTE[(index + colorOffset) % MODULE_PALETTE.length];
 
         
         const cardStyle = {
           ...styles.moduleCard,
-          backgroundColor: isLocked ? '#B0BEC5' : SAGE_PALETTE[index % SAGE_PALETTE.length],
+          backgroundColor: isLocked ? '#B0BEC5' : moduleColor,
           animation: `fadeInUp 0.5s ${index * 0.05}s ease-out both`,
           cursor: isLocked ? 'not-allowed' : 'pointer',
         };
@@ -108,7 +120,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectModule, onSelect
             key={module.id} 
             className="module-card" 
             style={cardStyle} 
-            onClick={() => handleModuleClick(module, isLocked)}
+            onClick={() => handleModuleClick(module, isLocked, moduleColor)}
             onMouseEnter={() => !isLocked && soundService.playHover()}
             >
             {isLocked && (
@@ -164,7 +176,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectModule, onSelect
             alt="Ivano Cincinnato, fondatore di CES Coach" 
             style={styles.headerImage}
             loading="eager"
-            fetchpriority="high"
+            fetchPriority="high"
         />
       </header>
       
@@ -215,7 +227,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectModule, onSelect
           {sectoralPacks.length > 0 && (
             <div style={{ marginTop: '48px' }}>
                 <h3 style={styles.categoryTitle}>Pacchetti Settoriali Professionali</h3>
-                {renderModuleGrid(sectoralPacks)}
+                {renderModuleGrid(sectoralPacks, foundationalModules.length)}
             </div>
           )}
         </section>
@@ -230,14 +242,14 @@ const styles: { [key: string]: React.CSSProperties } = {
     header: { display: 'flex', alignItems: 'center', gap: '32px', marginBottom: '48px', backgroundColor: COLORS.cardDark, padding: '32px', borderRadius: '12px' },
     headerTextContainer: { flex: 1 },
     headerImage: {
-        width: '150px',
-        height: '150px',
+        width: '200px',
+        height: '200px',
         borderRadius: '50%',
         objectFit: 'cover',
         border: `4px solid ${COLORS.card}`,
         boxShadow: '0 4px 15px rgba(0,0,0,0.1)',
     },
-    title: { fontSize: '28px', fontWeight: 'bold', color: COLORS.textPrimary, margin: '0 0 12px 0', lineHeight: 1.3 },
+    title: { fontSize: '28px', fontWeight: '700', color: COLORS.textAccent, margin: '0 0 12px 0', lineHeight: 1.3 },
     subtitle: { fontSize: '16px', color: COLORS.textSecondary, maxWidth: '600px', lineHeight: 1.6, margin: 0 },
     sectionTitle: { fontSize: '24px', fontWeight: 'bold', color: COLORS.primary, marginBottom: '24px', borderBottom: `3px solid ${COLORS.secondary}`, paddingBottom: '8px' },
     categoryTitle: { fontSize: '20px', fontWeight: 'bold', color: COLORS.textSecondary, marginTop: '24px', marginBottom: '16px' },
