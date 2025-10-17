@@ -428,9 +428,9 @@ const App: React.FC = () => {
     if (appState.screen === 'exercise') {
       if (!appState.isCheckup) {
         processExerciseCompletion(appState.exercise.id, result, userResponse);
-        const { currentModule, nextExercise } = findNextExerciseInModule(appState.exercise.id);
-        setAppState({ screen: 'report', result, exercise: appState.exercise, nextExercise, currentModule, userResponse });
       }
+      const { currentModule, nextExercise } = findNextExerciseInModule(appState.exercise.id);
+      setAppState({ screen: 'report', result, exercise: appState.exercise, nextExercise, currentModule, userResponse });
     }
   };
 
@@ -618,7 +618,7 @@ const App: React.FC = () => {
       screenContent = <ModuleScreen 
                         module={appState.module} 
                         moduleColor={appState.moduleColor}
-                        onSelectExercise={handleSelectExercise} 
+                        onSelectExercise={(exercise) => handleSelectExercise(exercise, false, 0, 0, appState.moduleColor)} 
                         onReviewExercise={handleReviewExercise}
                         onBack={handleBack} 
                         completedExerciseIds={completedExerciseIds} 
