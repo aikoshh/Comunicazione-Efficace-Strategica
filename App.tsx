@@ -615,8 +615,6 @@ const App: React.FC = () => {
       screenContent = <ModuleScreen 
                         module={appState.module} 
                         moduleColor={appState.moduleColor}
-                        // FIX: Pass an inline function to adapt the call to handleSelectExercise,
-                        // which expects additional optional arguments not provided by ModuleScreen.
                         onSelectExercise={(exercise, moduleColor) => handleSelectExercise(exercise, false, 0, 0, moduleColor)} 
                         onReviewExercise={handleReviewExercise}
                         onBack={handleBack} 
