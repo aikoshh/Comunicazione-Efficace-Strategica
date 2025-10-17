@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Module, Exercise, DifficultyLevel, ExerciseType, Entitlements } from '../types';
-import { COLORS, SAGE_PALETTE, EXERCISE_TYPE_ICONS } from '../constants';
+import { COLORS, EXERCISE_TYPE_ICONS } from '../constants';
 import { HomeIcon, CheckCircleIcon, QuestionIcon, TargetIcon } from './Icons';
 import { soundService } from '../services/soundService';
 import { hasProAccess } from '../services/monetizationService';
@@ -10,7 +10,8 @@ import { ExercisePreviewModal } from './ExercisePreviewModal';
 
 interface ModuleScreenProps {
   module: Module;
-  onSelectExercise: (exercise: Exercise) => void;
+  moduleColor: string;
+  onSelectExercise: (exercise: Exercise, moduleColor: string) => void;
   onReviewExercise: (exerciseId: string) => void;
   onBack: () => void;
   completedExerciseIds: string[];
@@ -42,7 +43,21 @@ const hoverStyle = `
   }
 `;
 
-export const ModuleScreen: React.FC<ModuleScreenProps> = ({ module, onSelectExercise, onReviewExercise, onBack, completedExerciseIds, entitlements }) => {
+// Helper function to blend a hex color with white (positive percent) or black (negative percent).
+const shadeColor = (color: string, percent: number): string => {
+    let f = parseInt(color.slice(1), 16),
+        t = percent < 0 ? 0 : 255,
+        p = percent < 0 ? percent * -1 : percent,
+        R = f >> 16,
+        G = (f >> 8) & 0x00ff,
+        B = f & 0x0000ff;
+    const newR = Math.round((t - R) * p) + R;
+    const newG = Math.round((t - G) * p) + G;
+    const newB = Math.round((t - B) * p) + B;
+    return `#${(0x1000000 + newR * 0x10000 + newG * 0x100 + newB).toString(16).slice(1)}`;
+};
+
+export const ModuleScreen: React.FC<ModuleScreenProps> = ({ module, moduleColor, onSelectExercise, onReviewExercise, onBack, completedExerciseIds, entitlements }) => {
   const [isLibraryModalOpen, setLibraryModalOpen] = useState(false);
   const [isChecklistModalOpen, setChecklistModalOpen] = useState(false);
   const [previewingExercise, setPreviewingExercise] = useState<Exercise | null>(null);
@@ -64,7 +79,7 @@ export const ModuleScreen: React.FC<ModuleScreenProps> = ({ module, onSelectExer
 
   const handleStartExercise = (exercise: Exercise) => {
       setPreviewingExercise(null);
-      onSelectExercise(exercise);
+      onSelectExercise(exercise, moduleColor);
   };
   
   const showProFeatures = module.id === 'm3' && hasProAccess(entitlements);
@@ -72,6 +87,12 @@ export const ModuleScreen: React.FC<ModuleScreenProps> = ({ module, onSelectExer
   const completedCount = module.exercises.filter(e => completedExerciseIds.includes(e.id)).length;
   const totalCount = module.exercises.length;
   const progressPercentage = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
+  
+  const difficultyShades = {
+    [DifficultyLevel.BASE]: shadeColor(moduleColor, 0.3), // 30% lighter
+    [DifficultyLevel.INTERMEDIO]: moduleColor,
+    [DifficultyLevel.AVANZATO]: shadeColor(moduleColor, -0.2), // 20% darker
+  };
 
 
   return (
@@ -79,6 +100,9 @@ export const ModuleScreen: React.FC<ModuleScreenProps> = ({ module, onSelectExer
     <div style={styles.container}>
        <style>{hoverStyle}</style>
       <header style={styles.header}>
+        {module.headerImage && (
+            <img src={module.headerImage} alt={`Illustrazione per ${module.title}`} style={styles.headerImage} />
+        )}
         <div style={styles.titleContainer}>
             <module.icon width={32} height={32} color={COLORS.secondary} />
             <h1 style={styles.title}>{module.title}</h1>
@@ -123,7 +147,7 @@ export const ModuleScreen: React.FC<ModuleScreenProps> = ({ module, onSelectExer
           
           const baseCardStyle = {
             ...styles.exerciseCard,
-            backgroundColor: SAGE_PALETTE[index % SAGE_PALETTE.length],
+            backgroundColor: difficultyShades[exercise.difficulty],
             animation: `fadeInUp 0.4s ${0.1 + index * 0.05}s ease-out both`,
           };
 
@@ -196,6 +220,15 @@ const styles: { [key: string]: React.CSSProperties } = {
     marginBottom: '24px',
     textAlign: 'center',
   },
+  headerImage: {
+    width: '100%',
+    height: '250px',
+    objectFit: 'cover',
+    borderRadius: '12px',
+    marginBottom: '24px',
+    boxShadow: '0 4px 15px rgba(0,0,0,0.1)',
+    animation: 'fadeInUp 0.4s ease-out both',
+  },
   titleContainer: {
     display: 'flex',
     alignItems: 'center',
@@ -205,8 +238,11 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
   title: {
     fontSize: '32px',
-    color: COLORS.textPrimary,
-    fontWeight: 'bold'
+    fontWeight: 'bold',
+    background: `linear-gradient(45deg, ${COLORS.primary} 30%, ${COLORS.secondary} 100%)`,
+    WebkitBackgroundClip: 'text',
+    WebkitTextFillColor: 'transparent',
+    display: 'inline-block',
   },
   description: {
     fontSize: '18px',

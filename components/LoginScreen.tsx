@@ -262,7 +262,7 @@ const styles: { [key: string]: React.CSSProperties } = {
         maxWidth: '320px',
         height: 'auto',
     },
-    title: { fontSize: '24px', color: COLORS.textPrimary, marginBottom: '32px', fontWeight: 400, lineHeight: 1.4 },
+    title: { fontSize: '24px', color: COLORS.textAccent, marginBottom: '32px', fontWeight: 400, lineHeight: 1.4 },
     subtitle: { fontSize: '16px', color: COLORS.textSecondary, margin: '0 auto 32px', lineHeight: 1.6 },
     form: { display: 'flex', flexDirection: 'column', gap: '20px', textAlign: 'left' },
     inputGroup: { display: 'flex', flexDirection: 'column', flex: 1 },

@@ -82,6 +82,9 @@ const App: React.FC = () => {
   const [isSoundEnabled, setIsSoundEnabled] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
 
+  // A state to force re-render when user list changes in admin panel
+  const [adminUserListVersion, setAdminUserListVersion] = useState(0);
+
   useEffect(() => {
     soundService.toggleSound(isSoundEnabled);
   }, [isSoundEnabled]);
@@ -114,20 +117,9 @@ const App: React.FC = () => {
       }
   }, []);
 
-  // Subscribe to database changes to keep global state in sync
   useEffect(() => {
-    const unsubscribe = databaseService.subscribe(() => {
-        // When the database changes (e.g., after an import in AdminScreen),
-        // re-sync the app-level state that depends on it.
-        setUserProgress(databaseService.getAllUserProgress());
-        if (currentUser) {
-            getUserEntitlements(currentUser).then(setEntitlements);
-        }
-    });
-
-    return () => unsubscribe();
-  }, [currentUser]);
-
+    databaseService.saveAllUserProgress(userProgress);
+  }, [userProgress]);
 
   useEffect(() => {
       // Session Persistence: Save state on change
@@ -154,18 +146,20 @@ const App: React.FC = () => {
   }, [isAuthenticated, currentUser]);
 
   const updateUserProgress = (email: string, updates: Partial<UserProgress>) => {
-      const allProgress = databaseService.getAllUserProgress();
-      const currentProgress = allProgress[email] || { 
-          scores: [], 
-          completedExerciseIds: [], 
-          skippedExerciseIds: [],
-          completedModuleIds: [],
-          analysisHistory: [],
-          competenceScores: { ascolto: 0, riformulazione: 0, assertivita: 0, gestione_conflitto: 0 } 
-      };
-      allProgress[email] = { ...currentProgress, ...updates };
-      databaseService.saveAllUserProgress(allProgress);
-      // The subscription will handle the `setUserProgress` state update.
+      setUserProgress(prev => {
+          const currentProgress = prev[email] || { 
+              scores: [], 
+              completedExerciseIds: [], 
+              skippedExerciseIds: [],
+              completedModuleIds: [],
+              analysisHistory: [],
+              competenceScores: { ascolto: 0, riformulazione: 0, assertivita: 0, gestione_conflitto: 0 } 
+          };
+          return {
+              ...prev,
+              [email]: { ...currentProgress, ...updates }
+          };
+      });
   };
 
   const navigateToPaywall = () => {
@@ -218,6 +212,7 @@ const App: React.FC = () => {
   
   const handleRegister = async (newUser: { firstName: string; lastName: string; email: string; password: string }) => {
     await userService.addUser(newUser.email, newUser.password, newUser.firstName, newUser.lastName);
+    setAdminUserListVersion(v => v + 1);
   };
   
   const handleGuestAccess = (key: string) => {
@@ -585,6 +580,14 @@ const App: React.FC = () => {
     }
   };
 
+  // --- Admin Panel Handlers ---
+  const handleAdminUpdate = () => {
+    // This is the key fix: reload progress data from the single source of truth
+    // to prevent stale state from overwriting the imported data.
+    setUserProgress(databaseService.getAllUserProgress());
+    setAdminUserListVersion(v => v + 1);
+  };
+
   if (isLoading) {
     return <FullScreenLoader estimatedTime={20} />;
   }
@@ -615,7 +618,7 @@ const App: React.FC = () => {
       screenContent = <ModuleScreen 
                         module={appState.module} 
                         moduleColor={appState.moduleColor}
-                        onSelectExercise={(exercise, moduleColor) => handleSelectExercise(exercise, false, 0, 0, moduleColor)} 
+                        onSelectExercise={handleSelectExercise} 
                         onReviewExercise={handleReviewExercise}
                         onBack={handleBack} 
                         completedExerciseIds={completedExerciseIds} 
@@ -720,7 +723,11 @@ const App: React.FC = () => {
         break;
     case 'admin':
         screenKey = 'admin';
-        screenContent = <AdminScreen onBack={handleBack} />;
+        screenContent = <AdminScreen 
+            key={adminUserListVersion}
+            onBack={handleBack}
+            onUsersUpdate={handleAdminUpdate}
+        />;
         break;
     default:
         screenContent = <HomeScreen 

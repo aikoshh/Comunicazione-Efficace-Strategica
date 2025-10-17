@@ -42,6 +42,7 @@ export interface Module {
   exercises: Exercise[];
   isCustom?: boolean;
   cardImage?: string;
+  headerImage?: string;
   category?: 'Fondamentali' | 'Pacchetti Settoriali';
   prerequisites?: string[]; // Array of module IDs needed to unlock this one
 }

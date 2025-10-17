@@ -1,34 +1,12 @@
-import type { Database, User, UserProgress, StorableEntitlements } from './types';
+import type { Database, User, UserProgress, StorableEntitlements } from '../types';
 
 const DB_STORAGE_KEY = 'ces_coach_database.txt';
 
-type Listener = () => void;
-
 class DatabaseService {
     private db: Database;
-    private listeners: Set<Listener> = new Set();
 
     constructor() {
         this.db = this.loadDatabase();
-    }
-
-    /**
-     * Permette ai componenti di iscriversi per ricevere notifiche sui cambiamenti del database.
-     * @param listener La funzione callback da eseguire quando i dati cambiano.
-     * @returns Una funzione per annullare l'iscrizione.
-     */
-    public subscribe(listener: Listener): () => void {
-        this.listeners.add(listener);
-        return () => {
-            this.listeners.delete(listener);
-        };
-    }
-
-    /**
-     * Notifica tutti gli iscritti che i dati del database sono cambiati.
-     */
-    private notify(): void {
-        this.listeners.forEach(listener => listener());
     }
 
     private loadDatabase(): Database {
@@ -57,7 +35,6 @@ class DatabaseService {
     private saveDatabase(): void {
         try {
             localStorage.setItem(DB_STORAGE_KEY, JSON.stringify(this.db));
-            this.notify(); // Notifica tutti i componenti dell'avvenuto cambiamento
         } catch (e) {
             console.error("Failed to save database to storage", e);
         }
@@ -67,7 +44,7 @@ class DatabaseService {
         return JSON.stringify(this.db, null, 2);
     }
 
-    public importDatabase(jsonString: string): { users: number, progress: number, entitlements: number } {
+    public importDatabase(jsonString: string): void {
         try {
             const newDb = JSON.parse(jsonString);
 
@@ -97,12 +74,6 @@ class DatabaseService {
             this.db = newDb as Database;
             this.saveDatabase();
             
-            return {
-                users: this.db.users.length,
-                progress: Object.keys(this.db.userProgress).length,
-                entitlements: Object.keys(this.db.entitlements).length
-            };
-            
         } catch (e: any) {
             console.error("Errore durante l'importazione del database", e);
             if (e instanceof SyntaxError) {
@@ -110,33 +81,6 @@ class DatabaseService {
             }
             throw e;
         }
-    }
-    
-    public deleteUser(email: string): boolean {
-        const lowerEmail = email.toLowerCase();
-        const userIndex = this.db.users.findIndex(u => u.email.toLowerCase() === lowerEmail);
-
-        if (userIndex > -1) {
-            // FIX: Get the user's original email *before* removing them from the list.
-            const originalEmail = this.db.users[userIndex].email;
-
-            // Remove user from the main list
-            this.db.users.splice(userIndex, 1);
-            
-            // Remove associated data using the correct email
-            if (this.db.userProgress && this.db.userProgress[originalEmail]) {
-                delete this.db.userProgress[originalEmail];
-            }
-             if (this.db.entitlements && this.db.entitlements[originalEmail]) {
-                delete this.db.entitlements[originalEmail];
-            }
-            
-            // Save all changes
-            this.saveDatabase();
-            
-            return true;
-        }
-        return false;
     }
 
 

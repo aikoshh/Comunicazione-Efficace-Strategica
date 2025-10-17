@@ -30,18 +30,14 @@ export const COLORS = {
   primaryGradient: 'linear-gradient(135deg, #0E3A5D 0%, #58A6A6 100%)',
 };
 
-// A dynamic palette of sage green shades, from lighter to darker, ensuring accessibility.
-export const SAGE_PALETTE = [
-  '#387676', // Contrast: 4.54:1
-  '#346d6d',
-  '#306565',
-  '#2c5c5c',
-  '#285353', // Contrast: 7.75:1
-  '#244b4b',
-  '#204242',
-  '#1c3939',
-  '#183131',
-  '#142828', // Contrast: 12.8:1
+// A vibrant yet professional palette for module cards.
+export const MODULE_PALETTE = [
+  '#E67E22', // Carrot Orange
+  '#3498DB', // Peter River Blue
+  '#8E44AD', // Wisteria Purple
+  '#1ABC9C', // Turquoise
+  '#F1C40F', // Sunflower Yellow
+  '#2ECC71', // Emerald Green
 ];
 
 export const VOICE_RUBRIC_CRITERIA = [
@@ -93,6 +89,7 @@ export const MODULES: Module[] = [
     description: 'Affina la capacità di ascoltare non solo per sentire, ma per comprendere a fondo, individuando le parole chiave che svelano le reali intenzioni.',
     icon: ListeningIcon,
     cardImage: cardImage5,
+    headerImage: 'https://www.centroclinicaformazionestrategica.it/CES-APP/images/ascolto%20strategico.png',
     category: 'Fondamentali',
     exercises: [
       {
@@ -124,6 +121,7 @@ export const MODULES: Module[] = [
     description: 'Impara a fornire feedback costruttivi che motivano il cambiamento senza demotivare.',
     icon: FeedbackIcon,
     cardImage: cardImage1,
+    headerImage: 'https://www.centroclinicaformazionestrategica.it/CES-APP/images/Riformulazione%20sintetica.png',
     category: 'Fondamentali',
     exercises: [
       {
@@ -155,6 +153,7 @@ export const MODULES: Module[] = [
     description: 'Scopri come usare le domande per guidare le conversazioni, stimolare il pensiero critico e scoprire informazioni cruciali.',
     icon: QuestionIcon,
     cardImage: cardImage3,
+    headerImage: 'https://www.centroclinicaformazionestrategica.it/CES-APP/images/domandare.png',
     category: 'Fondamentali',
     exercises: [
        {
@@ -182,7 +181,7 @@ export const MODULES: Module[] = [
         id: 'e16',
         title: 'Cogliere i Bisogni Non Detti',
         scenario: 'Stai parlando con un potenziale cliente che sembra interessato alla tua soluzione ma continua a dire \'Sì, interessante, ma dobbiamo pensarci\'. Vuoi capire meglio le sue reali preoccupazioni senza essere troppo diretto.',
-        task: 'Registra una domanda che potresti fare per approfondire le sue riserve, usando un tono empatico e curioso.',
+        task: 'Registra una domanda che potresti fare per approfondire le sue reserve, usando un tono empatico e curioso.',
         difficulty: DifficultyLevel.AVANZATO,
         exerciseType: ExerciseType.VERBAL,
       },
@@ -194,6 +193,7 @@ export const MODULES: Module[] = [
     description: 'Sviluppa le competenze per navigare conversazioni complesse e conflittuali con calma e professionalità.',
     icon: ConflictIcon,
     cardImage: cardImage2,
+    headerImage: 'https://www.centroclinicaformazionestrategica.it/CES-APP/images/dialogo%20strategico.png',
     category: 'Fondamentali',
     exercises: [
       {
@@ -246,6 +246,7 @@ export const MODULES: Module[] = [
     description: 'Allena il ritmo, il tono e le pause per rendere il tuo messaggio più d\'impatto e persuasivo.',
     icon: VoiceIcon,
     cardImage: cardImage6,
+    headerImage: 'https://www.centroclinicaformazionestrategica.it/CES-APP/images/Uso%20del%20silenzio%20strategico.png',
     category: 'Fondamentali',
     exercises: [
       {
@@ -280,6 +281,7 @@ export const MODULES: Module[] = [
     description: 'Crea il tuo scenario di allenamento su misura per affrontare le sfide di comunicazione che ti stanno più a cuore.',
     icon: CustomIcon,
     cardImage: cardImage4,
+    headerImage: 'https://www.centroclinicaformazionestrategica.it/CES-APP/images/Ristrutturazione%20comunicativa.png',
     exercises: [],
     isCustom: true,
     category: 'Fondamentali',
