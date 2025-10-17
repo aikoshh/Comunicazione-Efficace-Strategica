@@ -176,7 +176,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectModule, onSelect
             alt="Ivano Cincinnato, fondatore di CES Coach" 
             style={styles.headerImage}
             loading="eager"
-            fetchpriority="high"
+            // FIX: Corrected typo `fetchpriority` to `fetchPriority`.
+            fetchPriority="high"
         />
       </header>
       
