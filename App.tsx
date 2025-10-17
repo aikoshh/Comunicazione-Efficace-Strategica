@@ -13,7 +13,7 @@ import { Header } from './components/Header';
 import { PaywallScreen } from './components/PaywallScreen';
 import { AdminScreen } from './components/AdminScreen';
 import type { Module, Exercise, AnalysisResult, VoiceAnalysisResult, DifficultyLevel, User, UserProgress, CommunicatorProfile, Breadcrumb, Entitlements, Product, AnalysisHistoryEntry } from './types';
-import { MODULES, COLORS, STRATEGIC_CHECKUP_EXERCISES } from './constants';
+import { MODULES, COLORS, STRATEGIC_CHECKUP_EXERCISES, MODULE_PALETTE } from './constants';
 import { soundService } from './services/soundService';
 import { getUserEntitlements, purchaseProduct, restorePurchases, hasProAccess } from './services/monetizationService';
 import { useToast } from './hooks/useToast';
@@ -25,9 +25,9 @@ import { databaseService } from './services/databaseService';
 
 type AppState =
   | { screen: 'home' }
-  | { screen: 'module'; module: Module }
+  | { screen: 'module'; module: Module; moduleColor: string }
   | { screen: 'custom_setup'; module: Module }
-  | { screen: 'exercise'; exercise: Exercise; isCheckup?: boolean; checkupStep?: number; totalCheckupSteps?: number }
+  | { screen: 'exercise'; exercise: Exercise; isCheckup?: boolean; checkupStep?: number; totalCheckupSteps?: number; moduleColor?: string }
   | { screen: 'report'; result: AnalysisResult; exercise: Exercise; nextExercise?: Exercise; currentModule?: Module; userResponse?: string; isReview?: boolean }
   | { screen: 'voice_report'; result: VoiceAnalysisResult; exercise: Exercise; nextExercise?: Exercise; currentModule?: Module; userResponse?: string; isReview?: boolean }
   | { screen: 'api_key_error'; error: string }
@@ -82,9 +82,6 @@ const App: React.FC = () => {
   const [isSoundEnabled, setIsSoundEnabled] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
 
-  // A state to force re-render when user list changes in admin panel
-  const [adminUserListVersion, setAdminUserListVersion] = useState(0);
-
   useEffect(() => {
     soundService.toggleSound(isSoundEnabled);
   }, [isSoundEnabled]);
@@ -117,9 +114,20 @@ const App: React.FC = () => {
       }
   }, []);
 
+  // Subscribe to database changes to keep global state in sync
   useEffect(() => {
-    databaseService.saveAllUserProgress(userProgress);
-  }, [userProgress]);
+    const unsubscribe = databaseService.subscribe(() => {
+        // When the database changes (e.g., after an import in AdminScreen),
+        // re-sync the app-level state that depends on it.
+        setUserProgress(databaseService.getAllUserProgress());
+        if (currentUser) {
+            getUserEntitlements(currentUser).then(setEntitlements);
+        }
+    });
+
+    return () => unsubscribe();
+  }, [currentUser]);
+
 
   useEffect(() => {
       // Session Persistence: Save state on change
@@ -146,20 +154,18 @@ const App: React.FC = () => {
   }, [isAuthenticated, currentUser]);
 
   const updateUserProgress = (email: string, updates: Partial<UserProgress>) => {
-      setUserProgress(prev => {
-          const currentProgress = prev[email] || { 
-              scores: [], 
-              completedExerciseIds: [], 
-              skippedExerciseIds: [],
-              completedModuleIds: [],
-              analysisHistory: [],
-              competenceScores: { ascolto: 0, riformulazione: 0, assertivita: 0, gestione_conflitto: 0 } 
-          };
-          return {
-              ...prev,
-              [email]: { ...currentProgress, ...updates }
-          };
-      });
+      const allProgress = databaseService.getAllUserProgress();
+      const currentProgress = allProgress[email] || { 
+          scores: [], 
+          completedExerciseIds: [], 
+          skippedExerciseIds: [],
+          completedModuleIds: [],
+          analysisHistory: [],
+          competenceScores: { ascolto: 0, riformulazione: 0, assertivita: 0, gestione_conflitto: 0 } 
+      };
+      allProgress[email] = { ...currentProgress, ...updates };
+      databaseService.saveAllUserProgress(allProgress);
+      // The subscription will handle the `setUserProgress` state update.
   };
 
   const navigateToPaywall = () => {
@@ -212,7 +218,6 @@ const App: React.FC = () => {
   
   const handleRegister = async (newUser: { firstName: string; lastName: string; email: string; password: string }) => {
     await userService.addUser(newUser.email, newUser.password, newUser.firstName, newUser.lastName);
-    setAdminUserListVersion(v => v + 1);
   };
   
   const handleGuestAccess = (key: string) => {
@@ -251,16 +256,16 @@ const App: React.FC = () => {
       setAppState({ screen: 'home' });
   };
 
-  const handleSelectModule = (module: Module) => {
+  const handleSelectModule = (module: Module, color: string) => {
     if (module.isCustom) {
       setAppState({ screen: 'custom_setup', module });
     } else {
-      setAppState({ screen: 'module', module });
+      setAppState({ screen: 'module', module, moduleColor: color });
     }
   };
 
-  const handleSelectExercise = (exercise: Exercise, isCheckup: boolean = false, checkupStep: number = 0, totalCheckupSteps: number = 0) => {
-    setAppState({ screen: 'exercise', exercise, isCheckup, checkupStep, totalCheckupSteps });
+  const handleSelectExercise = (exercise: Exercise, isCheckup: boolean = false, checkupStep: number = 0, totalCheckupSteps: number = 0, moduleColor?: string) => {
+    setAppState({ screen: 'exercise', exercise, isCheckup, checkupStep, totalCheckupSteps, moduleColor });
   };
 
   const handleReviewExercise = async (exerciseId: string) => {
@@ -479,9 +484,10 @@ const App: React.FC = () => {
       if (appState.screen === 'exercise') {
           const { nextExercise, currentModule } = findNextExerciseInModule(appState.exercise.id);
           if (nextExercise) {
-              handleSelectExercise(nextExercise);
+              handleSelectExercise(nextExercise, false, 0, 0, appState.moduleColor);
           } else if (currentModule) {
-              handleSelectModule(currentModule);
+              const moduleIndex = MODULES.findIndex(m => m.id === currentModule.id);
+              handleSelectModule(currentModule, MODULE_PALETTE[moduleIndex % MODULE_PALETTE.length]);
           } else {
               setAppState({ screen: 'home' });
           }
@@ -490,7 +496,15 @@ const App: React.FC = () => {
 
   const handleRetryExercise = () => {
       if (appState.screen === 'report' || appState.screen === 'voice_report') {
-          setAppState({ screen: 'exercise', exercise: appState.exercise });
+          const moduleForExercise = MODULES.find(m => m.exercises.some(e => e.id === appState.exercise.id));
+          let moduleColor: string | undefined = undefined;
+          if(moduleForExercise) {
+              const moduleIndex = MODULES.findIndex(m => m.id === moduleForExercise.id);
+              if(moduleIndex !== -1) {
+                  moduleColor = MODULE_PALETTE[moduleIndex % MODULE_PALETTE.length];
+              }
+          }
+          setAppState({ screen: 'exercise', exercise: appState.exercise, moduleColor });
       }
   };
   
@@ -518,8 +532,16 @@ const App: React.FC = () => {
             setAppState({ screen: 'strategic_checkup' });
         } else {
             const moduleForExercise = MODULES.find(m => m.exercises.some(e => e.id === appState.exercise.id));
-            if (moduleForExercise) setAppState({ screen: 'module', module: moduleForExercise });
-            else setAppState({ screen: 'home' });
+            if (moduleForExercise && appState.moduleColor) {
+                setAppState({ screen: 'module', module: moduleForExercise, moduleColor: appState.moduleColor });
+            } else if (moduleForExercise) {
+                // Fallback to find color if it's missing in state (e.g., from older session)
+                const moduleIndex = MODULES.findIndex(m => m.id === moduleForExercise.id);
+                const color = MODULE_PALETTE[moduleIndex % MODULE_PALETTE.length] || MODULE_PALETTE[0];
+                setAppState({ screen: 'module', module: moduleForExercise, moduleColor: color });
+            } else {
+                setAppState({ screen: 'home' });
+            }
         }
     }
   };
@@ -538,14 +560,16 @@ const App: React.FC = () => {
             return [homeCrumb, { label: appState.module.title }];
         case 'exercise':
             const module = MODULES.find(m => m.exercises.some(e => e.id === appState.exercise.id));
-            if (module) {
-                return [homeCrumb, { label: module.title, onClick: () => setAppState({ screen: 'module', module }) }, { label: "Esercizio" }];
+            if (module && appState.moduleColor) {
+                return [homeCrumb, { label: module.title, onClick: () => setAppState({ screen: 'module', module, moduleColor: appState.moduleColor }) }, { label: "Esercizio" }];
             }
             return [homeCrumb, { label: "Esercizio" }];
         case 'report':
         case 'voice_report':
              if (appState.currentModule) {
-                return [homeCrumb, { label: appState.currentModule.title, onClick: () => setAppState({ screen: 'module', module: appState.currentModule }) }, { label: "Report" }];
+                 const moduleIndex = MODULES.findIndex(m => m.id === appState.currentModule!.id);
+                 const color = MODULE_PALETTE[moduleIndex % MODULE_PALETTE.length] || MODULE_PALETTE[0];
+                return [homeCrumb, { label: appState.currentModule.title, onClick: () => setAppState({ screen: 'module', module: appState.currentModule!, moduleColor: color }) }, { label: "Report" }];
              }
              return [homeCrumb, { label: "Report" }];
         case 'strategic_checkup':
@@ -559,14 +583,6 @@ const App: React.FC = () => {
         default:
             return [homeCrumb];
     }
-  };
-
-  // --- Admin Panel Handlers ---
-  const handleAdminUpdate = () => {
-    // This is the key fix: reload progress data from the single source of truth
-    // to prevent stale state from overwriting the imported data.
-    setUserProgress(databaseService.getAllUserProgress());
-    setAdminUserListVersion(v => v + 1);
   };
 
   if (isLoading) {
@@ -598,7 +614,10 @@ const App: React.FC = () => {
       screenKey = appState.module.id;
       screenContent = <ModuleScreen 
                         module={appState.module} 
-                        onSelectExercise={handleSelectExercise} 
+                        moduleColor={appState.moduleColor}
+                        // FIX: Pass an inline function to adapt the call to handleSelectExercise,
+                        // which expects additional optional arguments not provided by ModuleScreen.
+                        onSelectExercise={(exercise, moduleColor) => handleSelectExercise(exercise, false, 0, 0, moduleColor)} 
                         onReviewExercise={handleReviewExercise}
                         onBack={handleBack} 
                         completedExerciseIds={completedExerciseIds} 
@@ -636,11 +655,19 @@ const App: React.FC = () => {
         const { nextExercise, currentModule, isReview, userResponse } = appState;
         const onNextExercise = () => {
             if (isReview && currentModule) {
-                handleSelectModule(currentModule);
+                 const moduleIndex = MODULES.findIndex(m => m.id === currentModule.id);
+                 handleSelectModule(currentModule, MODULE_PALETTE[moduleIndex % MODULE_PALETTE.length]);
             } else if (nextExercise) {
-                handleSelectExercise(nextExercise);
+                const nextModule = MODULES.find(m => m.exercises.some(e => e.id === nextExercise.id));
+                let nextColor = MODULE_PALETTE[0];
+                if(nextModule){
+                    const moduleIndex = MODULES.findIndex(m => m.id === nextModule.id);
+                    nextColor = MODULE_PALETTE[moduleIndex % MODULE_PALETTE.length];
+                }
+                handleSelectExercise(nextExercise, false, 0, 0, nextColor);
             } else if (currentModule) {
-                handleSelectModule(currentModule);
+                const moduleIndex = MODULES.findIndex(m => m.id === currentModule.id);
+                handleSelectModule(currentModule, MODULE_PALETTE[moduleIndex % MODULE_PALETTE.length]);
             } else {
                 setAppState({ screen: 'home' });
             }
@@ -695,11 +722,7 @@ const App: React.FC = () => {
         break;
     case 'admin':
         screenKey = 'admin';
-        screenContent = <AdminScreen 
-            key={adminUserListVersion}
-            onBack={handleBack}
-            onUsersUpdate={handleAdminUpdate}
-        />;
+        screenContent = <AdminScreen onBack={handleBack} />;
         break;
     default:
         screenContent = <HomeScreen 
