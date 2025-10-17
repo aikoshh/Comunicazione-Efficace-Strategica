@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { User } from '../types';
 import { userService } from '../services/userService';
 import { databaseService } from '../services/databaseService';
@@ -9,7 +9,6 @@ import { soundService } from '../services/soundService';
 
 interface AdminScreenProps {
   onBack: () => void;
-  onUsersUpdate: () => void;
 }
 
 // A type for the data being edited to avoid type conflicts with the main User type
@@ -27,7 +26,7 @@ const isoToDateTimeLocal = (isoString: string | null): string => {
   }
 };
 
-export const AdminScreen: React.FC<AdminScreenProps> = ({ onBack, onUsersUpdate }) => {
+export const AdminScreen: React.FC<AdminScreenProps> = ({ onBack }) => {
   const [users, setUsers] = useState<User[]>(() => userService.listUsers());
   const { addToast } = useToast();
   const importInputRef = useRef<HTMLInputElement>(null);
@@ -42,6 +41,18 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({ onBack, onUsersUpdate 
   const [editedUserData, setEditedUserData] = useState<EditableUserData>({});
   
   const [fileToImport, setFileToImport] = useState<File | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
+  const [importProgress, setImportProgress] = useState(0);
+
+  const refreshUserList = useCallback(() => {
+    setUsers(userService.listUsers());
+  }, []);
+
+  // Subscribe to database changes to keep the user list in sync
+  useEffect(() => {
+    const unsubscribe = databaseService.subscribe(refreshUserList);
+    return () => unsubscribe();
+  }, [refreshUserList]);
 
 
   const handleAddUser = async (e: React.FormEvent) => {
@@ -55,9 +66,7 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({ onBack, onUsersUpdate 
     try {
         await userService.addUser(newEmail, newPassword, newFirstName, newLastName);
         addToast("Utente aggiunto con successo.", "success");
-        setUsers(userService.listUsers());
-        onUsersUpdate();
-        // Reset form
+        // Reset form - UI will update automatically via subscription
         setNewEmail('');
         setNewPassword('');
         setNewFirstName('');
@@ -99,21 +108,14 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({ onBack, onUsersUpdate 
 
       await userService.updateUser(email, updates);
       addToast("Utente aggiornato con successo.", "success");
-      setUsers(userService.listUsers());
-      onUsersUpdate();
       cancelEditing();
     } catch (e: any) {
       addToast(e.message, 'error');
     }
   };
 
-  const handleInputChange = (field: keyof EditableUserData, value: string | boolean) => {
-    if (field === 'expiryDate' && typeof value === 'string') {
-        const isoValue = value ? new Date(value).toISOString() : null;
-        setEditedUserData(prev => ({ ...prev, [field]: isoValue }));
-    } else {
-        setEditedUserData(prev => ({ ...prev, [field]: value }));
-    }
+  const handleEditFormChange = (field: keyof EditableUserData, value: string | boolean | null) => {
+      setEditedUserData(prev => ({...prev, [field]: value}));
   };
 
   const handleDeleteUser = (email: string) => {
@@ -121,8 +123,7 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({ onBack, onUsersUpdate 
     if (confirm(`Sei sicuro di voler eliminare l'utente ${email}? L'azione è irreversibile.`)) {
         if (userService.deleteUser(email)) {
             addToast("Utente eliminato.", "success");
-            setUsers(userService.listUsers());
-            onUsersUpdate();
+            // UI will update automatically
         } else {
             addToast("Impossibile trovare l'utente.", "error");
         }
@@ -141,8 +142,7 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({ onBack, onUsersUpdate 
     const updatedUser = userService.extendSubscription(email, days);
     if (updatedUser) {
         addToast(`Abbonamento esteso. Nuova scadenza: ${updatedUser.expiryDate ? new Date(updatedUser.expiryDate).toLocaleDateString() : 'Nessuna'}`, "success");
-        setUsers(userService.listUsers());
-        onUsersUpdate();
+        // UI will update automatically
     } else {
         addToast("Impossibile trovare l'utente.", "error");
     }
@@ -185,21 +185,46 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({ onBack, onUsersUpdate 
         return;
     }
 
+    setIsImporting(true);
+    setImportProgress(0);
+
+    // Simulate progress for UX
+    const progressInterval = setInterval(() => {
+        setImportProgress(prev => {
+            if (prev >= 95) { // Stop just before 100
+                clearInterval(progressInterval);
+                return prev;
+            }
+            return prev + 5;
+        });
+    }, 50);
+
     const reader = new FileReader();
     reader.onload = (e) => {
-        try {
-            const content = e.target?.result as string;
-            databaseService.importDatabase(content);
-            userService.reloadUsers();
-            setUsers(userService.listUsers());
-            onUsersUpdate();
-            addToast("Database importato con successo. La lista utenti è stata aggiornata.", "success");
-        } catch (error: any) {
-            addToast(error.message, 'error');
-        } finally {
-            setFileToImport(null);
-            if (importInputRef.current) importInputRef.current.value = '';
-        }
+        clearInterval(progressInterval);
+        setImportProgress(100);
+
+        setTimeout(() => { // Brief delay to show 100%
+            try {
+                const content = e.target?.result;
+                if (typeof content !== 'string') {
+                    throw new Error("Contenuto del file non valido o illeggibile.");
+                }
+                const summary = databaseService.importDatabase(content);
+                addToast(`Importazione completata! Caricati: ${summary.users} utenti, ${summary.progress} progressi, ${summary.entitlements} acquisti.`, "success");
+            } catch (error: any) {
+                addToast(error.message, 'error');
+            } finally {
+                setIsImporting(false);
+                setFileToImport(null);
+                if (importInputRef.current) importInputRef.current.value = '';
+            }
+        }, 300);
+    };
+    reader.onerror = () => {
+      clearInterval(progressInterval);
+      setIsImporting(false);
+      addToast("Errore durante la lettura del file.", "error");
     };
     reader.readAsText(fileToImport);
   };
@@ -263,10 +288,10 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({ onBack, onUsersUpdate 
         <h2 style={styles.formTitle}>Import / Export Dati</h2>
         <div style={styles.importExportSection}>
             <div style={styles.importExportActions}>
-                <button onClick={handleExport} style={{...styles.actionButton, ...styles.exportButton}}>
+                <button onClick={handleExport} style={{...styles.actionButton, ...styles.exportButton}} disabled={isImporting}>
                     Esporta Database (.json)
                 </button>
-                <button onClick={() => importInputRef.current?.click()} style={{...styles.actionButton, ...styles.importButton}}>
+                <button onClick={() => importInputRef.current?.click()} style={{...styles.actionButton, ...styles.importButton}} disabled={isImporting}>
                     Seleziona File di Backup...
                 </button>
                 <input
@@ -277,12 +302,20 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({ onBack, onUsersUpdate 
                     onChange={handleFileSelect}
                 />
             </div>
-            {fileToImport && (
+            {fileToImport && !isImporting && (
                 <div style={styles.fileSelectedContainer}>
                     <span style={styles.fileName}>{fileToImport.name}</span>
                     <button onClick={handleImport} style={{...styles.actionButton, ...styles.loadButton}}>
                         Carica File
                     </button>
+                </div>
+            )}
+            {isImporting && (
+                <div style={styles.progressBarContainer}>
+                    <div style={styles.progressText}>Caricamento: {importProgress}%</div>
+                    <div style={styles.progressBar}>
+                        <div style={{ ...styles.progressBarFill, width: `${importProgress}%`}} />
+                    </div>
                 </div>
             )}
         </div>
@@ -309,27 +342,27 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({ onBack, onUsersUpdate 
                       </div>
                        <div style={styles.editGroup}>
                           <label style={styles.editLabel}>Nome</label>
-                          <input type="text" value={editedUserData.firstName} onChange={e => handleInputChange('firstName', e.target.value)} style={styles.editInput} />
+                          <input type="text" value={editedUserData.firstName} onChange={e => handleEditFormChange('firstName', e.target.value)} style={styles.editInput} />
                       </div>
                        <div style={styles.editGroup}>
                           <label style={styles.editLabel}>Cognome</label>
-                          <input type="text" value={editedUserData.lastName} onChange={e => handleInputChange('lastName', e.target.value)} style={styles.editInput} />
+                          <input type="text" value={editedUserData.lastName} onChange={e => handleEditFormChange('lastName', e.target.value)} style={styles.editInput} />
                       </div>
                       <div style={styles.editGroup}>
                           <label style={styles.editLabel}>Nuova Password</label>
-                          <input type="password" placeholder="Lascia vuoto per non cambiare" value={editedUserData.password} onChange={e => handleInputChange('password', e.target.value)} style={styles.editInput} />
+                          <input type="password" placeholder="Lascia vuoto per non cambiare" value={editedUserData.password} onChange={e => handleEditFormChange('password', e.target.value)} style={styles.editInput} />
                       </div>
                        <div style={styles.editGroup}>
                           <label style={styles.editLabel}>Scadenza</label>
-                          <input type="datetime-local" value={isoToDateTimeLocal(editedUserData.expiryDate ?? null)} onChange={e => handleInputChange('expiryDate', e.target.value)} style={styles.editInput} />
+                          <input type="datetime-local" value={isoToDateTimeLocal(editedUserData.expiryDate ?? null)} onChange={e => handleEditFormChange('expiryDate', e.target.value ? new Date(e.target.value).toISOString() : null)} style={styles.editInput} />
                       </div>
                       <div style={styles.checkboxGroup}>
                           <label style={styles.checkboxLabel}>
-                              <input type="checkbox" checked={!!editedUserData.isAdmin} onChange={e => handleInputChange('isAdmin', e.target.checked)} />
+                              <input type="checkbox" checked={!!editedUserData.isAdmin} onChange={e => handleEditFormChange('isAdmin', e.target.checked)} />
                               Amministratore
                           </label>
                           <label style={styles.checkboxLabel}>
-                              <input type="checkbox" checked={!!editedUserData.enabled} onChange={e => handleInputChange('enabled', e.target.checked)} />
+                              <input type="checkbox" checked={!!editedUserData.enabled} onChange={e => handleEditFormChange('enabled', e.target.checked)} />
                               Abilitato
                           </label>
                       </div>
@@ -424,6 +457,27 @@ const styles: { [key: string]: React.CSSProperties } = {
     },
     importButton: {
         backgroundColor: COLORS.secondary,
+    },
+    progressBarContainer: {
+        width: '100%',
+    },
+    progressText: {
+        fontSize: '14px',
+        color: COLORS.textSecondary,
+        marginBottom: '4px',
+        textAlign: 'center'
+    },
+    progressBar: {
+        height: '10px',
+        backgroundColor: COLORS.divider,
+        borderRadius: '5px',
+        overflow: 'hidden',
+    },
+    progressBarFill: {
+        height: '100%',
+        backgroundColor: COLORS.success,
+        borderRadius: '5px',
+        transition: 'width 0.1s linear',
     },
     importExportDescription: {
         fontSize: '14px',
