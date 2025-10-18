@@ -618,7 +618,7 @@ const App: React.FC = () => {
       screenContent = <ModuleScreen 
                         module={appState.module} 
                         moduleColor={appState.moduleColor}
-                        onSelectExercise={(exercise) => handleSelectExercise(exercise, false, 0, 0, appState.moduleColor)} 
+                        onSelectExercise={(exercise, moduleColor) => handleSelectExercise(exercise, false, 0, 0, moduleColor)} 
                         onReviewExercise={handleReviewExercise}
                         onBack={handleBack} 
                         completedExerciseIds={completedExerciseIds} 
