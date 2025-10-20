@@ -57,7 +57,7 @@ export const UpsellBanner: React.FC<UpsellBannerProps> = ({ product, score, onUn
                     className="upsell-button-primary" 
                     disabled={isUnlocking}
                 >
-                    {isUnlocking ? <Spinner size={20} color="white"/> : `Sblocca (Una Tantum) - ${product.price}`}
+                    {isUnlocking ? <Spinner size={20} color="white"/> : `Sblocca (1 Anno) - ${product.price}`}
                 </button>
             </div>
         </div>

@@ -73,6 +73,7 @@ export const FullScreenLoader: React.FC<LoaderProps> = ({ estimatedTime = DEFAUL
       />
       <p style={{...styles.text, animation: 'rapid-blink 1s infinite ease-in-out'}}>Analisi in corso...</p>
       <p style={styles.subtext}>L'AI sta elaborando la tua risposta, attendi qualche istante.</p>
+      <p style={styles.warningText}>Non uscire dalla pagina!</p>
 
        <div style={styles.quoteContainer}>
         <p style={styles.quoteText}>"{quote.text}"</p>
@@ -149,6 +150,13 @@ const styles: { [key: string]: React.CSSProperties } = {
     maxWidth: '320px',
     lineHeight: 1.5,
     margin: 0,
+  },
+  warningText: {
+    color: COLORS.error,
+    fontSize: '18px',
+    fontWeight: 'bold',
+    marginTop: '16px',
+    animation: 'rapid-blink 1.5s infinite ease-in-out',
   },
    quoteContainer: {
     marginTop: '32px',

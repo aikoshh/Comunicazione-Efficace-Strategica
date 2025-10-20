@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { COLORS } from '../constants';
-import { cesLogoUrl, loginBackground } from '../assets';
+import { mainLogoUrl } from '../assets';
 import { soundService } from '../services/soundService';
 import { Spinner } from './Loader';
 import { useToast } from '../hooks/useToast';
@@ -152,7 +152,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onRegister, o
   
   const dynamicStyles = `
     .login-input::placeholder {
-      color: #AAAAAA;
+      color: ${COLORS.textSecondary};
+      opacity: 0.7;
     }
     .login-input:focus {
         border-color: ${COLORS.secondary};
@@ -177,11 +178,12 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onRegister, o
       <style>{dynamicStyles}</style>
       <div style={styles.loginBox} className="login-box-container">
         <div style={styles.logoContainer}>
-            <img src={cesLogoUrl} alt="Comunicazione Efficace Strategica Logo" style={styles.logoImage} />
+            <img src={mainLogoUrl} alt="CES Coach Logo" style={styles.logoImage} />
         </div>
         {view === 'login' ? (
            <>
             <h1 style={styles.title}>Benvenuto in<br /><strong>CES Coach</strong></h1>
+            <p style={styles.loginSubtitle}>il primo coach basato sull'AI che ti permette di rendere la tua comunicazione efficace e strategica in poco tempo!</p>
             <form onSubmit={handleLoginSubmit} style={styles.form}>
               <div style={styles.inputGroup}>
                 <label htmlFor="email" style={styles.label}>Email</label>
@@ -246,14 +248,14 @@ const styles: { [key: string]: React.CSSProperties } = {
         backgroundColor: '#000000',
     },
     loginBox: {
-        backgroundColor: '#FFFFFF',
+        backgroundColor: COLORS.base,
         padding: '40px',
         borderRadius: '12px',
         border: `1px solid ${COLORS.divider}`,
         width: '100%',
         maxWidth: '450px',
         textAlign: 'center',
-        boxShadow: '0 8px 30px rgba(0,0,0,0.5)',
+        boxShadow: '0 8px 30px rgba(0,0,0,0.1)',
         animation: 'fadeInUp 0.5s ease-out'
     },
     logoContainer: { marginBottom: '24px', display: 'flex', justifyContent: 'center' },
@@ -262,18 +264,25 @@ const styles: { [key: string]: React.CSSProperties } = {
         maxWidth: '320px',
         height: 'auto',
     },
-    title: { fontSize: '24px', color: COLORS.textAccent, marginBottom: '32px', fontWeight: 400, lineHeight: 1.4 },
+    title: { fontSize: '24px', color: COLORS.textPrimary, marginBottom: '8px', fontWeight: 400, lineHeight: 1.4 },
+    loginSubtitle: {
+        fontSize: '16px',
+        color: COLORS.textSecondary,
+        lineHeight: 1.6,
+        marginBottom: '32px',
+        marginTop: '0',
+    },
     subtitle: { fontSize: '16px', color: COLORS.textSecondary, margin: '0 auto 32px', lineHeight: 1.6 },
     form: { display: 'flex', flexDirection: 'column', gap: '20px', textAlign: 'left' },
     inputGroup: { display: 'flex', flexDirection: 'column', flex: 1 },
-    label: { marginBottom: '8px', fontSize: '14px', fontWeight: '500', color: COLORS.textSecondary },
+    label: { marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: COLORS.textPrimary },
     input: {
         padding: '12px 16px',
         fontSize: '16px',
         borderRadius: '8px',
         border: `1px solid ${COLORS.divider}`,
         fontFamily: 'inherit',
-        backgroundColor: '#FFFFFF',
+        backgroundColor: COLORS.card,
         color: COLORS.textPrimary,
         outline: 'none',
         transition: 'border-color 0.2s, box-shadow 0.2s'
@@ -293,7 +302,7 @@ const styles: { [key: string]: React.CSSProperties } = {
         color: COLORS.textSecondary,
     },
     link: {
-        color: COLORS.primary,
+        color: COLORS.secondary,
         textDecoration: 'underline',
         fontWeight: 500
     },

@@ -6,11 +6,12 @@ import { soundService } from '../services/soundService';
 
 interface ExercisePreviewModalProps {
   exercise: Exercise;
+  color: string;
   onClose: () => void;
   onStart: (exercise: Exercise) => void;
 }
 
-export const ExercisePreviewModal: React.FC<ExercisePreviewModalProps> = ({ exercise, onClose, onStart }) => {
+export const ExercisePreviewModal: React.FC<ExercisePreviewModalProps> = ({ exercise, color, onClose, onStart }) => {
   const modalRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -52,10 +53,10 @@ export const ExercisePreviewModal: React.FC<ExercisePreviewModalProps> = ({ exer
         aria-labelledby="exercise-preview-title"
         tabIndex={-1}
       >
-        <header style={styles.header}>
+        <header style={{...styles.header, backgroundColor: color}}>
             <div style={styles.titleContainer}>
-                <ExerciseIcon style={styles.icon}/>
-                <h2 id="exercise-preview-title" style={styles.title}>{exercise.title}</h2>
+                <ExerciseIcon style={{...styles.icon, color: 'white'}}/>
+                <h2 id="exercise-preview-title" style={{...styles.title, color: 'white'}}>{exercise.title}</h2>
             </div>
             <button onClick={handleClose} style={styles.closeButton} aria-label="Chiudi anteprima">
               <CloseIcon />
@@ -99,6 +100,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     maxHeight: '90vh',
     border: `1px solid ${COLORS.divider}`,
     outline: 'none',
+    overflow: 'hidden'
   },
   header: {
     padding: '20px 24px',
@@ -122,7 +124,7 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
   closeButton: {
     background: 'none', border: 'none', cursor: 'pointer',
-    padding: '4px', color: COLORS.textSecondary
+    padding: '4px', color: 'white', opacity: 0.8
   },
   content: {
     overflowY: 'auto',

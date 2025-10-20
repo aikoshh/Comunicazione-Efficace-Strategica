@@ -60,20 +60,16 @@ const shadeColor = (color: string, percent: number): string => {
 export const ModuleScreen: React.FC<ModuleScreenProps> = ({ module, moduleColor, onSelectExercise, onReviewExercise, onBack, completedExerciseIds, entitlements }) => {
   const [isLibraryModalOpen, setLibraryModalOpen] = useState(false);
   const [isChecklistModalOpen, setChecklistModalOpen] = useState(false);
-  const [previewingExercise, setPreviewingExercise] = useState<Exercise | null>(null);
+  const [previewingExercise, setPreviewingExercise] = useState<{exercise: Exercise, color: string} | null>(null);
   
-  const handleExerciseClick = (exercise: Exercise) => {
-    soundService.playClick();
-    setPreviewingExercise(exercise);
-  }
-
-  const handleCardClick = (exercise: Exercise) => {
+  const handleCardClick = (exercise: Exercise, color: string) => {
     const isCompleted = completedExerciseIds.includes(exercise.id);
     if (isCompleted) {
         soundService.playClick();
         onReviewExercise(exercise.id);
     } else {
-        handleExerciseClick(exercise);
+        soundService.playClick();
+        setPreviewingExercise({ exercise, color });
     }
   };
 
@@ -144,10 +140,11 @@ export const ModuleScreen: React.FC<ModuleScreenProps> = ({ module, moduleColor,
       <main style={styles.exerciseList}>
         {module.exercises.map((exercise, index) => {
           const isCompleted = completedExerciseIds.includes(exercise.id);
+          const cardBackgroundColor = difficultyShades[exercise.difficulty];
           
           const baseCardStyle = {
             ...styles.exerciseCard,
-            backgroundColor: difficultyShades[exercise.difficulty],
+            backgroundColor: cardBackgroundColor,
             animation: `fadeInUp 0.4s ${0.1 + index * 0.05}s ease-out both`,
           };
 
@@ -167,7 +164,7 @@ export const ModuleScreen: React.FC<ModuleScreenProps> = ({ module, moduleColor,
               key={exercise.id} 
               className={`exercise-card ${isCompleted ? 'completed' : ''}`}
               style={cardStyle} 
-              onClick={() => handleCardClick(exercise)}
+              onClick={() => handleCardClick(exercise, cardBackgroundColor)}
               onMouseEnter={() => soundService.playHover()}
             >
               <div style={styles.exerciseHeader}>
@@ -199,7 +196,8 @@ export const ModuleScreen: React.FC<ModuleScreenProps> = ({ module, moduleColor,
     <PreparationChecklistModal isOpen={isChecklistModalOpen} onClose={() => setChecklistModalOpen(false)} />
     {previewingExercise && (
         <ExercisePreviewModal 
-            exercise={previewingExercise}
+            exercise={previewingExercise.exercise}
+            color={previewingExercise.color}
             onClose={() => setPreviewingExercise(null)}
             onStart={handleStartExercise}
         />

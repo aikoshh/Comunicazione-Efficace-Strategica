@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import type { User, Breadcrumb } from '../types';
 import { COLORS } from '../constants';
 import { Logo } from './Logo';
-import { ChevronRightIcon, SpeakerIcon, SpeakerOffIcon, SettingsIcon, CloseIcon } from './Icons';
+import { ChevronRightIcon, SpeakerIcon, SpeakerOffIcon, SettingsIcon, CloseIcon, CrownIcon } from './Icons';
+import { mainLogoUrl } from '../assets';
 
 
 interface HeaderProps {
@@ -183,7 +184,7 @@ export const Header: React.FC<HeaderProps> = ({ currentUser, breadcrumbs, onLogo
 
                     {!isPro && (
                         <button onClick={handleGoToPaywallClick} style={{...styles.settingsPanelButton, ...styles.proPanelButton}} className="pro-panel-button">
-                            Sblocca PRO
+                            <CrownIcon width={20} height={20} /> Sblocca PRO
                         </button>
                     )}
                     <div style={styles.settingsOption}>
@@ -203,6 +204,10 @@ export const Header: React.FC<HeaderProps> = ({ currentUser, breadcrumbs, onLogo
                             Logout
                          </button>
                     )}
+                    
+                    <div style={styles.settingsLogoContainer}>
+                        <img src={mainLogoUrl} alt="CES Coach Logo" style={styles.settingsLogo}/>
+                    </div>
                 </div>
             </div>
           </>
@@ -372,6 +377,7 @@ const styles: { [key: string]: React.CSSProperties } = {
       flexDirection: 'column',
       gap: '16px',
       flex: 1,
+      overflowY: 'auto',
   },
   settingsUserDisplay: {
     display: 'flex',
@@ -466,6 +472,10 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontWeight: 'bold',
     textAlign: 'center',
     transition: 'filter 0.2s ease',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '8px'
   },
   logoutButton: {
     backgroundColor: '#FABD7F',
@@ -474,4 +484,15 @@ const styles: { [key: string]: React.CSSProperties } = {
     textAlign: 'center',
     border: 'none',
   },
+  settingsLogoContainer: {
+    marginTop: 'auto',
+    paddingTop: '24px',
+    textAlign: 'center',
+  },
+  settingsLogo: {
+    width: '80%',
+    maxWidth: '200px',
+    height: 'auto',
+    opacity: 0.8,
+  }
 };

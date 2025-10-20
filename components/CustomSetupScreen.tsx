@@ -82,6 +82,9 @@ const CustomSetupScreen: React.FC<CustomSetupScreenProps> = ({ module, onStart, 
         <div style={styles.container}>
             <style>{hoverStyle}</style>
             <header style={styles.header}>
+                {module.headerImage && (
+                    <img src={module.headerImage} alt={`Illustrazione per ${module.title}`} style={styles.headerImage} />
+                )}
                 <div style={styles.titleContainer}>
                     <module.icon width={32} height={32} color={COLORS.secondary} />
                     <h1 style={styles.title}>{module.title}</h1>
@@ -156,6 +159,14 @@ const CustomSetupScreen: React.FC<CustomSetupScreenProps> = ({ module, onStart, 
 const styles: { [key: string]: React.CSSProperties } = {
   container: { maxWidth: '800px', margin: '0 auto', padding: '40px 20px', backgroundColor: COLORS.base, minHeight: '100vh' },
   header: { marginBottom: '40px', textAlign: 'center' },
+  headerImage: {
+    width: '100%',
+    height: '250px',
+    objectFit: 'cover',
+    borderRadius: '12px',
+    marginBottom: '24px',
+    boxShadow: '0 4px 15px rgba(0,0,0,0.1)',
+  },
   titleContainer: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', marginBottom: '16px' },
   title: { fontSize: '32px', color: COLORS.textPrimary, fontWeight: 'bold' },
   description: { fontSize: '18px', color: COLORS.textSecondary, lineHeight: 1.6, maxWidth: '650px', margin: '0 auto' },

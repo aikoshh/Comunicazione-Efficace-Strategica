@@ -2,9 +2,10 @@ import React, { useState } from 'react';
 import type { Product, Entitlements } from '../types';
 import { PRODUCTS } from '../products';
 import { COLORS } from '../constants';
-import { CheckCircleIcon, BarChartIcon, VoiceIcon, LightbulbIcon } from './Icons';
+import { CheckCircleIcon, BarChartIcon, VoiceIcon, LightbulbIcon, CrownIcon } from './Icons';
 import { soundService } from '../services/soundService';
 import { Spinner } from './Loader';
+import { risultatiProImg, replayStrategicoImg, librerieStrategicheImg, riepilogoVantaggiProImg } from '../assets';
 
 interface PaywallScreenProps {
   entitlements: Entitlements;
@@ -18,19 +19,19 @@ const proFeatures = [
         icon: BarChartIcon,
         title: 'Analisi Dettagliata con Rubriche PRO',
         description: 'Ricevi un\'analisi approfondita basata su 5 criteri chiave: Chiarezza, Tono, Orientamento alla Soluzione, Assertività e Struttura, con punteggi e motivazioni specifiche.',
-        imageUrl: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?q=80&w=800&auto=format&fit=crop'
+        imageUrl: risultatiProImg
     },
     {
         icon: VoiceIcon,
         title: 'Feedback Paraverbale e Replay Strategico',
         description: 'Migliora il tuo impatto vocale con l\'analisi AI di tono, ritmo e pause. Ascolta la versione ideale della tua risposta per capire la consegna perfetta.',
-        imageUrl: 'https://images.unsplash.com/photo-1590602842205-e411b9a9f731?q=80&w=800&auto=format&fit=crop'
+        imageUrl: replayStrategicoImg
     },
     {
         icon: LightbulbIcon,
         title: 'Librerie Strategiche e Checklist PRO',
         description: 'Accedi a decine di domande strategiche per ogni situazione e usa la checklist di preparazione per affrontare con sicurezza qualsiasi conversazione difficile.',
-        imageUrl: 'https://images.unsplash.com/photo-1521714161819-15534968fc55?q=80&w=800&auto=format&fit=crop'
+        imageUrl: librerieStrategicheImg
     }
 ];
 
@@ -57,8 +58,8 @@ export const PaywallScreen: React.FC<PaywallScreenProps> = ({ entitlements, onPu
     return (
         <div style={styles.container}>
             <header style={styles.header}>
-                <h1 style={styles.title}>Porta la tua CES al Livello PRO</h1>
-                <p style={styles.permanentActivationText}>Paga una sola volta e utilizzalo per sempre!</p>
+                <h1 style={styles.title}><CrownIcon style={{ width: 32, height: 32, marginRight: 8 }} /> Porta la tua CES al Livello PRO</h1>
+                <p style={styles.permanentActivationText}>Validità 365 giorni</p>
                 <p style={styles.subtitle}>Sblocca le funzionalità avanzate per accelerare la tua crescita e padroneggiare ogni conversazione.</p>
             </header>
 
@@ -83,6 +84,7 @@ export const PaywallScreen: React.FC<PaywallScreenProps> = ({ entitlements, onPu
                 
                 <section style={styles.purchaseSection}>
                     <div style={styles.purchaseBox}>
+                        <img src={riepilogoVantaggiProImg} alt="Riepilogo Vantaggi PRO" style={styles.purchaseBoxImage} />
                         <h3 style={styles.productName}>{product.name} - Riepilogo Vantaggi</h3>
                          <ul style={styles.benefitsList}>
                             {product.benefits.map((benefit, i) => (
@@ -108,7 +110,7 @@ export const PaywallScreen: React.FC<PaywallScreenProps> = ({ entitlements, onPu
                                     {isLoading === product.id ? <Spinner size={20} color="white"/> : 'Sblocca Tutti i Vantaggi'}
                                 </button>
                             )}
-                            <p style={styles.oneTimePaymentText}>Pagamento "una tantum". Valido per sempre!</p>
+                            <p style={styles.oneTimePaymentText}>Pagamento annuale. Valido per 365 giorni!</p>
                         </div>
                     </div>
                 </section>
@@ -118,7 +120,7 @@ export const PaywallScreen: React.FC<PaywallScreenProps> = ({ entitlements, onPu
                          {isLoading === 'restore' ? <Spinner size={20} /> : 'Ripristina Acquisti'}
                     </button>
                     <p style={styles.disclosure}>
-                        L'attivazione PRO è un acquisto una tantum, che non richiede ulteriori pagamenti in futuro, mentre l'accesso all'App richiede un abbonamento mensile attivo.
+                        L'attivazione PRO è un acquisto con validità annuale, mentre l'accesso all'App richiede un abbonamento mensile attivo.
                     </p>
                 </footer>
             </main>
@@ -129,7 +131,7 @@ export const PaywallScreen: React.FC<PaywallScreenProps> = ({ entitlements, onPu
 const styles: { [key: string]: React.CSSProperties } = {
     container: { maxWidth: '900px', margin: '0 auto', padding: '40px 20px', minHeight: 'calc(100vh - 64px)' },
     header: { textAlign: 'center', marginBottom: '48px' },
-    title: { fontSize: '32px', fontWeight: 'bold', color: COLORS.textPrimary, marginBottom: '12px' },
+    title: { fontSize: '32px', fontWeight: 'bold', color: COLORS.textPrimary, marginBottom: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' },
     permanentActivationText: {
         fontSize: '18px',
         color: COLORS.error,
@@ -193,6 +195,11 @@ const styles: { [key: string]: React.CSSProperties } = {
         maxWidth: '600px',
         margin: '0 auto',
         textAlign: 'center',
+    },
+    purchaseBoxImage: {
+        width: '100%',
+        borderRadius: '8px',
+        marginBottom: '24px',
     },
     productName: { fontSize: '22px', fontWeight: 'bold', color: COLORS.textPrimary, margin: '0 0 24px 0' },
     benefitsList: {

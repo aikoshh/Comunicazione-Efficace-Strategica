@@ -5,7 +5,7 @@ import { smilingPerson, dailyChallengePerson, checkupImage } from '../assets';
 import { ProgressOverview } from './ProgressOverview';
 import { ProgressAnalytics } from './ProgressAnalytics';
 import { getDailyChallenge } from '../services/progressionService';
-import { CheckCircleIcon, TargetIcon, LockIcon, SettingsIcon } from './Icons';
+import { CheckCircleIcon, TargetIcon, LockIcon, SettingsIcon, ArrowDownIcon } from './Icons';
 import { soundService } from '../services/soundService';
 
 interface HomeScreenProps {
@@ -166,10 +166,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectModule, onSelect
       <style>{hoverStyle}</style>
       <header style={styles.header} className="homescreen-header">
         <div style={styles.headerTextContainer} className="homescreen-header-text">
-            <h1 style={styles.title}>Inizia ora il tuo Allenamento con la Comunicazione Efficace Strategica®</h1>
+            <h1 style={styles.title}>Ciao {currentUser?.firstName || 'Ospite'}!</h1>
             <p style={styles.subtitle}>
-                Seleziona la tua prossima sessione dalla Mappa delle Competenze o affronta la Sfida del Giorno.
+                Inizia ora il tuo Allenamento con la Comunicazione Efficace Strategica®.<br/>
+                <strong style={{marginTop: '8px', display: 'inline-block'}}>Scegli da cosa vuoi iniziare...</strong>
             </p>
+            <ArrowDownIcon style={styles.arrowDown} />
         </div>
         <img 
             src={smilingPerson} 
@@ -246,11 +248,19 @@ const styles: { [key: string]: React.CSSProperties } = {
         height: '200px',
         borderRadius: '50%',
         objectFit: 'cover',
+        objectPosition: 'center 20%',
         border: `4px solid ${COLORS.card}`,
         boxShadow: '0 4px 15px rgba(0,0,0,0.1)',
     },
-    title: { fontSize: '28px', fontWeight: '700', color: COLORS.textAccent, margin: '0 0 12px 0', lineHeight: 1.3 },
-    subtitle: { fontSize: '16px', color: COLORS.textSecondary, maxWidth: '600px', lineHeight: 1.6, margin: 0 },
+    title: { fontSize: '32px', fontWeight: '700', color: COLORS.primary, margin: '0 0 8px 0' },
+    subtitle: { fontSize: '18px', color: COLORS.textSecondary, maxWidth: '600px', lineHeight: 1.6, margin: '0 0 16px 0' },
+    arrowDown: {
+        color: COLORS.success,
+        width: '32px',
+        height: '32px',
+        marginTop: '16px',
+        animation: 'bounce 2s infinite',
+    },
     sectionTitle: { fontSize: '24px', fontWeight: 'bold', color: COLORS.primary, marginBottom: '24px', borderBottom: `3px solid ${COLORS.secondary}`, paddingBottom: '8px' },
     categoryTitle: { fontSize: '20px', fontWeight: 'bold', color: COLORS.textSecondary, marginTop: '24px', marginBottom: '16px' },
     adminPanelPrompt: {

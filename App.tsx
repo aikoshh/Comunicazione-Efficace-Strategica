@@ -203,6 +203,7 @@ const App: React.FC = () => {
       setCurrentUser(user);
       setIsAuthenticated(true);
       setAppState({ screen: 'home' });
+      window.scrollTo(0, 0);
     } else if (expired) {
       throw new Error("Il tuo periodo di prova è terminato oppure l'account è sospeso.");
     } else {
@@ -618,7 +619,7 @@ const App: React.FC = () => {
       screenContent = <ModuleScreen 
                         module={appState.module} 
                         moduleColor={appState.moduleColor}
-                        onSelectExercise={(exercise, moduleColor) => handleSelectExercise(exercise, false, 0, 0, moduleColor)} 
+                        onSelectExercise={(exercise) => handleSelectExercise(exercise, false, 0, 0, appState.moduleColor)} 
                         onReviewExercise={handleReviewExercise}
                         onBack={handleBack} 
                         completedExerciseIds={completedExerciseIds} 

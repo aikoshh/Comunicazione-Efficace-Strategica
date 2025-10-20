@@ -4,7 +4,11 @@ import {
     HealthcareIcon, EducationIcon, CustomerCareIcon, RetailIcon, BankingIcon,
     HRIcon, SalesIcon, LeadershipIcon, VoiceIcon, WrittenIcon, VerbalIcon
 } from './components/Icons';
-import { cardImage1, cardImage2, cardImage3, cardImage4, cardImage5, cardImage6 } from './assets';
+import { 
+    cardImage1, cardImage2, cardImage3, cardImage4, cardImage5, cardImage6,
+    gestireConversazioniDifficiliHeaderImg, domandeStrategicheHeaderImg,
+    ascoltoStrategicoHeaderImg, voceStrategicaHeaderImg, allenamentoPersonalizzatoImg 
+} from './assets';
 
 export const COLORS = {
   // Base
@@ -89,7 +93,7 @@ export const MODULES: Module[] = [
     description: 'Affina la capacità di ascoltare non solo per sentire, ma per comprendere a fondo, individuando le parole chiave che svelano le reali intenzioni.',
     icon: ListeningIcon,
     cardImage: cardImage5,
-    headerImage: 'https://www.centroclinicaformazionestrategica.it/CES-APP/images/ascolto%20strategico.png',
+    headerImage: ascoltoStrategicoHeaderImg,
     category: 'Fondamentali',
     exercises: [
       {
@@ -153,7 +157,7 @@ export const MODULES: Module[] = [
     description: 'Scopri come usare le domande per guidare le conversazioni, stimolare il pensiero critico e scoprire informazioni cruciali.',
     icon: QuestionIcon,
     cardImage: cardImage3,
-    headerImage: 'https://www.centroclinicaformazionestrategica.it/CES-APP/images/domandare.png',
+    headerImage: domandeStrategicheHeaderImg,
     category: 'Fondamentali',
     exercises: [
        {
@@ -193,7 +197,7 @@ export const MODULES: Module[] = [
     description: 'Sviluppa le competenze per navigare conversazioni complesse e conflittuali con calma e professionalità.',
     icon: ConflictIcon,
     cardImage: cardImage2,
-    headerImage: 'https://www.centroclinicaformazionestrategica.it/CES-APP/images/dialogo%20strategico.png',
+    headerImage: gestireConversazioniDifficiliHeaderImg,
     category: 'Fondamentali',
     exercises: [
       {
@@ -246,7 +250,7 @@ export const MODULES: Module[] = [
     description: 'Allena il ritmo, il tono e le pause per rendere il tuo messaggio più d\'impatto e persuasivo.',
     icon: VoiceIcon,
     cardImage: cardImage6,
-    headerImage: 'https://www.centroclinicaformazionestrategica.it/CES-APP/images/Uso%20del%20silenzio%20strategico.png',
+    headerImage: voceStrategicaHeaderImg,
     category: 'Fondamentali',
     exercises: [
       {
@@ -281,7 +285,7 @@ export const MODULES: Module[] = [
     description: 'Crea il tuo scenario di allenamento su misura per affrontare le sfide di comunicazione che ti stanno più a cuore.',
     icon: CustomIcon,
     cardImage: cardImage4,
-    headerImage: 'https://www.centroclinicaformazionestrategica.it/CES-APP/images/Ristrutturazione%20comunicativa.png',
+    headerImage: allenamentoPersonalizzatoImg,
     exercises: [],
     isCustom: true,
     category: 'Fondamentali',
