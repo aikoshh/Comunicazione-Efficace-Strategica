@@ -1,12 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import type { Module, User, UserProgress, Exercise } from '../types';
 import { MODULES, COLORS, MODULE_PALETTE } from '../constants';
 import { homeScreenHeaderVideo, dailyChallengeMedia, checkupMedia } from '../assets';
 import { ProgressOverview } from './ProgressOverview';
 import { ProgressAnalytics } from './ProgressAnalytics';
 import { getDailyChallenge } from '../services/progressionService';
-import { CheckCircleIcon, TargetIcon, LockIcon, SettingsIcon, ArrowDownIcon } from './Icons';
+import { CheckCircleIcon, TargetIcon, LockIcon, SettingsIcon, ArrowDownIcon, PlayIcon } from './Icons';
 import { soundService } from '../services/soundService';
+import { VideoPlayerModal } from './VideoPlayerModal';
 
 interface HomeScreenProps {
   onSelectModule: (module: Module, color: string) => void;
@@ -44,6 +45,17 @@ const hoverStyle = `
     transform: translateY(-2px) scale(0.99);
     box-shadow: 0 4px 15px rgba(88, 166, 166, 0.3);
   }
+  .header-media-container:hover .header-image-media {
+    transform: scale(1.05);
+    filter: brightness(0.9);
+  }
+  .header-media-container .play-icon-overlay {
+    transition: opacity 0.3s ease;
+    opacity: 0;
+  }
+  .header-media-container:hover .play-icon-overlay {
+    opacity: 1;
+  }
 `;
 
 const MediaDisplay: React.FC<{ 
@@ -53,10 +65,27 @@ const MediaDisplay: React.FC<{
     className?: string;
     autoPlay?: boolean;
 }> = ({ src, alt, style, className, autoPlay = true }) => {
+    const videoRef = useRef<HTMLVideoElement>(null);
     const isVideo = src && src.toLowerCase().endsWith('.mp4');
+
+    useEffect(() => {
+        if (videoRef.current) {
+            if (autoPlay) {
+                videoRef.current.play().catch(error => {
+                    // Autoplay is often blocked, which is fine. Muted autoplay is usually allowed.
+                    console.warn("Autoplay was prevented:", error);
+                });
+            } else {
+                videoRef.current.pause();
+                videoRef.current.currentTime = 0; // Reset to first frame
+            }
+        }
+    }, [autoPlay, src]);
+
     if (isVideo) {
         return (
             <video 
+                ref={videoRef}
                 src={src} 
                 style={style} 
                 className={className}
@@ -75,6 +104,7 @@ const MediaDisplay: React.FC<{
 export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectModule, onSelectExercise, onStartCheckup, currentUser, userProgress }) => {
   const [dailyChallenge, setDailyChallenge] = useState<Exercise | null>(null);
   const [playIntroVideo, setPlayIntroVideo] = useState(false);
+  const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
 
   useEffect(() => {
     setDailyChallenge(getDailyChallenge());
@@ -128,6 +158,16 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectModule, onSelect
       if (!userProgress || !dailyChallenge) return false;
       const completedIds = userProgress.completedExerciseIds || [];
       return completedIds.includes(dailyChallenge.id);
+  };
+  
+  const handleHeaderMediaClick = () => {
+    soundService.playClick();
+    setIsVideoModalOpen(true);
+  };
+
+  const handleCloseVideoModal = () => {
+    setIsVideoModalOpen(false);
+    setPlayIntroVideo(false);
   };
 
   const renderModuleGrid = (modules: Module[], colorOffset: number = 0) => (
@@ -195,77 +235,90 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectModule, onSelect
   );
 
   return (
-    <div style={styles.container}>
-      <style>{hoverStyle}</style>
-      <header style={styles.header} className="homescreen-header">
-        <div style={styles.headerTextContainer} className="homescreen-header-text">
-            <h1 style={styles.title}>Ciao {currentUser?.firstName || 'Ospite'}!</h1>
-            <p style={styles.subtitle}>
-                Inizia ora il tuo Allenamento con la Comunicazione Efficace Strategica®<br/>
-                <strong style={{marginTop: '8px', display: 'inline-block'}}>Scegli da cosa vuoi iniziare a migliorare...</strong>
-            </p>
-            <ArrowDownIcon style={styles.arrowDown} />
-        </div>
-        <MediaDisplay 
-            src={homeScreenHeaderVideo}
-            alt="Presentazione CES Coach" 
-            style={styles.headerImage}
-            autoPlay={playIntroVideo}
-        />
-      </header>
-      
-      {currentUser && <ProgressOverview user={currentUser} progress={userProgress} />}
-      
-      {currentUser && <ProgressAnalytics userProgress={progressDataForAnalytics} />}
-      
-      <main style={currentUser ? {marginTop: '48px'} : {}}>
+    <>
+      <div style={styles.container}>
+        <style>{hoverStyle}</style>
+        <header style={styles.header} className="homescreen-header">
+          <div style={styles.headerTextContainer} className="homescreen-header-text">
+              <h1 style={styles.title}>Ciao {currentUser?.firstName || 'Ospite'}!</h1>
+              <p style={styles.subtitle}>
+                  Inizia ora il tuo Allenamento con la Comunicazione Efficace Strategica®<br/>
+                  <strong style={{marginTop: '8px', display: 'inline-block'}}>Scegli da cosa vuoi iniziare a migliorare...</strong>
+              </p>
+              <ArrowDownIcon style={styles.arrowDown} />
+          </div>
+          <div style={styles.headerMediaContainer} onClick={handleHeaderMediaClick} className="header-media-container">
+            <MediaDisplay 
+                src={homeScreenHeaderVideo}
+                alt="Presentazione CES Coach" 
+                style={styles.headerImage}
+                className="header-image-media"
+                autoPlay={playIntroVideo}
+            />
+            <div style={styles.playIconOverlay} className="play-icon-overlay">
+                <PlayIcon color="white" width={48} height={48} style={{filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))'}}/>
+            </div>
+          </div>
+        </header>
         
-        {currentUser && !userProgress?.hasCompletedCheckup && (
-          <section style={{marginBottom: '48px'}}>
-            <div style={styles.checkupCard} className="checkup-prompt" onClick={onStartCheckup}>
-              <div style={styles.checkupTextContainer}>
-                <h3 style={styles.checkupTitle}>Valuta il tuo Livello Iniziale</h3>
-                <p style={styles.checkupText}>
-                  Completa il test di analisi per scoprire il tuo profilo di comunicatore e ricevere un percorso di allenamento personalizzato.
-                </p>
-              </div>
-              <MediaDisplay src={checkupMedia} alt="Analisi strategica della comunicazione" style={styles.checkupImage} />
-            </div>
-          </section>
-        )}
-
-        {dailyChallenge && (
+        {currentUser && <ProgressOverview user={currentUser} progress={userProgress} />}
+        
+        {currentUser && <ProgressAnalytics userProgress={progressDataForAnalytics} />}
+        
+        <main style={currentUser ? {marginTop: '48px'} : {}}>
+          
+          {currentUser && !userProgress?.hasCompletedCheckup && (
             <section style={{marginBottom: '48px'}}>
-                 <div style={styles.dailyChallenge} className="daily-challenge" onClick={handleDailyChallengeClick} onMouseEnter={() => soundService.playHover()}>
-                    <MediaDisplay src={dailyChallengeMedia} alt="Persona sorridente per la sfida del giorno" style={styles.challengeImage} />
-                    <div style={styles.challengeTextContainer}>
-                        <h3 style={styles.challengeTitle}>{dailyChallenge.task}</h3>
-                    </div>
-                    {isDailyChallengeCompleted() && (
-                        <div style={styles.completedBadge}>
-                            <CheckCircleIcon color="white"/>
-                            <span>Completata!</span>
-                        </div>
-                    )}
-                 </div>
+              <div style={styles.checkupCard} className="checkup-prompt" onClick={onStartCheckup}>
+                <div style={styles.checkupTextContainer}>
+                  <h3 style={styles.checkupTitle}>Valuta il tuo Livello Iniziale</h3>
+                  <p style={styles.checkupText}>
+                    Completa il test di analisi per scoprire il tuo profilo di comunicatore e ricevere un percorso di allenamento personalizzato.
+                  </p>
+                </div>
+                <MediaDisplay src={checkupMedia} alt="Analisi strategica della comunicazione" style={styles.checkupImage} />
+              </div>
             </section>
-        )}
-
-        <section>
-          <h2 style={styles.sectionTitle}>Mappa delle Competenze</h2>
-          <h3 style={styles.categoryTitle}>Fondamentali</h3>
-          {renderModuleGrid(foundationalModules)}
-
-          {sectoralPacks.length > 0 && (
-            <div style={{ marginTop: '48px' }}>
-                <h3 style={styles.categoryTitle}>Pacchetti Settoriali Professionali</h3>
-                {renderModuleGrid(sectoralPacks, foundationalModules.length)}
-            </div>
           )}
-        </section>
 
-      </main>
-    </div>
+          {dailyChallenge && (
+              <section style={{marginBottom: '48px'}}>
+                   <div style={styles.dailyChallenge} className="daily-challenge" onClick={handleDailyChallengeClick} onMouseEnter={() => soundService.playHover()}>
+                      <MediaDisplay src={dailyChallengeMedia} alt="Persona sorridente per la sfida del giorno" style={styles.challengeImage} />
+                      <div style={styles.challengeTextContainer}>
+                          <h3 style={styles.challengeTitle}>{dailyChallenge.task}</h3>
+                      </div>
+                      {isDailyChallengeCompleted() && (
+                          <div style={styles.completedBadge}>
+                              <CheckCircleIcon color="white"/>
+                              <span>Completata!</span>
+                          </div>
+                      )}
+                   </div>
+              </section>
+          )}
+
+          <section>
+            <h2 style={styles.sectionTitle}>Mappa delle Competenze</h2>
+            <h3 style={styles.categoryTitle}>Fondamentali</h3>
+            {renderModuleGrid(foundationalModules)}
+
+            {sectoralPacks.length > 0 && (
+              <div style={{ marginTop: '48px' }}>
+                  <h3 style={styles.categoryTitle}>Pacchetti Settoriali Professionali</h3>
+                  {renderModuleGrid(sectoralPacks, foundationalModules.length)}
+              </div>
+            )}
+          </section>
+
+        </main>
+      </div>
+      <VideoPlayerModal 
+        isOpen={isVideoModalOpen}
+        onClose={handleCloseVideoModal}
+        videoSrc={homeScreenHeaderVideo}
+      />
+    </>
   );
 };
 
@@ -273,14 +326,35 @@ const styles: { [key: string]: React.CSSProperties } = {
     container: { maxWidth: '1200px', margin: '0 auto', padding: '40px 20px', backgroundColor: COLORS.base, minHeight: '100vh' },
     header: { display: 'flex', alignItems: 'center', gap: '32px', marginBottom: '48px', backgroundColor: COLORS.cardDark, padding: '32px', borderRadius: '12px' },
     headerTextContainer: { flex: 1 },
-    headerImage: {
+    headerMediaContainer: {
+        cursor: 'pointer',
+        position: 'relative',
         width: '200px',
         height: '200px',
         borderRadius: '50%',
-        objectFit: 'cover',
-        objectPosition: 'center 20%',
         border: `4px solid ${COLORS.card}`,
         boxShadow: '0 4px 15px rgba(0,0,0,0.1)',
+        overflow: 'hidden',
+        flexShrink: 0,
+    },
+    headerImage: {
+        width: '100%',
+        height: '100%',
+        objectFit: 'cover',
+        objectPosition: 'center 20%',
+        transition: 'transform 0.3s ease, filter 0.3s ease',
+    },
+    playIconOverlay: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.4)',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        pointerEvents: 'none',
     },
     title: { fontSize: '32px', fontWeight: '700', color: COLORS.primary, margin: '0 0 8px 0' },
     subtitle: { fontSize: '18px', color: COLORS.textSecondary, maxWidth: '600px', lineHeight: 1.6, margin: '0 0 16px 0' },
