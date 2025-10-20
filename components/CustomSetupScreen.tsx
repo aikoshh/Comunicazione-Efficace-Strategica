@@ -57,7 +57,6 @@ const CustomSetupScreen: React.FC<CustomSetupScreenProps> = ({ module, onStart, 
         }
     };
     
-    // FIX: Check if value is a string before calling .trim() to resolve TypeScript error where 'value' is of type 'unknown'.
     const isReadyToStart = Object.values(personalizationData).every(value => typeof value === 'string' && value.trim() !== '');
     
     const hoverStyle = `
@@ -158,7 +157,7 @@ const CustomSetupScreen: React.FC<CustomSetupScreenProps> = ({ module, onStart, 
                     <input id="sfidaPrincipale" type="text" style={styles.input} className="form-input" value={personalizationData.sfidaPrincipale} onChange={(e) => handleInputChange('sfidaPrincipale', e.target.value)} placeholder="Es: 'Dire di no senza sentirmi in colpa', 'Gestire le obiezioni dei clienti'" />
                 </div>
                 
-                <h2 style={styles.formTitle}>2. Genera e Inizia</h2>
+                <div style={{ paddingBottom: '8px', borderBottom: `2px solid ${COLORS.secondary}` }}></div>
                 <button type="submit" style={{...styles.startButton, ...(!isReadyToStart ? styles.startButtonDisabled : {})}} disabled={!isReadyToStart} className="start-button">
                     Crea e Inizia Allenamento <NextIcon/>
                 </button>

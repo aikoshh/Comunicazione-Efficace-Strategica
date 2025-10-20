@@ -1,3 +1,5 @@
+import React from 'react';
+
 // assets.ts
 
 // Funzione helper per ottimizzare le immagini tramite un servizio CDN.
@@ -11,6 +13,8 @@ export const cardImage3 = optimize('https://www.giorgiofranzosipsicologo.com/upl
 export const cardImage4 = optimize('https://images.unsplash.com/photo-1484480974693-6ca0a78fb36b?q=80&w=600&h=360&auto=format&fit=crop');
 export const cardImage5 = optimize('https://www.centroclinicaformazionestrategica.it/wp-content/uploads/2014/09/comunicazione-efficace-strategica-roma-centro-cfs.jpg');
 export const cardImage6 = optimize('https://www.marinaosnaghi.com/wp-content/uploads/2020/03/Parlare-in-pubblico-1170x600.jpg');
+export const chatTrainerCardImage = optimize('https://www.centroclinicaformazionestrategica.it/CES-APP/images/chat-strategica.png');
+
 
 // === LOGHI E ICONE ===
 export const mainLogoUrl = optimize('https://www.centroclinicaformazionestrategica.it/CES-APP/images/CES-COACH-LOGO-trasparente.PNG');
@@ -18,6 +22,7 @@ export const siteIconUrl = optimize('https://www.centroclinicaformazionestrategi
 
 // === IMMAGINI GENERICHE E MEDIA ===
 export const homeScreenHeaderVideo = 'https://www.centroclinicaformazionestrategica.it/CES-APP/images/presentazione-iniziale.MP4';
+export const ivanoCincinnatoImage = optimize('https://www.centroclinicaformazionestrategica.it/CES-APP/images/ivano-cincinnato.png');
 export const loginBackground = optimize('https://images.unsplash.com/photo-1590650516494-0c8e4a4dd67e?q=80&w=1200&auto=format&fit=crop');
 export const dailyChallengeMedia = 'https://www.centroclinicaformazionestrategica.it/CES-APP/images/sfida-del-giorno.MP4';
 export const dailyChallengeHeaderImage = optimize('https://www.centroclinicaformazionestrategica.it/CES-APP/images/sfida-del-giorno.png');
@@ -32,6 +37,7 @@ export const domandeStrategicheHeaderVideo = 'https://www.centroclinicaformazion
 export const ascoltoStrategicoHeaderVideo = 'https://www.centroclinicaformazionestrategica.it/CES-APP/images/ascolto-strategico.MP4';
 export const allenamentoPersonalizzatoVideo = 'https://www.centroclinicaformazionestrategica.it/CES-APP/images/allenamento-personalizzato.MP4';
 export const voceStrategicaHeaderVideo = 'https://www.centroclinicaformazionestrategica.it/CES-APP/images/voce-strategica.MP4';
+export const chatTrainerHeaderVideo = 'https://www.centroclinicaformazionestrategica.it/CES-APP/images/chat-strategica.MP4';
 
 // === RISORSE PRO (IMMAGINI E VIDEO) ===
 export const risultatiProVideo = 'https://www.centroclinicaformazionestrategica.it/CES-APP/images/risultati-pro.MP4';
@@ -43,16 +49,17 @@ export const librerieStrategicheVideo = 'https://www.centroclinicaformazionestra
 // === ARRAY PER PRE-CARICAMENTO ===
 export const ALL_RESOURCES_TO_PRELOAD = [
   // Immagini
-  cardImage1, cardImage2, cardImage3, cardImage4, cardImage5, cardImage6,
+  cardImage1, cardImage2, cardImage3, cardImage4, cardImage5, cardImage6, chatTrainerCardImage,
   mainLogoUrl, siteIconUrl, loginBackground, 
   riformulazioneSinteticaHeaderImg,
   dailyChallengeHeaderImage,
   checkupHeaderImage,
+  ivanoCincinnatoImage,
   // Video
   homeScreenHeaderVideo,
   dailyChallengeMedia,
   checkupMedia,
   gestireConversazioniDifficiliHeaderVideo, dareFeedbackEfficaceHeaderVideo, domandeStrategicheHeaderVideo,
   ascoltoStrategicoHeaderVideo, allenamentoPersonalizzatoVideo, risultatiProVideo, vantaggioRisultatiProVideo,
-  voceStrategicaHeaderVideo, librerieStrategicheVideo, feedbackParaverbaleVideo
+  voceStrategicaHeaderVideo, librerieStrategicheVideo, feedbackParaverbaleVideo, chatTrainerHeaderVideo
 ];

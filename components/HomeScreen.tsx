@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import type { Module, User, UserProgress, Exercise } from '../types';
 import { MODULES, COLORS, MODULE_PALETTE } from '../constants';
-import { homeScreenHeaderVideo, dailyChallengeMedia, checkupMedia } from '../assets';
+import { homeScreenHeaderVideo, dailyChallengeMedia, checkupMedia, ivanoCincinnatoImage } from '../assets';
 import { ProgressOverview } from './ProgressOverview';
 import { ProgressAnalytics } from './ProgressAnalytics';
 import { getDailyChallenge } from '../services/progressionService';
@@ -103,22 +103,16 @@ const MediaDisplay: React.FC<{
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectModule, onSelectExercise, onStartCheckup, currentUser, userProgress }) => {
   const [dailyChallenge, setDailyChallenge] = useState<Exercise | null>(null);
-  const [playIntroVideo, setPlayIntroVideo] = useState(false);
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
 
   useEffect(() => {
     setDailyChallenge(getDailyChallenge());
-    
-    const hasSeenIntro = sessionStorage.getItem('hasSeenIntroVideo');
-    if (!hasSeenIntro) {
-      setPlayIntroVideo(true);
-      sessionStorage.setItem('hasSeenIntroVideo', 'true');
-    }
   }, []);
 
   const completedModuleIds = userProgress?.completedModuleIds || [];
   const completedExerciseIds = userProgress?.completedExerciseIds || [];
   const foundationalModules = MODULES.filter(m => m.category === 'Fondamentali' || !m.category);
+  const specialPacks = MODULES.filter(m => m.category === 'Pacchetti Speciali');
   const sectoralPacks = MODULES.filter(m => m.category === 'Pacchetti Settoriali');
   
   // This constant provides a default object for new users to ensure the analytics chart renders.
@@ -167,7 +161,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectModule, onSelect
 
   const handleCloseVideoModal = () => {
     setIsVideoModalOpen(false);
-    setPlayIntroVideo(false);
   };
 
   const renderModuleGrid = (modules: Module[], colorOffset: number = 0) => (
@@ -249,11 +242,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectModule, onSelect
           </div>
           <div style={styles.headerMediaContainer} onClick={handleHeaderMediaClick} className="header-media-container">
             <MediaDisplay 
-                src={homeScreenHeaderVideo}
-                alt="Presentazione CES Coach" 
+                src={ivanoCincinnatoImage}
+                alt="Ivano Cincinnato - CES Coach" 
                 style={styles.headerImage}
                 className="header-image-media"
-                autoPlay={playIntroVideo}
             />
             <div style={styles.playIconOverlay} className="play-icon-overlay">
                 <PlayIcon color="white" width={48} height={48} style={{filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))'}}/>
@@ -303,10 +295,17 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectModule, onSelect
             <h3 style={styles.categoryTitle}>Fondamentali</h3>
             {renderModuleGrid(foundationalModules)}
 
+            {specialPacks.length > 0 && (
+              <div style={{ marginTop: '48px' }}>
+                  <h3 style={styles.categoryTitle}>Pacchetti Speciali</h3>
+                  {renderModuleGrid(specialPacks, foundationalModules.length)}
+              </div>
+            )}
+
             {sectoralPacks.length > 0 && (
               <div style={{ marginTop: '48px' }}>
                   <h3 style={styles.categoryTitle}>Pacchetti Settoriali Professionali</h3>
-                  {renderModuleGrid(sectoralPacks, foundationalModules.length)}
+                  {renderModuleGrid(sectoralPacks, foundationalModules.length + specialPacks.length)}
               </div>
             )}
           </section>

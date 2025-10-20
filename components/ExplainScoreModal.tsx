@@ -62,7 +62,7 @@ export const ExplainScoreModal: React.FC<ExplainScoreModalProps> = ({ isOpen, on
                 Object.entries(scoreData).map(([key, value]) => (
                   <div key={key} style={styles.row}>
                     <span style={styles.label}>{scoreComponentLabels[key as keyof ScoreExplanation]}</span>
-                    <span style={styles.value}>{value}/100</span>
+                    <span style={styles.value}>{Number(value)}/100</span>
                   </div>
                 ))
               ) : (

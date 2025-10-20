@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 
 // Polyfill for browsers that support it under a webkit prefix
-// Fix: Cast window to `any` to access non-standard SpeechRecognition API which is not in the default Window type.
 const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
 export function useSpeech() {
@@ -10,7 +9,6 @@ export function useSpeech() {
   const [isSupported, setIsSupported] = useState(true);
   const [selectedVoice, setSelectedVoice] = useState<SpeechSynthesisVoice | null>(null);
   const [isSpeaking, setIsSpeaking] = useState(false);
-  // Fix: Use `any` for the ref type as the `SpeechRecognition` type is not available globally and the name is shadowed by the constant above.
   const recognitionRef = useRef<any | null>(null);
 
   useEffect(() => {

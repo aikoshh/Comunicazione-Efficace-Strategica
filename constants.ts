@@ -2,13 +2,14 @@ import { Module, DifficultyLevel, ExerciseType, Exercise, IconComponent } from '
 import { 
     FeedbackIcon, ConflictIcon, QuestionIcon, CustomIcon, ListeningIcon,
     HealthcareIcon, EducationIcon, CustomerCareIcon, RetailIcon, BankingIcon,
-    HRIcon, SalesIcon, LeadershipIcon, VoiceIcon, WrittenIcon, VerbalIcon
+    HRIcon, SalesIcon, LeadershipIcon, VoiceIcon, WrittenIcon, VerbalIcon, ChatIcon
 } from './components/Icons';
 import { 
     cardImage1, cardImage2, cardImage3, cardImage4, cardImage5, cardImage6,
     gestireConversazioniDifficiliHeaderVideo, domandeStrategicheHeaderVideo,
     ascoltoStrategicoHeaderVideo, allenamentoPersonalizzatoVideo,
-    dareFeedbackEfficaceHeaderVideo, voceStrategicaHeaderVideo
+    dareFeedbackEfficaceHeaderVideo, voceStrategicaHeaderVideo, chatTrainerCardImage,
+    chatTrainerHeaderVideo
 } from './assets';
 
 export const COLORS = {
@@ -43,6 +44,7 @@ export const MODULE_PALETTE = [
   '#1ABC9C', // Turquoise
   '#F1C40F', // Sunflower Yellow
   '#2ECC71', // Emerald Green
+  '#E74C3C', // Alizarin Crimson
 ];
 
 export const VOICE_RUBRIC_CRITERIA = [
@@ -290,6 +292,18 @@ export const MODULES: Module[] = [
     exercises: [],
     isCustom: true,
     category: 'Fondamentali',
+  },
+  // Pacchetti Speciali
+  {
+    id: 'chat_trainer',
+    title: 'Crea la tua risposta strategica in chat',
+    description: 'Allenati a rispondere in modo efficace a messaggi difficili ricevuti su WhatsApp, email o altri canali.',
+    icon: ChatIcon,
+    cardImage: chatTrainerCardImage,
+    headerImage: chatTrainerHeaderVideo,
+    exercises: [],
+    specialModuleType: 'chat_trainer',
+    category: 'Pacchetti Speciali',
   },
   // Pacchetti Settoriali
   {

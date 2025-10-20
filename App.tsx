@@ -13,6 +13,7 @@ import { Header } from './components/Header';
 import { PaywallScreen } from './components/PaywallScreen';
 import { AdminScreen } from './components/AdminScreen';
 import { PreloadingScreen } from './components/PreloadingScreen';
+import StrategicChatTrainerScreen from './components/StrategicChatTrainerScreen';
 import type { Module, Exercise, AnalysisResult, VoiceAnalysisResult, DifficultyLevel, User, UserProgress, CommunicatorProfile, Breadcrumb, Entitlements, Product, AnalysisHistoryEntry } from './types';
 import { MODULES, COLORS, STRATEGIC_CHECKUP_EXERCISES, MODULE_PALETTE } from './constants';
 import { soundService } from './services/soundService';
@@ -30,6 +31,7 @@ type AppState =
   | { screen: 'preloading' }
   | { screen: 'module'; module: Module; moduleColor: string }
   | { screen: 'custom_setup'; module: Module }
+  | { screen: 'chat_trainer'; module: Module }
   | { screen: 'exercise'; exercise: Exercise; isCheckup?: boolean; checkupStep?: number; totalCheckupSteps?: number; moduleColor?: string }
   | { screen: 'report'; result: AnalysisResult; exercise: Exercise; nextExercise?: Exercise; currentModule?: Module; userResponse?: string; isReview?: boolean }
   | { screen: 'voice_report'; result: VoiceAnalysisResult; exercise: Exercise; nextExercise?: Exercise; currentModule?: Module; userResponse?: string; isReview?: boolean }
@@ -255,6 +257,8 @@ const App: React.FC = () => {
   const handleSelectModule = (module: Module, color: string) => {
     if (module.isCustom) {
       setAppState({ screen: 'custom_setup', module });
+    } else if (module.specialModuleType === 'chat_trainer') {
+      setAppState({ screen: 'chat_trainer', module });
     } else {
       setAppState({ screen: 'module', module, moduleColor: color });
     }
@@ -515,7 +519,7 @@ const App: React.FC = () => {
         }
         return;
     }
-    if (appState.screen === 'module' || appState.screen === 'custom_setup' || appState.screen === 'communicator_profile' || appState.screen === 'strategic_checkup' || appState.screen === 'admin') {
+    if (appState.screen === 'module' || appState.screen === 'custom_setup' || appState.screen === 'communicator_profile' || appState.screen === 'strategic_checkup' || appState.screen === 'admin' || appState.screen === 'chat_trainer') {
       setAppState({ screen: 'home' });
     }
     if (appState.screen === 'exercise') {
@@ -553,6 +557,8 @@ const App: React.FC = () => {
         case 'module':
             return [homeCrumb, { label: appState.module.title }];
         case 'custom_setup':
+            return [homeCrumb, { label: appState.module.title }];
+        case 'chat_trainer':
             return [homeCrumb, { label: appState.module.title }];
         case 'exercise':
             const module = MODULES.find(m => m.exercises.some(e => e.id === appState.exercise.id));
@@ -640,6 +646,15 @@ const App: React.FC = () => {
                         onApiKeyError={handleApiKeyError}
                       />;
       break;
+    case 'chat_trainer':
+        screenKey = 'chat_trainer';
+        screenContent = <StrategicChatTrainerScreen
+            module={appState.module}
+            onBack={handleBack}
+            apiKey={apiKey}
+            onApiKeyError={handleApiKeyError}
+        />;
+        break;
     case 'exercise':
         screenKey = appState.exercise.id;
         screenContent = <ExerciseScreen 
