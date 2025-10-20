@@ -100,7 +100,7 @@ export const ModuleScreen: React.FC<ModuleScreenProps> = ({ module, moduleColor,
             <img src={module.headerImage} alt={`Illustrazione per ${module.title}`} style={styles.headerImage} />
         )}
         <div style={styles.titleContainer}>
-            <module.icon width={32} height={32} color={COLORS.secondary} />
+            <module.icon width={32} height={32} color="white" />
             <h1 style={styles.title}>{module.title}</h1>
         </div>
         <p style={styles.description}>{module.description}</p>
@@ -233,14 +233,16 @@ const styles: { [key: string]: React.CSSProperties } = {
     justifyContent: 'center',
     gap: '16px',
     marginBottom: '12px',
+    background: `linear-gradient(135deg, ${COLORS.primary} 0%, ${COLORS.secondary} 100%)`,
+    padding: '20px',
+    borderRadius: '12px',
+    boxShadow: '0 4px 15px rgba(0,0,0,0.1)',
   },
   title: {
-    fontSize: '32px',
+    fontSize: '22px',
     fontWeight: 'bold',
-    background: `linear-gradient(45deg, ${COLORS.primary} 30%, ${COLORS.secondary} 100%)`,
-    WebkitBackgroundClip: 'text',
-    WebkitTextFillColor: 'transparent',
-    display: 'inline-block',
+    color: 'white',
+    margin: 0,
   },
   description: {
     fontSize: '18px',

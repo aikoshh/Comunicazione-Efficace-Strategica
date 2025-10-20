@@ -110,7 +110,7 @@ export const PaywallScreen: React.FC<PaywallScreenProps> = ({ entitlements, onPu
                                     {isLoading === product.id ? <Spinner size={20} color="white"/> : 'Sblocca Tutti i Vantaggi'}
                                 </button>
                             )}
-                            <p style={styles.oneTimePaymentText}>Pagamento annuale. Valido per 365 giorni!</p>
+                            <p style={styles.oneTimePaymentText}>Valido per 365 giorni!</p>
                         </div>
                     </div>
                 </section>

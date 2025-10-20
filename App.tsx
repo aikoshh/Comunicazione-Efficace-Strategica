@@ -22,6 +22,7 @@ import { userService } from './services/userService';
 import { analyzeResponse } from './services/geminiService';
 import { FullScreenLoader } from './components/Loader';
 import { databaseService } from './services/databaseService';
+import { mainLogoUrl } from './assets';
 
 type AppState =
   | { screen: 'home' }
@@ -427,10 +428,10 @@ const App: React.FC = () => {
   
   const handleCompleteWrittenExercise = (result: AnalysisResult, userResponse: string) => {
     if (appState.screen === 'exercise') {
+      const { currentModule, nextExercise } = findNextExerciseInModule(appState.exercise.id);
       if (!appState.isCheckup) {
         processExerciseCompletion(appState.exercise.id, result, userResponse);
       }
-      const { currentModule, nextExercise } = findNextExerciseInModule(appState.exercise.id);
       setAppState({ screen: 'report', result, exercise: appState.exercise, nextExercise, currentModule, userResponse });
     }
   };
@@ -759,6 +760,7 @@ const App: React.FC = () => {
         </main>
         {appState.screen !== 'api_key_error' && (
             <footer style={styles.footer}>
+                 <img src={mainLogoUrl} alt="CES Coach Logo" style={styles.footerLogo} />
                  <div style={styles.footerLinks}>
                     <a href="https://www.centroclinicaformazionestrategica.it/CES-APP/pdf/privacy_policy.pdf" target="_blank" rel="noopener noreferrer" title="Leggi la Privacy Policy" style={styles.footerLink}>Privacy Policy</a>
                     <span style={styles.footerSeparator}>|</span>
@@ -786,6 +788,11 @@ const styles: { [key: string]: React.CSSProperties } = {
         textAlign: 'center',
         padding: '32px 20px',
         backgroundColor: COLORS.base,
+    },
+    footerLogo: {
+        width: '150px',
+        marginBottom: '24px',
+        opacity: 0.8,
     },
     footerLinks: {
         marginBottom: '16px',

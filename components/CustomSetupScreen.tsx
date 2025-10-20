@@ -86,7 +86,7 @@ const CustomSetupScreen: React.FC<CustomSetupScreenProps> = ({ module, onStart, 
                     <img src={module.headerImage} alt={`Illustrazione per ${module.title}`} style={styles.headerImage} />
                 )}
                 <div style={styles.titleContainer}>
-                    <module.icon width={32} height={32} color={COLORS.secondary} />
+                    <module.icon width={32} height={32} color="white" />
                     <h1 style={styles.title}>{module.title}</h1>
                 </div>
                 <p style={styles.description}>
@@ -167,8 +167,23 @@ const styles: { [key: string]: React.CSSProperties } = {
     marginBottom: '24px',
     boxShadow: '0 4px 15px rgba(0,0,0,0.1)',
   },
-  titleContainer: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', marginBottom: '16px' },
-  title: { fontSize: '32px', color: COLORS.textPrimary, fontWeight: 'bold' },
+  titleContainer: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '16px',
+    marginBottom: '16px',
+    background: `linear-gradient(135deg, ${COLORS.primary} 0%, ${COLORS.secondary} 100%)`,
+    padding: '20px',
+    borderRadius: '12px',
+    boxShadow: '0 4px 15px rgba(0,0,0,0.1)',
+  },
+  title: {
+    fontSize: '22px',
+    color: 'white',
+    fontWeight: 'bold',
+    margin: 0
+  },
   description: { fontSize: '18px', color: COLORS.textSecondary, lineHeight: 1.6, maxWidth: '650px', margin: '0 auto' },
   setupForm: { display: 'flex', flexDirection: 'column', gap: '24px', backgroundColor: COLORS.card, padding: '32px', borderRadius: '12px', border: `1px solid ${COLORS.divider}`, boxShadow: '0 4px 12px rgba(0,0,0,0.05)' },
   formTitle: {

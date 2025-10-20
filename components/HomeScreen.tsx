@@ -168,8 +168,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectModule, onSelect
         <div style={styles.headerTextContainer} className="homescreen-header-text">
             <h1 style={styles.title}>Ciao {currentUser?.firstName || 'Ospite'}!</h1>
             <p style={styles.subtitle}>
-                Inizia ora il tuo Allenamento con la Comunicazione Efficace Strategica®.<br/>
-                <strong style={{marginTop: '8px', display: 'inline-block'}}>Scegli da cosa vuoi iniziare...</strong>
+                Inizia ora il tuo Allenamento con la Comunicazione Efficace Strategica®<br/>
+                <strong style={{marginTop: '8px', display: 'inline-block'}}>Scegli da cosa vuoi iniziare a migliorare...</strong>
             </p>
             <ArrowDownIcon style={styles.arrowDown} />
         </div>
@@ -190,7 +190,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectModule, onSelect
         
         {currentUser && !userProgress?.hasCompletedCheckup && (
           <section style={{marginBottom: '48px'}}>
-            <h2 style={styles.sectionTitle}>Valutazione Iniziale</h2>
             <div style={styles.checkupCard} className="checkup-prompt" onClick={onStartCheckup}>
               <div style={styles.checkupTextContainer}>
                 <h3 style={styles.checkupTitle}>Valuta il tuo Livello Iniziale</h3>
@@ -205,12 +204,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectModule, onSelect
 
         {dailyChallenge && (
             <section style={{marginBottom: '48px'}}>
-                 <h2 style={styles.sectionTitle}>Sfida del Giorno</h2>
                  <div style={styles.dailyChallenge} className="daily-challenge" onClick={handleDailyChallengeClick} onMouseEnter={() => soundService.playHover()}>
+                    <img src={dailyChallengePerson} alt="Persona sorridente per la sfida del giorno" style={styles.challengeImage} />
                     <div style={styles.challengeTextContainer}>
                         <h3 style={styles.challengeTitle}>{dailyChallenge.task}</h3>
                     </div>
-                    <img src={dailyChallengePerson} alt="Persona sorridente per la sfida del giorno" style={styles.challengeImage} />
                     {isDailyChallengeCompleted() && (
                         <div style={styles.completedBadge}>
                             <CheckCircleIcon color="white"/>
@@ -313,30 +311,24 @@ const styles: { [key: string]: React.CSSProperties } = {
     checkupTitle: { margin: '0 0 8px 0', fontSize: '18px', fontWeight: 600 },
     checkupText: { margin: 0, fontSize: '15px', opacity: 0.9, lineHeight: 1.5 },
     dailyChallenge: {
-        background: COLORS.primaryGradient,
+        background: COLORS.primary,
         color: 'white',
         borderRadius: '16px',
         cursor: 'pointer',
         transition: 'all 0.3s ease',
         boxShadow: '0 4px 15px rgba(14, 58, 93, 0.15)',
         display: 'flex',
-        alignItems: 'stretch',
+        flexDirection: 'column',
         overflow: 'hidden',
         position: 'relative',
-        minHeight: '180px',
     },
     challengeImage: {
-        width: '220px',
-        flexShrink: 0,
+        width: '100%',
+        height: '180px',
         objectFit: 'cover',
-        clipPath: 'polygon(25% 0, 100% 0, 100% 100%, 0% 100%)',
     },
     challengeTextContainer: {
-        flex: 1,
         padding: '24px 32px',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'center',
     },
     challengeTitle: { margin: 0, fontSize: '18px', fontWeight: 600 },
     challengeScenario: { margin: 0, fontSize: '15px', opacity: 0.9, lineHeight: 1.5 },

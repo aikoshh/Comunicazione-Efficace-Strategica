@@ -152,8 +152,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onRegister, o
   
   const dynamicStyles = `
     .login-input::placeholder {
-      color: ${COLORS.textSecondary};
-      opacity: 0.7;
+      color: ${COLORS.textAccent};
+      opacity: 0.6;
     }
     .login-input:focus {
         border-color: ${COLORS.secondary};
@@ -248,7 +248,7 @@ const styles: { [key: string]: React.CSSProperties } = {
         backgroundColor: '#000000',
     },
     loginBox: {
-        backgroundColor: COLORS.base,
+        backgroundColor: COLORS.card,
         padding: '40px',
         borderRadius: '12px',
         border: `1px solid ${COLORS.divider}`,
@@ -264,18 +264,18 @@ const styles: { [key: string]: React.CSSProperties } = {
         maxWidth: '320px',
         height: 'auto',
     },
-    title: { fontSize: '24px', color: COLORS.textPrimary, marginBottom: '8px', fontWeight: 400, lineHeight: 1.4 },
+    title: { fontSize: '24px', color: COLORS.textAccent, marginBottom: '8px', fontWeight: 400, lineHeight: 1.4 },
     loginSubtitle: {
         fontSize: '16px',
-        color: COLORS.textSecondary,
+        color: COLORS.textAccent,
         lineHeight: 1.6,
         marginBottom: '32px',
         marginTop: '0',
     },
-    subtitle: { fontSize: '16px', color: COLORS.textSecondary, margin: '0 auto 32px', lineHeight: 1.6 },
+    subtitle: { fontSize: '16px', color: COLORS.textAccent, margin: '0 auto 32px', lineHeight: 1.6 },
     form: { display: 'flex', flexDirection: 'column', gap: '20px', textAlign: 'left' },
     inputGroup: { display: 'flex', flexDirection: 'column', flex: 1 },
-    label: { marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: COLORS.textPrimary },
+    label: { marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: COLORS.textAccent },
     input: {
         padding: '12px 16px',
         fontSize: '16px',
@@ -283,7 +283,7 @@ const styles: { [key: string]: React.CSSProperties } = {
         border: `1px solid ${COLORS.divider}`,
         fontFamily: 'inherit',
         backgroundColor: COLORS.card,
-        color: COLORS.textPrimary,
+        color: COLORS.textAccent,
         outline: 'none',
         transition: 'border-color 0.2s, box-shadow 0.2s'
     },
@@ -299,10 +299,10 @@ const styles: { [key: string]: React.CSSProperties } = {
     },
     termsLabel: {
         fontSize: '13px',
-        color: COLORS.textSecondary,
+        color: COLORS.textAccent,
     },
     link: {
-        color: COLORS.secondary,
+        color: COLORS.textAccent,
         textDecoration: 'underline',
         fontWeight: 500
     },
@@ -323,7 +323,7 @@ const styles: { [key: string]: React.CSSProperties } = {
         marginTop: '16px',
         background: 'none',
         border: 'none',
-        color: COLORS.textSecondary,
+        color: COLORS.textAccent,
         textDecoration: 'underline',
         cursor: 'pointer',
         fontSize: '14px'
@@ -332,7 +332,7 @@ const styles: { [key: string]: React.CSSProperties } = {
         marginTop: '24px',
         background: 'none',
         border: 'none',
-        color: COLORS.primary,
+        color: COLORS.textAccent,
         cursor: 'pointer',
         fontSize: '14px',
         fontWeight: 'bold'
@@ -346,20 +346,20 @@ const styles: { [key: string]: React.CSSProperties } = {
         marginBottom: '16px',
     },
     footerLink: {
-        color: COLORS.textSecondary,
+        color: COLORS.textAccent,
         textDecoration: 'none',
         fontSize: '12px',
         margin: '0 8px'
     },
     footerSeparator: {
-        color: COLORS.textSecondary,
+        color: COLORS.textAccent,
         fontSize: '12px',
     },
     copyrightText: {
         margin: 0,
         textAlign: 'center',
         fontSize: '12px',
-        color: COLORS.textSecondary,
+        color: COLORS.textAccent,
         lineHeight: '1.6',
     }
 };

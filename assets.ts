@@ -13,7 +13,7 @@ export const cardImage5 = optimize('https://www.centroclinicaformazionestrategic
 export const cardImage6 = optimize('https://www.marinaosnaghi.com/wp-content/uploads/2020/03/Parlare-in-pubblico-1170x600.jpg');
 
 // Nuovi loghi e icone
-export const mainLogoUrl = optimize('https://www.centroclinicaformazionestrategica.it/CES-APP/images/CES-COACH-LOGO.png');
+export const mainLogoUrl = optimize('https://www.centroclinicaformazionestrategica.it/CES-APP/images/CES-COACH-LOGO-trasparente.PNG');
 export const siteIconUrl = optimize('https://www.centroclinicaformazionestrategica.it/CES-APP/images/CES-COACH-LOGO-PICCOLO.png');
 
 // Altre immagini, ora ottimizzate

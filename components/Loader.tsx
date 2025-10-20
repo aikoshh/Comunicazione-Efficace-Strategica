@@ -156,7 +156,6 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontSize: '18px',
     fontWeight: 'bold',
     marginTop: '16px',
-    animation: 'rapid-blink 1.5s infinite ease-in-out',
   },
    quoteContainer: {
     marginTop: '32px',
