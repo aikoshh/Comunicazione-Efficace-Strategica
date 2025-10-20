@@ -5,7 +5,7 @@ import { COLORS } from '../constants';
 import { CheckCircleIcon, BarChartIcon, VoiceIcon, LightbulbIcon, CrownIcon } from './Icons';
 import { soundService } from '../services/soundService';
 import { Spinner } from './Loader';
-import { risultatiProImg, replayStrategicoImg, librerieStrategicheImg, riepilogoVantaggiProImg } from '../assets';
+import { risultatiProVideo, vantaggioRisultatiProVideo, feedbackParaverbaleVideo, librerieStrategicheVideo } from '../assets';
 
 interface PaywallScreenProps {
   entitlements: Entitlements;
@@ -19,21 +19,40 @@ const proFeatures = [
         icon: BarChartIcon,
         title: 'Analisi Dettagliata con Rubriche PRO',
         description: 'Ricevi un\'analisi approfondita basata su 5 criteri chiave: Chiarezza, Tono, Orientamento alla Soluzione, Assertività e Struttura, con punteggi e motivazioni specifiche.',
-        imageUrl: risultatiProImg
+        imageUrl: risultatiProVideo
     },
     {
         icon: VoiceIcon,
         title: 'Feedback Paraverbale e Replay Strategico',
         description: 'Migliora il tuo impatto vocale con l\'analisi AI di tono, ritmo e pause. Ascolta la versione ideale della tua risposta per capire la consegna perfetta.',
-        imageUrl: replayStrategicoImg
+        imageUrl: feedbackParaverbaleVideo
     },
     {
         icon: LightbulbIcon,
         title: 'Librerie Strategiche e Checklist PRO',
         description: 'Accedi a decine di domande strategiche per ogni situazione e usa la checklist di preparazione per affrontare con sicurezza qualsiasi conversazione difficile.',
-        imageUrl: librerieStrategicheImg
+        imageUrl: librerieStrategicheVideo
     }
 ];
+
+const MediaDisplay: React.FC<{ src: string; alt: string; style: React.CSSProperties }> = ({ src, alt, style }) => {
+    const isVideo = src && src.toLowerCase().endsWith('.mp4');
+    if (isVideo) {
+        return (
+            <video 
+                src={src} 
+                style={style} 
+                autoPlay 
+                muted 
+                loop 
+                playsInline 
+                title={alt} 
+            />
+        );
+    }
+    return <img src={src} alt={alt} style={style} loading="lazy" />;
+};
+
 
 export const PaywallScreen: React.FC<PaywallScreenProps> = ({ entitlements, onPurchase, onRestore, onBack }) => {
     const [isLoading, setIsLoading] = useState<string | null>(null); // Stores product ID being purchased
@@ -69,7 +88,7 @@ export const PaywallScreen: React.FC<PaywallScreenProps> = ({ entitlements, onPu
                         const FeatureIcon = feature.icon;
                         return (
                              <div key={index} style={styles.featureCard}>
-                                <img src={feature.imageUrl} alt={feature.title} style={styles.featureImage} loading="lazy"/>
+                                <MediaDisplay src={feature.imageUrl} alt={feature.title} style={styles.featureImage} />
                                 <div style={styles.featureContent}>
                                     <div style={styles.featureHeader}>
                                         <FeatureIcon style={styles.featureIcon} />
@@ -84,7 +103,7 @@ export const PaywallScreen: React.FC<PaywallScreenProps> = ({ entitlements, onPu
                 
                 <section style={styles.purchaseSection}>
                     <div style={styles.purchaseBox}>
-                        <img src={riepilogoVantaggiProImg} alt="Riepilogo Vantaggi PRO" style={styles.purchaseBoxImage} />
+                        <MediaDisplay src={vantaggioRisultatiProVideo} alt="Riepilogo Vantaggi PRO" style={styles.purchaseBoxImage} />
                         <h3 style={styles.productName}>{product.name} - Riepilogo Vantaggi</h3>
                          <ul style={styles.benefitsList}>
                             {product.benefits.map((benefit, i) => (
@@ -200,6 +219,8 @@ const styles: { [key: string]: React.CSSProperties } = {
         width: '100%',
         borderRadius: '8px',
         marginBottom: '24px',
+        objectFit: 'cover',
+        height: 'auto',
     },
     productName: { fontSize: '22px', fontWeight: 'bold', color: COLORS.textPrimary, margin: '0 0 24px 0' },
     benefitsList: {

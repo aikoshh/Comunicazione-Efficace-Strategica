@@ -30,6 +30,7 @@ export interface Exercise {
   difficulty: DifficultyLevel;
   exerciseType?: ExerciseType; // Make it optional to not break existing modules
   customObjective?: string; // For personalized training goal
+  headerImage?: string;
 }
 
 export type IconComponent = React.FC<React.SVGProps<SVGSVGElement>>;

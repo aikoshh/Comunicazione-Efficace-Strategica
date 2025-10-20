@@ -3,11 +3,11 @@ import { Exercise, AnalysisResult, CommunicatorProfile, Entitlements } from '../
 import { STRATEGIC_CHECKUP_EXERCISES, COLORS } from '../constants';
 import { FullScreenLoader } from './Loader';
 import { generateCommunicatorProfile, analyzeResponse } from '../services/geminiService';
-import { Logo } from './Logo';
 import { HomeIcon, MicIcon } from './Icons';
 import { soundService } from '../services/soundService';
 import { useSpeech } from '../hooks/useSpeech';
 import { useToast } from '../hooks/useToast';
+import { checkupHeaderImage } from '../assets';
 
 interface StrategicCheckupScreenProps {
   onSelectExercise: (exercise: Exercise, isCheckup: boolean, checkupStep: number, totalCheckupSteps: number) => void;
@@ -159,28 +159,29 @@ export const StrategicCheckupScreen: React.FC<StrategicCheckupScreenProps> = ({ 
   return (
     <div style={styles.container}>
       <div style={styles.card}>
-        <header style={styles.header}>
-            <Logo />
-            <h1 style={styles.title}>Check-up Strategico Iniziale</h1>
-            <p style={styles.subtitle}>
-              Rispondi a {totalSteps} brevi scenari per creare il tuo profilo di comunicatore personalizzato.
-            </p>
-        </header>
-        
-        <div style={styles.progressContainer} ref={stepContainerRef}>
-            <div style={styles.progressBar}>
-                <div style={{...styles.progressBarFill, width: `${((currentStep + 1) / totalSteps) * 100}%`}}></div>
+        <img src={checkupHeaderImage} alt="Check-up Strategico" style={styles.headerImage} />
+        <div style={styles.contentWrapper}>
+            <header style={styles.header}>
+                <h1 style={styles.title}>Check-up Strategico Iniziale</h1>
+                <p style={styles.subtitle}>
+                  Rispondi a {totalSteps} brevi scenari per creare il tuo profilo di comunicatore personalizzato.
+                </p>
+            </header>
+            
+            <div style={styles.progressContainer} ref={stepContainerRef}>
+                <div style={styles.progressBar}>
+                    <div style={{...styles.progressBarFill, width: `${((currentStep + 1) / totalSteps) * 100}%`}}></div>
+                </div>
+                <span style={styles.progressText}>Passo {currentStep + 1} di {totalSteps}</span>
             </div>
-            <span style={styles.progressText}>Passo {currentStep + 1} di {totalSteps}</span>
+
+            <h2 style={styles.exerciseTitle}>
+                {titleParts[0]}:
+                <br />
+                <span style={{ fontWeight: 400 }}>{titleParts[1]}</span>
+            </h2>
+            <StandaloneExercise />
         </div>
-
-        <h2 style={styles.exerciseTitle}>
-            {titleParts[0]}:
-            <br />
-            <span style={{ fontWeight: 400 }}>{titleParts[1]}</span>
-        </h2>
-        <StandaloneExercise />
-
       </div>
     </div>
   );
@@ -198,12 +199,20 @@ const styles: { [key: string]: React.CSSProperties } = {
   card: {
     backgroundColor: COLORS.card,
     borderRadius: '12px',
-    padding: '40px',
     width: '100%',
     maxWidth: '800px',
     boxShadow: '0 8px 30px rgba(0,0,0,0.1)',
     animation: 'fadeInUp 0.5s ease-out',
     position: 'relative',
+    overflow: 'hidden',
+  },
+  headerImage: {
+    width: '100%',
+    height: '220px',
+    objectFit: 'cover',
+  },
+  contentWrapper: {
+    padding: '40px',
   },
   header: {
     textAlign: 'center',
@@ -213,7 +222,6 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontSize: '28px',
     fontWeight: 'bold',
     color: COLORS.textPrimary,
-    marginTop: '16px'
   },
   subtitle: {
     fontSize: '16px',

@@ -6,8 +6,9 @@ import {
 } from './components/Icons';
 import { 
     cardImage1, cardImage2, cardImage3, cardImage4, cardImage5, cardImage6,
-    gestireConversazioniDifficiliHeaderImg, domandeStrategicheHeaderImg,
-    ascoltoStrategicoHeaderImg, voceStrategicaHeaderImg, allenamentoPersonalizzatoImg 
+    gestireConversazioniDifficiliHeaderVideo, domandeStrategicheHeaderVideo,
+    ascoltoStrategicoHeaderVideo, allenamentoPersonalizzatoVideo,
+    dareFeedbackEfficaceHeaderVideo, voceStrategicaHeaderVideo
 } from './assets';
 
 export const COLORS = {
@@ -93,7 +94,7 @@ export const MODULES: Module[] = [
     description: 'Affina la capacità di ascoltare non solo per sentire, ma per comprendere a fondo, individuando le parole chiave che svelano le reali intenzioni.',
     icon: ListeningIcon,
     cardImage: cardImage5,
-    headerImage: ascoltoStrategicoHeaderImg,
+    headerImage: ascoltoStrategicoHeaderVideo,
     category: 'Fondamentali',
     exercises: [
       {
@@ -125,7 +126,7 @@ export const MODULES: Module[] = [
     description: 'Impara a fornire feedback costruttivi che motivano il cambiamento senza demotivare.',
     icon: FeedbackIcon,
     cardImage: cardImage1,
-    headerImage: 'https://www.centroclinicaformazionestrategica.it/CES-APP/images/Riformulazione%20sintetica.png',
+    headerImage: dareFeedbackEfficaceHeaderVideo,
     category: 'Fondamentali',
     exercises: [
       {
@@ -157,7 +158,7 @@ export const MODULES: Module[] = [
     description: 'Scopri come usare le domande per guidare le conversazioni, stimolare il pensiero critico e scoprire informazioni cruciali.',
     icon: QuestionIcon,
     cardImage: cardImage3,
-    headerImage: domandeStrategicheHeaderImg,
+    headerImage: domandeStrategicheHeaderVideo,
     category: 'Fondamentali',
     exercises: [
        {
@@ -197,7 +198,7 @@ export const MODULES: Module[] = [
     description: 'Sviluppa le competenze per navigare conversazioni complesse e conflittuali con calma e professionalità.',
     icon: ConflictIcon,
     cardImage: cardImage2,
-    headerImage: gestireConversazioniDifficiliHeaderImg,
+    headerImage: gestireConversazioniDifficiliHeaderVideo,
     category: 'Fondamentali',
     exercises: [
       {
@@ -250,7 +251,7 @@ export const MODULES: Module[] = [
     description: 'Allena il ritmo, il tono e le pause per rendere il tuo messaggio più d\'impatto e persuasivo.',
     icon: VoiceIcon,
     cardImage: cardImage6,
-    headerImage: voceStrategicaHeaderImg,
+    headerImage: voceStrategicaHeaderVideo,
     category: 'Fondamentali',
     exercises: [
       {
@@ -285,7 +286,7 @@ export const MODULES: Module[] = [
     description: 'Crea il tuo scenario di allenamento su misura per affrontare le sfide di comunicazione che ti stanno più a cuore.',
     icon: CustomIcon,
     cardImage: cardImage4,
-    headerImage: allenamentoPersonalizzatoImg,
+    headerImage: allenamentoPersonalizzatoVideo,
     exercises: [],
     isCustom: true,
     category: 'Fondamentali',

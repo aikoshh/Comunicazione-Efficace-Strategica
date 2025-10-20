@@ -210,26 +210,31 @@ export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({
             <BackIcon /> Torna al Modulo
         </button>
       <div style={styles.scenarioCard}>
-        <div style={styles.scenarioHeader}>
-            <h1 style={styles.title}>{exercise.title}</h1>
-            <button onClick={handleScenarioPlayback} style={styles.speakerButton} aria-label={isSpeaking ? "Ferma lettura" : "Leggi scenario"}>
-                {isSpeaking ? <SpeakerOffIcon color={COLORS.secondary}/> : <SpeakerIcon color={COLORS.secondary}/>}
-            </button>
-        </div>
-        {isCheckup && (
-          <div style={styles.checkupHeader}>
-              Passo {checkupStep} di {totalCheckupSteps}
-          </div>
-         )}
-        <p style={styles.scenarioText}><strong>Scenario:</strong> {exercise.scenario}</p>
-        <div style={styles.taskContainer}>
-          <p style={styles.taskText}><strong>Compito:</strong> {exercise.task}</p>
-        </div>
-        {exercise.customObjective && (
-             <div style={styles.customObjectiveContainer}>
-                <p style={styles.taskText}><strong>Tuo Obiettivo:</strong> {exercise.customObjective}</p>
-            </div>
+        {exercise.headerImage && (
+            <img src={exercise.headerImage} alt={exercise.title} style={styles.headerImage} />
         )}
+        <div style={styles.contentWrapper}>
+            <div style={styles.scenarioHeader}>
+                <h1 style={styles.title}>{exercise.title}</h1>
+                <button onClick={handleScenarioPlayback} style={styles.speakerButton} aria-label={isSpeaking ? "Ferma lettura" : "Leggi scenario"}>
+                    {isSpeaking ? <SpeakerOffIcon color={COLORS.secondary}/> : <SpeakerIcon color={COLORS.secondary}/>}
+                </button>
+            </div>
+            {isCheckup && (
+              <div style={styles.checkupHeader}>
+                  Passo {checkupStep} di {totalCheckupSteps}
+              </div>
+             )}
+            <p style={styles.scenarioText}><strong>Scenario:</strong> {exercise.scenario}</p>
+            <div style={styles.taskContainer}>
+              <p style={styles.taskText}><strong>Compito:</strong> {exercise.task}</p>
+            </div>
+            {exercise.customObjective && (
+                 <div style={styles.customObjectiveContainer}>
+                    <p style={styles.taskText}><strong>Tuo Obiettivo:</strong> {exercise.customObjective}</p>
+                </div>
+            )}
+        </div>
       </div>
       
       <div style={styles.responseSection}>
@@ -273,7 +278,21 @@ const styles: { [key: string]: React.CSSProperties } = {
       alignSelf: 'center',
       marginBottom: '16px'
   },
-  scenarioCard: { backgroundColor: COLORS.card, borderRadius: '12px', padding: '24px', border: `1px solid ${COLORS.divider}`, boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)' },
+  scenarioCard: { 
+    backgroundColor: COLORS.card, 
+    borderRadius: '12px', 
+    border: `1px solid ${COLORS.divider}`, 
+    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
+    overflow: 'hidden'
+  },
+  headerImage: {
+      width: '100%',
+      height: '220px',
+      objectFit: 'cover',
+  },
+  contentWrapper: {
+      padding: '24px'
+  },
   scenarioHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', gap: '16px'},
   title: { fontSize: '24px', color: COLORS.textPrimary, margin: 0, fontWeight: 'bold' },
   speakerButton: { background: 'none', border: 'none', cursor: 'pointer', padding: '8px', borderRadius: '50%', transition: 'background-color 0.2s ease' },

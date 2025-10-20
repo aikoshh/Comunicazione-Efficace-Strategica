@@ -77,12 +77,24 @@ const CustomSetupScreen: React.FC<CustomSetupScreenProps> = ({ module, onStart, 
     if (isGenerating) {
         return <FullScreenLoader estimatedTime={20} />;
     }
+    
+    const isHeaderVideo = module.headerImage && module.headerImage.toLowerCase().endsWith('.mp4');
 
     return (
         <div style={styles.container}>
             <style>{hoverStyle}</style>
             <header style={styles.header}>
-                {module.headerImage && (
+                {isHeaderVideo ? (
+                    <video 
+                        src={module.headerImage} 
+                        style={styles.headerImage} 
+                        autoPlay 
+                        muted 
+                        loop 
+                        playsInline 
+                        title={`Video per ${module.title}`} 
+                    />
+                ) : module.headerImage && (
                     <img src={module.headerImage} alt={`Illustrazione per ${module.title}`} style={styles.headerImage} />
                 )}
                 <div style={styles.titleContainer}>

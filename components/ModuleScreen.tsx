@@ -90,13 +90,25 @@ export const ModuleScreen: React.FC<ModuleScreenProps> = ({ module, moduleColor,
     [DifficultyLevel.AVANZATO]: shadeColor(moduleColor, -0.2), // 20% darker
   };
 
+  const isHeaderVideo = module.headerImage && module.headerImage.toLowerCase().endsWith('.mp4');
+
 
   return (
     <>
     <div style={styles.container}>
        <style>{hoverStyle}</style>
       <header style={styles.header}>
-        {module.headerImage && (
+        {isHeaderVideo ? (
+            <video 
+                src={module.headerImage} 
+                style={styles.headerImage} 
+                autoPlay 
+                muted 
+                loop 
+                playsInline 
+                title={`Video per ${module.title}`} 
+            />
+        ) : module.headerImage && (
             <img src={module.headerImage} alt={`Illustrazione per ${module.title}`} style={styles.headerImage} />
         )}
         <div style={styles.titleContainer}>

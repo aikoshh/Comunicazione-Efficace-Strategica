@@ -1,5 +1,6 @@
 import type { ProgressOverviewData, ScoreExplanation, User, UserProgress, Exercise } from '../types';
 import { MODULES } from '../constants';
+import { dailyChallengeHeaderImage } from '../assets';
 
 const mockScoreExplanation: ScoreExplanation = {
   Coverage: 58,
@@ -71,5 +72,6 @@ export const getDailyChallenge = (): Exercise => {
     return {
         ...dailyExercise,
         title: `Sfida del Giorno: ${dailyExercise.title}`,
+        headerImage: dailyChallengeHeaderImage,
     };
 };

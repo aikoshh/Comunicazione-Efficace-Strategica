@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import type { Module, User, UserProgress, Exercise } from '../types';
 import { MODULES, COLORS, MODULE_PALETTE } from '../constants';
-import { smilingPerson, dailyChallengePerson, checkupImage } from '../assets';
+import { homeScreenHeaderVideo, dailyChallengeMedia, checkupMedia } from '../assets';
 import { ProgressOverview } from './ProgressOverview';
 import { ProgressAnalytics } from './ProgressAnalytics';
 import { getDailyChallenge } from '../services/progressionService';
@@ -46,11 +46,44 @@ const hoverStyle = `
   }
 `;
 
+const MediaDisplay: React.FC<{ 
+    src: string; 
+    alt: string; 
+    style: React.CSSProperties;
+    className?: string;
+    autoPlay?: boolean;
+}> = ({ src, alt, style, className, autoPlay = true }) => {
+    const isVideo = src && src.toLowerCase().endsWith('.mp4');
+    if (isVideo) {
+        return (
+            <video 
+                src={src} 
+                style={style} 
+                className={className}
+                autoPlay={autoPlay} 
+                muted 
+                loop={autoPlay} 
+                playsInline 
+                title={alt} 
+            />
+        );
+    }
+    return <img src={src} alt={alt} style={style} className={className} loading="lazy" />;
+};
+
+
 export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectModule, onSelectExercise, onStartCheckup, currentUser, userProgress }) => {
   const [dailyChallenge, setDailyChallenge] = useState<Exercise | null>(null);
+  const [playIntroVideo, setPlayIntroVideo] = useState(false);
 
   useEffect(() => {
     setDailyChallenge(getDailyChallenge());
+    
+    const hasSeenIntro = sessionStorage.getItem('hasSeenIntroVideo');
+    if (!hasSeenIntro) {
+      setPlayIntroVideo(true);
+      sessionStorage.setItem('hasSeenIntroVideo', 'true');
+    }
   }, []);
 
   const completedModuleIds = userProgress?.completedModuleIds || [];
@@ -173,12 +206,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectModule, onSelect
             </p>
             <ArrowDownIcon style={styles.arrowDown} />
         </div>
-        <img 
-            src={smilingPerson} 
-            alt="Ivano Cincinnato, fondatore di CES Coach" 
+        <MediaDisplay 
+            src={homeScreenHeaderVideo}
+            alt="Presentazione CES Coach" 
             style={styles.headerImage}
-            loading="eager"
-            fetchPriority="high"
+            autoPlay={playIntroVideo}
         />
       </header>
       
@@ -197,7 +229,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectModule, onSelect
                   Completa il test di analisi per scoprire il tuo profilo di comunicatore e ricevere un percorso di allenamento personalizzato.
                 </p>
               </div>
-              <img src={checkupImage} alt="Analisi strategica della comunicazione" style={styles.checkupImage} />
+              <MediaDisplay src={checkupMedia} alt="Analisi strategica della comunicazione" style={styles.checkupImage} />
             </div>
           </section>
         )}
@@ -205,7 +237,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectModule, onSelect
         {dailyChallenge && (
             <section style={{marginBottom: '48px'}}>
                  <div style={styles.dailyChallenge} className="daily-challenge" onClick={handleDailyChallengeClick} onMouseEnter={() => soundService.playHover()}>
-                    <img src={dailyChallengePerson} alt="Persona sorridente per la sfida del giorno" style={styles.challengeImage} />
+                    <MediaDisplay src={dailyChallengeMedia} alt="Persona sorridente per la sfida del giorno" style={styles.challengeImage} />
                     <div style={styles.challengeTextContainer}>
                         <h3 style={styles.challengeTitle}>{dailyChallenge.task}</h3>
                     </div>

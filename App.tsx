@@ -12,6 +12,7 @@ import { CommunicatorProfileScreen } from './components/CommunicatorProfileScree
 import { Header } from './components/Header';
 import { PaywallScreen } from './components/PaywallScreen';
 import { AdminScreen } from './components/AdminScreen';
+import { PreloadingScreen } from './components/PreloadingScreen';
 import type { Module, Exercise, AnalysisResult, VoiceAnalysisResult, DifficultyLevel, User, UserProgress, CommunicatorProfile, Breadcrumb, Entitlements, Product, AnalysisHistoryEntry } from './types';
 import { MODULES, COLORS, STRATEGIC_CHECKUP_EXERCISES, MODULE_PALETTE } from './constants';
 import { soundService } from './services/soundService';
@@ -26,6 +27,7 @@ import { mainLogoUrl } from './assets';
 
 type AppState =
   | { screen: 'home' }
+  | { screen: 'preloading' }
   | { screen: 'module'; module: Module; moduleColor: string }
   | { screen: 'custom_setup'; module: Module }
   | { screen: 'exercise'; exercise: Exercise; isCheckup?: boolean; checkupStep?: number; totalCheckupSteps?: number; moduleColor?: string }
@@ -102,14 +104,7 @@ const App: React.FC = () => {
           if (user) {
               setCurrentUser(user);
               setIsAuthenticated(true);
-              const savedStateItem = localStorage.getItem(APP_STATE_KEY);
-              const savedState = savedStateItem ? JSON.parse(savedStateItem) : null;
-              // Prevent being stuck on admin page if not an admin anymore
-              if (savedState?.screen === 'admin' && !user.isAdmin) {
-                  setAppState({ screen: 'home' });
-              } else if (savedState) {
-                  setAppState(savedState);
-              }
+              setAppState({ screen: 'preloading' });
           } else {
               // Clear invalid session data if user not found
               localStorage.removeItem(CURRENT_USER_EMAIL_KEY);
@@ -197,14 +192,18 @@ const App: React.FC = () => {
       }
   };
 
+  const handlePreloadingComplete = () => {
+    setAppState({ screen: 'home' });
+    window.scrollTo(0, 0);
+  };
+
   const handleLogin = async (email: string, pass: string, key: string) => {
     const { user, expired } = await userService.authenticate(email, pass);
     if (user) {
       if (key) setApiKey(key);
       setCurrentUser(user);
       setIsAuthenticated(true);
-      setAppState({ screen: 'home' });
-      window.scrollTo(0, 0);
+      setAppState({ screen: 'preloading' });
     } else if (expired) {
       throw new Error("Il tuo periodo di prova è terminato oppure l'account è sospeso.");
     } else {
@@ -221,7 +220,7 @@ const App: React.FC = () => {
     if (key) setApiKey(key);
     setCurrentUser(null);
     setIsAuthenticated(true);
-    setAppState({ screen: 'home' });
+    setAppState({ screen: 'preloading' });
   };
 
   const handleLogout = () => {
@@ -431,8 +430,8 @@ const App: React.FC = () => {
       const { currentModule, nextExercise } = findNextExerciseInModule(appState.exercise.id);
       if (!appState.isCheckup) {
         processExerciseCompletion(appState.exercise.id, result, userResponse);
+        setAppState({ screen: 'report', result, exercise: appState.exercise, nextExercise, currentModule, userResponse });
       }
-      setAppState({ screen: 'report', result, exercise: appState.exercise, nextExercise, currentModule, userResponse });
     }
   };
 
@@ -602,9 +601,13 @@ const App: React.FC = () => {
   const isPro = hasProAccess(entitlements);
   let screenContent;
   let screenKey = 'home';
-  const showHeader = appState.screen !== 'api_key_error';
+  const showHeader = appState.screen !== 'api_key_error' && appState.screen !== 'preloading';
 
   switch (appState.screen) {
+    case 'preloading':
+      screenKey = 'preloading';
+      screenContent = <PreloadingScreen onComplete={handlePreloadingComplete} />;
+      break;
     case 'home':
       screenKey = 'home';
       screenContent = <HomeScreen 
@@ -758,7 +761,7 @@ const App: React.FC = () => {
                 {screenContent}
             </div>
         </main>
-        {appState.screen !== 'api_key_error' && (
+        {appState.screen !== 'api_key_error' && appState.screen !== 'preloading' && (
             <footer style={styles.footer}>
                  <img src={mainLogoUrl} alt="CES Coach Logo" style={styles.footerLogo} />
                  <div style={styles.footerLinks}>
