@@ -33,8 +33,11 @@ const UserModal: React.FC<{
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
-        await onSave(formData);
-        setIsLoading(false);
+        try {
+            await onSave(formData);
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     if (!user) return null;
@@ -95,18 +98,26 @@ export const AdminScreen: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     const { addToast } = useToast();
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const fetchUsers = useCallback(() => {
+    const refreshUserList = useCallback(() => {
         setIsLoading(true);
-        userService.reloadUsers();
+        // Ora leggiamo sempre la lista più aggiornata dal servizio,
+        // che a sua volta la prende dal databaseService aggiornato in tempo reale.
         setUsers(userService.listUsers());
         setIsLoading(false);
     }, []);
 
     useEffect(() => {
-        const unsubscribe = databaseService.subscribe(fetchUsers);
-        fetchUsers();
+        // Iscriviti agli aggiornamenti del database.
+        // Ogni volta che il DB cambia (per importazione, eliminazione, ecc.),
+        // la nostra funzione refreshUserList verrà chiamata.
+        const unsubscribe = databaseService.subscribe(refreshUserList);
+        
+        // Chiamata iniziale per caricare gli utenti
+        refreshUserList();
+
+        // Pulizia all'unmount del componente
         return () => unsubscribe();
-    }, [fetchUsers]);
+    }, [refreshUserList]);
 
     const handleEdit = (user: User) => {
         setEditingUser({ ...user });
@@ -118,7 +129,7 @@ export const AdminScreen: React.FC<{ onBack: () => void }> = ({ onBack }) => {
 
     const handleDelete = async (email: string) => {
         if (window.confirm(`Sei sicuro di voler eliminare l'utente ${email}? L'azione è irreversibile.`)) {
-            const success = userService.deleteUser(email);
+            const success = await userService.deleteUser(email);
             if (success) {
                 addToast('Utente eliminato.', 'success');
             } else {
@@ -128,7 +139,7 @@ export const AdminScreen: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     };
     
     const handleExtend = async (email: string) => {
-        const user = userService.extendSubscription(email, 30);
+        const user = await userService.extendSubscription(email, 30);
         if (user) {
             addToast(`Abbonamento per ${email} esteso di 30 giorni.`, 'success');
         } else {
@@ -184,10 +195,10 @@ export const AdminScreen: React.FC<{ onBack: () => void }> = ({ onBack }) => {
         if (!file) return;
 
         const reader = new FileReader();
-        reader.onload = (e) => {
+        reader.onload = async (e) => {
             try {
                 const content = e.target?.result as string;
-                const stats = databaseService.importDatabase(content);
+                const stats = await databaseService.importDatabase(content);
                 addToast(`Database importato: ${stats.users} utenti.`, 'success');
             } catch (err: any) {
                 addToast(err.message || 'Errore nell\'importazione del file.', 'error');
@@ -203,7 +214,7 @@ export const AdminScreen: React.FC<{ onBack: () => void }> = ({ onBack }) => {
         reader.readAsText(file);
     };
 
-    if (isLoading) {
+    if (isLoading && users.length === 0) {
         return <div style={styles.container}><Spinner size={48} color={COLORS.primary} /></div>;
     }
 

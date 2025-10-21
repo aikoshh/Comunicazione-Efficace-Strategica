@@ -45,9 +45,9 @@ const App: React.FC = () => {
     const [entitlements, setEntitlements] = useState<Entitlements | null>(null);
     const [isSoundEnabled, setIsSoundEnabled] = useState(true);
     const [breadcrumbs, setBreadcrumbs] = useState<Breadcrumb[]>([]);
+    const [isDataLoaded, setIsDataLoaded] = useState(false); // Nuovo stato per il caricamento iniziale
     const { addToast } = useToast();
 
-    // === State & Navigation Management ===
     const navigate = useCallback((newScreen: Screen, props: any = {}) => {
         setScreenProps(props);
         setScreen(newScreen);
@@ -55,10 +55,14 @@ const App: React.FC = () => {
 
     const goHome = useCallback(() => navigate('home'), [navigate]);
 
-    // === User & Data Management ===
-    const loadUserData = useCallback(async (user: User) => {
+    const loadUserData = useCallback((user: User | null) => {
+        if (!user) {
+            setUserProgress(undefined);
+            setEntitlements(null);
+            return;
+        }
         const progress = databaseService.getAllProgress()[user.email] || { scores: [], competenceScores: { ascolto: 0, riformulazione: 0, assertivita: 0, gestione_conflitto: 0 }};
-        const userEntitlements = await getUserEntitlements(user);
+        const userEntitlements = getUserEntitlements(user);
         setUserProgress(progress);
         setEntitlements(userEntitlements);
     }, []);
@@ -71,37 +75,48 @@ const App: React.FC = () => {
         }
     }, []);
 
-    // === Effects ===
+    useEffect(() => {
+        const handleDbUpdate = () => {
+             // Quando il DB cambia, ricarica i dati dell'utente corrente
+            loadUserData(currentUser);
+            // Se siamo nel pannello admin, i dati si aggiorneranno da soli
+        };
+
+        const unsubscribe = databaseService.subscribe(handleDbUpdate);
+        return () => unsubscribe();
+    }, [currentUser, loadUserData]);
+
     useEffect(() => {
         const checkPersistedSession = async () => {
             const savedEmail = localStorage.getItem('ces_coach_current_user_email');
-            
             if (savedEmail) {
                 const user = userService.getUser(savedEmail);
                 if (user && user.enabled) {
                     setCurrentUser(user);
-                    await loadUserData(user);
+                    loadUserData(user); // Carica i dati
                     navigate('home');
                 } else {
-                    persistSession(null); // Clear invalid session
+                    persistSession(null);
                     navigate('login');
                 }
             } else {
                 navigate('login');
             }
+            setIsDataLoaded(true); // Segna il caricamento iniziale come completo
         };
+        
+        // Aspettiamo che il DB si iscriva prima di controllare la sessione
+        const unsubscribe = databaseService.subscribe(() => {
+            if (!isDataLoaded) { // Esegui solo una volta
+                checkPersistedSession();
+                unsubscribe(); // Disiscriviti dopo il primo caricamento
+            }
+        });
 
-        if (screen === 'preloading') {
-            // After preloading is done, check session
-            // The PreloadingScreen component calls this onComplete
-        } else if (screen === 'login' && !currentUser) {
-            checkPersistedSession().catch(e => {
-                console.error("Session check failed:", e);
-                navigate('login');
-            });
-        }
-    }, [screen, currentUser, navigate, loadUserData, persistSession]);
+        // Cleanup in caso di unmount
+        return () => unsubscribe();
 
+    }, [navigate, loadUserData, persistSession, isDataLoaded]);
 
     useEffect(() => {
         soundService.toggleSound(isSoundEnabled);
@@ -132,13 +147,12 @@ const App: React.FC = () => {
         }
     }, [screen, screenProps, currentUser, goHome, navigate]);
 
-    // === Handlers ===
     const handleLogin = async (email: string, pass: string) => {
         const { user, expired } = await userService.authenticate(email, pass);
         if (user) {
             addToast(`Bentornato, ${user.firstName}!`, 'success');
             setCurrentUser(user);
-            await loadUserData(user);
+            loadUserData(user);
             persistSession(user.email);
             navigate('home');
         } else {
@@ -182,7 +196,7 @@ const App: React.FC = () => {
         navigate('exercise', { exercise, module, moduleColor, isCheckup, checkupStep, totalCheckupSteps });
     };
     
-    const handleCompleteExercise = (result: AnalysisResult | VoiceAnalysisResult, userResponse: string, exercise: Exercise, type: 'written' | 'verbal') => {
+    const handleCompleteExercise = async (result: AnalysisResult | VoiceAnalysisResult, userResponse: string, exercise: Exercise, type: 'written' | 'verbal') => {
         if (currentUser && userProgress) {
             const newHistoryEntry: AnalysisHistoryEntry = {
                 exerciseId: exercise.id,
@@ -203,8 +217,10 @@ const App: React.FC = () => {
                 analysisHistory: [...(userProgress.analysisHistory || []), newHistoryEntry],
                 competenceScores: newCompetenceScores,
             };
-            setUserProgress(updatedProgress);
-            databaseService.saveAllProgress({ ...databaseService.getAllProgress(), [currentUser.email]: updatedProgress });
+            
+            const allProgress = databaseService.getAllProgress();
+            await databaseService.saveAllProgress({ ...allProgress, [currentUser.email]: updatedProgress });
+            loadUserData(currentUser); // Ricarica i dati per essere sicuro
         }
 
         const nextExerciseIndex = screenProps.module.exercises.findIndex((e: Exercise) => e.id === exercise.id) + 1;
@@ -227,11 +243,12 @@ const App: React.FC = () => {
     };
 
     const handleStartCheckup = () => navigate('checkup');
-    const handleCompleteCheckup = (profile: CommunicatorProfile) => {
+    const handleCompleteCheckup = async (profile: CommunicatorProfile) => {
         if(currentUser && userProgress) {
             const updatedProgress = { ...userProgress, hasCompletedCheckup: true, checkupResults: profile };
-            setUserProgress(updatedProgress);
-            databaseService.saveAllProgress({ ...databaseService.getAllProgress(), [currentUser.email]: updatedProgress });
+            const allProgress = databaseService.getAllProgress();
+            await databaseService.saveAllProgress({ ...allProgress, [currentUser.email]: updatedProgress });
+            loadUserData(currentUser);
         }
         navigate('profile', { profile });
     }
@@ -252,11 +269,11 @@ const App: React.FC = () => {
         navigate('api_key_error', { error });
     };
 
-    // === Render Logic ===
     const renderScreen = () => {
+        if (screen === 'preloading' || !isDataLoaded) {
+            return <PreloadingScreen onComplete={() => { /* La logica di navigazione è gestita dall'effetto */ }} />;
+        }
         switch (screen) {
-            case 'preloading':
-                return <PreloadingScreen onComplete={() => navigate('login')} />;
             case 'login':
                 return <LoginScreen onLogin={handleLogin} onRegister={handleRegister} onGuestAccess={handleGuestAccess} />;
             case 'home':

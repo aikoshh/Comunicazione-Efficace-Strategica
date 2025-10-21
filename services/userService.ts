@@ -5,58 +5,60 @@ const DEFAULT_ADMIN_EMAIL = "aikos@libero.it";
 const DEFAULT_ADMIN_PASSWORD = "aaa";
 
 class UserManager {
-    private users: User[] = [];
-
+    // Rimuoviamo lo stato interno 'users'. Lo leggeremo sempre dalla fonte (databaseService)
+    
     constructor() {
-        this.loadUsers();
-        this.ensureAdminExists();
+        // La logica di caricamento e aggiornamento è ora gestita da databaseService
+        // e dai componenti che si iscrivono ad esso.
+        this.ensureAdminExistsOnFirstLoad();
     }
 
     private async hashPassword(password: string): Promise<string> {
         const encoder = new TextEncoder();
         const data = encoder.encode(password);
-        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+        const hashBuffer = await crypto.subtle.digest('SHA-2-56', data);
         const hashArray = Array.from(new Uint8Array(hashBuffer));
         return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
     }
 
-    private loadUsers(): void {
-        this.users = databaseService.getAllUsers();
+    // Questa funzione speciale viene eseguita solo una volta per assicurarsi che l'admin esista.
+    private ensureAdminExistsOnFirstLoad(): void {
+        const unsubscribe = databaseService.subscribe(async () => {
+            // Una volta che il DB è caricato, esegui il controllo
+            const users = databaseService.getAllUsers();
+            if (!users.find(u => u.email.toLowerCase() === DEFAULT_ADMIN_EMAIL.toLowerCase())) {
+                console.log('Default admin user not found. Creating one...');
+                // Disiscriviti subito per evitare loop
+                unsubscribe(); 
+                await this.addUser(
+                    DEFAULT_ADMIN_EMAIL,
+                    DEFAULT_ADMIN_PASSWORD,
+                    'Amministratore',
+                    '',
+                    true // isAdmin
+                );
+                console.log('Default admin user created.');
+            } else {
+                // L'admin esiste, possiamo disiscriverci
+                unsubscribe();
+            }
+        });
     }
 
-    public reloadUsers(): void {
-        this.loadUsers();
-        this.ensureAdminExists();
-    }
-
-    private saveUsers(): void {
-        databaseService.saveAllUsers(this.users);
-    }
-
-    private async ensureAdminExists(): Promise<void> {
-        const admin = this.getUser(DEFAULT_ADMIN_EMAIL);
-        if (!admin) {
-            await this.addUser(
-                DEFAULT_ADMIN_EMAIL,
-                DEFAULT_ADMIN_PASSWORD,
-                'Amministratore',
-                '',
-                true // isAdmin
-            );
-            console.log('Default admin user created.');
-        }
-    }
-
+    // Le funzioni ora leggono direttamente da databaseService
     public getUser(email: string): User | undefined {
-        return this.users.find(u => u.email.toLowerCase() === email.toLowerCase());
+        const users = databaseService.getAllUsers();
+        return users.find(u => u.email.toLowerCase() === email.toLowerCase());
     }
     
     public listUsers(): User[] {
-        return [...this.users].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+        const users = databaseService.getAllUsers();
+        return [...users].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
     }
 
     public async addUser(email: string, password: string, firstName: string, lastName: string, isAdmin: boolean = false, daysTrial: number = 7): Promise<User> {
-        if (this.getUser(email)) {
+        const users = databaseService.getAllUsers();
+        if (users.find(u => u.email.toLowerCase() === email.toLowerCase())) {
             throw new Error(`L'utente ${email} esiste già.`);
         }
         
@@ -74,8 +76,7 @@ class UserManager {
             enabled: true,
         };
         
-        this.users.push(newUser);
-        this.saveUsers();
+        await databaseService.saveAllUsers([...users, newUser]);
         return newUser;
     }
     
@@ -95,11 +96,9 @@ class UserManager {
 
         if (!user.enabled || isExpired) {
             if (user.enabled && isExpired) {
-                // Disable expired user upon authentication attempt
                 user.enabled = false;
-                this.saveUsers();
+                await this.updateUser(user.email, { enabled: false }); // Salva la modifica
             }
-            // As per python script logic, admin can login even if expired/disabled
             if (user.isAdmin) {
                  return { user, expired: false };
             }
@@ -109,18 +108,21 @@ class UserManager {
         return { user, expired: false };
     }
 
-    public deleteUser(email: string): boolean {
-        const userIndex = this.users.findIndex(u => u.email.toLowerCase() === email.toLowerCase());
-        if (userIndex > -1) {
-            this.users.splice(userIndex, 1);
-            this.saveUsers();
+    public async deleteUser(email: string): Promise<boolean> {
+        let users = databaseService.getAllUsers();
+        const initialLength = users.length;
+        users = users.filter(u => u.email.toLowerCase() !== email.toLowerCase());
+        
+        if (users.length < initialLength) {
+            await databaseService.saveAllUsers(users);
             return true;
         }
         return false;
     }
 
     public async updateUser(email: string, updates: Partial<Pick<User, 'firstName' | 'lastName' | 'isAdmin' | 'enabled' | 'expiryDate'>> & { password?: string }): Promise<User | null> {
-        const user = this.getUser(email);
+        const users = databaseService.getAllUsers();
+        const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
         if (!user) return null;
 
         if (updates.firstName) user.firstName = updates.firstName;
@@ -132,12 +134,13 @@ class UserManager {
             user.passwordHash = await this.hashPassword(updates.password);
         }
         
-        this.saveUsers();
+        await databaseService.saveAllUsers(users);
         return user;
     }
     
-    public extendSubscription(email: string, additionalDays: number = 30): User | null {
-        const user = this.getUser(email);
+    public async extendSubscription(email: string, additionalDays: number = 30): Promise<User | null> {
+        const users = databaseService.getAllUsers();
+        const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
         if (!user) return null;
         if (user.isAdmin || !user.expiryDate) return user;
 
@@ -149,7 +152,7 @@ class UserManager {
         user.expiryDate = newExpiry.toISOString();
         user.enabled = true; // Re-enable the user
         
-        this.saveUsers();
+        await databaseService.saveAllUsers(users);
         return user;
     }
 }
