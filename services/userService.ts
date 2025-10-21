@@ -1,160 +1,138 @@
-import type { User } from '../types';
+// services/userService.ts
+
 import { databaseService } from './databaseService';
+import type { User, UserProgress } from '../types';
 
-const DEFAULT_ADMIN_EMAIL = "aikos@libero.it";
-const DEFAULT_ADMIN_PASSWORD = "aaa";
+// Simple "hashing" for demonstration. In a real app, use bcrypt.
+const simpleHash = (pass: string) => `hashed_${pass}`;
 
-class UserManager {
-    // Rimuoviamo lo stato interno 'users'. Lo leggeremo sempre dalla fonte (databaseService)
-    
-    constructor() {
-        // La logica di caricamento e aggiornamento è ora gestita da databaseService
-        // e dai componenti che si iscrivono ad esso.
-        this.ensureAdminExistsOnFirstLoad();
-    }
-
-    private async hashPassword(password: string): Promise<string> {
-        const encoder = new TextEncoder();
-        const data = encoder.encode(password);
-        const hashBuffer = await crypto.subtle.digest('SHA-2-56', data);
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-    }
-
-    // Questa funzione speciale viene eseguita solo una volta per assicurarsi che l'admin esista.
-    private ensureAdminExistsOnFirstLoad(): void {
-        const unsubscribe = databaseService.subscribe(async () => {
-            // Una volta che il DB è caricato, esegui il controllo
-            const users = databaseService.getAllUsers();
-            if (!users.find(u => u.email.toLowerCase() === DEFAULT_ADMIN_EMAIL.toLowerCase())) {
-                console.log('Default admin user not found. Creating one...');
-                // Disiscriviti subito per evitare loop
-                unsubscribe(); 
-                await this.addUser(
-                    DEFAULT_ADMIN_EMAIL,
-                    DEFAULT_ADMIN_PASSWORD,
-                    'Amministratore',
-                    '',
-                    true // isAdmin
-                );
-                console.log('Default admin user created.');
-            } else {
-                // L'admin esiste, possiamo disiscriverci
-                unsubscribe();
-            }
-        });
-    }
-
-    // Le funzioni ora leggono direttamente da databaseService
-    public getUser(email: string): User | undefined {
-        const users = databaseService.getAllUsers();
-        return users.find(u => u.email.toLowerCase() === email.toLowerCase());
-    }
-    
+class UserService {
+    // --- User Management ---
     public listUsers(): User[] {
-        const users = databaseService.getAllUsers();
-        return [...users].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+        return databaseService.getAllUsers();
     }
 
-    public async addUser(email: string, password: string, firstName: string, lastName: string, isAdmin: boolean = false, daysTrial: number = 7): Promise<User> {
-        const users = databaseService.getAllUsers();
-        if (users.find(u => u.email.toLowerCase() === email.toLowerCase())) {
-            throw new Error(`L'utente ${email} esiste già.`);
+    public getUser(email: string): User | undefined {
+        return this.listUsers().find(u => u.email.toLowerCase() === email.toLowerCase());
+    }
+
+    public async addUser(email: string, pass: string, firstName: string, lastName: string, isAdmin: boolean = false, validityDays: number = 30): Promise<User> {
+        if (this.getUser(email)) {
+            throw new Error("Un utente con questa email esiste già.");
         }
-        
-        const expiryDate = isAdmin ? null : new Date(Date.now() + daysTrial * 24 * 60 * 60 * 1000).toISOString();
-        const passwordHash = await this.hashPassword(password);
-        
+
+        const now = new Date();
+        const expiryDate = new Date(now);
+        expiryDate.setDate(expiryDate.getDate() + validityDays);
+
         const newUser: User = {
-            email: email.trim(),
-            passwordHash,
-            firstName: firstName.trim(),
-            lastName: lastName.trim(),
-            createdAt: new Date().toISOString(),
-            expiryDate,
+            email: email.toLowerCase(),
+            passwordHash: simpleHash(pass),
+            firstName,
+            lastName,
+            createdAt: now.toISOString(),
+            expiryDate: expiryDate.toISOString(),
             isAdmin,
             enabled: true,
         };
-        
-        await databaseService.saveAllUsers([...users, newUser]);
+
+        const allUsers = this.listUsers();
+        allUsers.push(newUser);
+        await databaseService.saveAllUsers(allUsers);
+
+        // Create initial progress record
+        const allProgress = databaseService.getAllProgress();
+        const initialProgress: UserProgress = { scores: [], competenceScores: { ascolto: 0, riformulazione: 0, assertivita: 0, gestione_conflitto: 0 }};
+        allProgress[newUser.email] = initialProgress;
+        await databaseService.saveAllProgress(allProgress);
+
         return newUser;
     }
-    
-    public async authenticate(email: string, password: string): Promise<{ user: User | null; expired: boolean }> {
-        const user = this.getUser(email);
-        if (!user) {
-            return { user: null, expired: false };
+
+    public async updateUser(email: string, updates: Partial<User> & { password?: string }): Promise<User> {
+        const allUsers = this.listUsers();
+        const userIndex = allUsers.findIndex(u => u.email.toLowerCase() === email.toLowerCase());
+        if (userIndex === -1) {
+            throw new Error("Utente non trovato.");
         }
 
-        const passwordHash = await this.hashPassword(password);
-        if (user.passwordHash !== passwordHash) {
-            return { user: null, expired: false };
+        const user = allUsers[userIndex];
+        const { password, ...otherUpdates } = updates;
+
+        // Update user data
+        allUsers[userIndex] = { ...user, ...otherUpdates };
+        
+        // Update password if a new one is provided
+        if (password) {
+            allUsers[userIndex].passwordHash = simpleHash(password);
         }
 
-        const now = new Date();
-        const isExpired = user.expiryDate ? new Date(user.expiryDate) < now : false;
-
-        if (!user.enabled || isExpired) {
-            if (user.enabled && isExpired) {
-                user.enabled = false;
-                await this.updateUser(user.email, { enabled: false }); // Salva la modifica
-            }
-            if (user.isAdmin) {
-                 return { user, expired: false };
-            }
-            return { user: null, expired: true };
-        }
-
-        return { user, expired: false };
+        await databaseService.saveAllUsers(allUsers);
+        return allUsers[userIndex];
     }
 
     public async deleteUser(email: string): Promise<boolean> {
-        let users = databaseService.getAllUsers();
-        const initialLength = users.length;
-        users = users.filter(u => u.email.toLowerCase() !== email.toLowerCase());
+        const allUsers = this.listUsers();
+        const initialLength = allUsers.length;
+        const updatedUsers = allUsers.filter(u => u.email.toLowerCase() !== email.toLowerCase());
+
+        if (updatedUsers.length === initialLength) return false; // User not found
+
+        await databaseService.saveAllUsers(updatedUsers);
+
+        // Also delete progress and entitlements
+        const allProgress = databaseService.getAllProgress();
+        delete allProgress[email.toLowerCase()];
+        await databaseService.saveAllProgress(allProgress);
         
-        if (users.length < initialLength) {
-            await databaseService.saveAllUsers(users);
-            return true;
-        }
-        return false;
+        const allEntitlements = databaseService.getAllEntitlements();
+        delete allEntitlements[email.toLowerCase()];
+        await databaseService.saveAllEntitlements(allEntitlements);
+
+        return true;
     }
 
-    public async updateUser(email: string, updates: Partial<Pick<User, 'firstName' | 'lastName' | 'isAdmin' | 'enabled' | 'expiryDate'>> & { password?: string }): Promise<User | null> {
-        const users = databaseService.getAllUsers();
-        const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
-        if (!user) return null;
+    // --- Authentication ---
+    public async login(email: string, pass: string): Promise<User> {
+        const user = this.getUser(email);
 
-        if (updates.firstName) user.firstName = updates.firstName;
-        if (updates.lastName) user.lastName = updates.lastName;
-        if (typeof updates.isAdmin === 'boolean') user.isAdmin = updates.isAdmin;
-        if (typeof updates.enabled === 'boolean') user.enabled = updates.enabled;
-        if ('expiryDate' in updates) user.expiryDate = updates.expiryDate;
-        if (updates.password) {
-            user.passwordHash = await this.hashPassword(updates.password);
+        if (!user) {
+            throw new Error("Credenziali non valide.");
         }
-        
-        await databaseService.saveAllUsers(users);
+
+        if (user.passwordHash !== simpleHash(pass)) {
+            throw new Error("Credenziali non valide.");
+        }
+
+        if (!user.enabled) {
+            throw new Error("Questo account è stato disabilitato.");
+        }
+
+        if (user.expiryDate && new Date(user.expiryDate) < new Date()) {
+            throw new Error("Il tuo abbonamento è scaduto. Contatta l'amministratore.");
+        }
+
         return user;
     }
-    
-    public async extendSubscription(email: string, additionalDays: number = 30): Promise<User | null> {
-        const users = databaseService.getAllUsers();
-        const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
-        if (!user) return null;
-        if (user.isAdmin || !user.expiryDate) return user;
 
+    // --- Subscription Management ---
+    public async extendSubscription(email: string, days: number): Promise<User | null> {
+        const allUsers = this.listUsers();
+        const userIndex = allUsers.findIndex(u => u.email.toLowerCase() === email.toLowerCase());
+        if (userIndex === -1) return null;
+
+        const user = allUsers[userIndex];
         const now = new Date();
-        const expiry = new Date(user.expiryDate);
-        const newExpiry = (expiry < now ? now : expiry);
-        newExpiry.setDate(newExpiry.getDate() + additionalDays);
+        const currentExpiry = user.expiryDate ? new Date(user.expiryDate) : now;
         
-        user.expiryDate = newExpiry.toISOString();
-        user.enabled = true; // Re-enable the user
+        // If expired, extend from today. If not, extend from the expiry date.
+        const newExpiryBase = currentExpiry < now ? now : currentExpiry;
+        newExpiryBase.setDate(newExpiryBase.getDate() + days);
+        user.expiryDate = newExpiryBase.toISOString();
         
-        await databaseService.saveAllUsers(users);
+        await databaseService.saveAllUsers(allUsers);
         return user;
     }
 }
 
-export const userService = new UserManager();
+export const userService = new UserService();
