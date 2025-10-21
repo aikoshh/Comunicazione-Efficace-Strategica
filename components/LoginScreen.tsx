@@ -13,9 +13,9 @@ interface RegistrationData {
 }
 
 interface LoginScreenProps {
-  onLogin: (email: string, pass: string, apiKey: string) => Promise<void>;
+  onLogin: (email: string, pass: string) => Promise<void>;
   onRegister: (data: RegistrationData) => Promise<void>;
-  onGuestAccess: (apiKey: string) => void;
+  onGuestAccess: () => void;
 }
 
 const RegistrationForm: React.FC<{
@@ -127,7 +127,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onRegister, o
   const [view, setView] = useState<'login' | 'register'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [apiKey, setApiKey] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { addToast } = useToast();
 
@@ -137,7 +136,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onRegister, o
     setIsLoading(true);
 
     try {
-        await onLogin(email, password, apiKey);
+        await onLogin(email, password);
         // On success, App component will switch screens, unmounting this one.
     } catch (err: any) {
         addToast(err.message || "Errore sconosciuto.", 'error');
@@ -147,7 +146,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onRegister, o
 
   const handleGuestAccessClick = async () => {
       soundService.playClick();
-      onGuestAccess(apiKey);
+      onGuestAccess();
   };
   
   const dynamicStyles = `
@@ -192,19 +191,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onRegister, o
               <div style={styles.inputGroup}>
                 <label htmlFor="password" style={styles.label}>Password</label>
                 <input type="password" id="password" value={password} onChange={(e) => setPassword(e.target.value)} style={styles.input} className="login-input" placeholder="••••••••" required disabled={isLoading} />
-              </div>
-              <div style={styles.inputGroup}>
-                <label htmlFor="apiKey" style={styles.label}>Chiave API Gemini (Opzionale)</label>
-                <input 
-                  type="password" 
-                  id="apiKey" 
-                  value={apiKey} 
-                  onChange={(e) => setApiKey(e.target.value)} 
-                  style={styles.input} 
-                  className="login-input" 
-                  placeholder="Incolla qui la tua API Key..." 
-                  disabled={isLoading} 
-                />
               </div>
               <button type="submit" style={styles.loginButton} className="login-button" disabled={isLoading}>
                  {isLoading ? <Spinner color="white" /> : 'Accedi'}

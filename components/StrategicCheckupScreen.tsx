@@ -15,10 +15,9 @@ interface StrategicCheckupScreenProps {
   onApiKeyError: (error: string) => void;
   onBack: () => void;
   entitlements: Entitlements | null;
-  apiKey: string | null;
 }
 
-export const StrategicCheckupScreen: React.FC<StrategicCheckupScreenProps> = ({ onSelectExercise, onCompleteCheckup, onApiKeyError, onBack, entitlements, apiKey }) => {
+export const StrategicCheckupScreen: React.FC<StrategicCheckupScreenProps> = ({ onSelectExercise, onCompleteCheckup, onApiKeyError, onBack, entitlements }) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [userResponses, setUserResponses] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -40,7 +39,7 @@ export const StrategicCheckupScreen: React.FC<StrategicCheckupScreenProps> = ({ 
         // Step 1: Run all analyses in parallel
         const analysisPromises = finalResponses.map((response, index) => {
           const exercise = STRATEGIC_CHECKUP_EXERCISES[index];
-          return analyzeResponse(response, exercise.scenario, exercise.task, entitlements, false, undefined, apiKey);
+          return analyzeResponse(response, exercise.scenario, exercise.task, entitlements, false, undefined);
         });
         
         const allAnalysisResults = await Promise.all(analysisPromises);
@@ -51,7 +50,7 @@ export const StrategicCheckupScreen: React.FC<StrategicCheckupScreenProps> = ({ 
         }));
 
         // Step 2: Generate profile with all results
-        const profile = await generateCommunicatorProfile(formattedResults, apiKey);
+        const profile = await generateCommunicatorProfile(formattedResults);
         
         // Step 3: Complete the checkup
         onCompleteCheckup(profile);

@@ -16,7 +16,6 @@ interface ExerciseScreenProps {
   onBack: () => void;
   onApiKeyError: (error: string) => void;
   entitlements: Entitlements | null;
-  apiKey: string | null;
   isCheckup?: boolean;
   checkupStep?: number;
   totalCheckupSteps?: number;
@@ -30,7 +29,6 @@ export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({
     onBack, 
     onApiKeyError,
     entitlements,
-    apiKey,
     isCheckup,
     checkupStep,
     totalCheckupSteps
@@ -119,10 +117,10 @@ export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({
     setIsLoading(true);
     try {
       if(isVerbalExercise) {
-        const result = await analyzeParaverbalResponse(userResponse, exercise.scenario, exercise.task, apiKey);
+        const result = await analyzeParaverbalResponse(userResponse, exercise.scenario, exercise.task);
         onCompleteVerbal(result, userResponse);
       } else {
-        const result = await analyzeResponse(userResponse, exercise.scenario, exercise.task, entitlements, false, exercise.customObjective, apiKey);
+        const result = await analyzeResponse(userResponse, exercise.scenario, exercise.task, entitlements, false, exercise.customObjective);
         onCompleteWritten(result, userResponse);
       }
     } catch (e: any) {

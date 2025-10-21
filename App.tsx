@@ -45,7 +45,6 @@ const App: React.FC = () => {
     const [entitlements, setEntitlements] = useState<Entitlements | null>(null);
     const [isSoundEnabled, setIsSoundEnabled] = useState(true);
     const [breadcrumbs, setBreadcrumbs] = useState<Breadcrumb[]>([]);
-    const [apiKey, setApiKey] = useState<string | null>(null);
     const { addToast } = useToast();
 
     // === State & Navigation Management ===
@@ -64,16 +63,11 @@ const App: React.FC = () => {
         setEntitlements(userEntitlements);
     }, []);
 
-    const persistSession = useCallback((userEmail: string | null, userApiKey: string | null) => {
+    const persistSession = useCallback((userEmail: string | null) => {
         if (userEmail) {
             localStorage.setItem('ces_coach_current_user_email', userEmail);
         } else {
             localStorage.removeItem('ces_coach_current_user_email');
-        }
-        if (userApiKey) {
-            localStorage.setItem('ces_coach_api_key', userApiKey);
-        } else {
-            localStorage.removeItem('ces_coach_api_key');
         }
     }, []);
 
@@ -81,17 +75,15 @@ const App: React.FC = () => {
     useEffect(() => {
         const checkPersistedSession = async () => {
             const savedEmail = localStorage.getItem('ces_coach_current_user_email');
-            const savedApiKey = localStorage.getItem('ces_coach_api_key');
             
             if (savedEmail) {
                 const user = userService.getUser(savedEmail);
                 if (user && user.enabled) {
                     setCurrentUser(user);
-                    setApiKey(savedApiKey);
                     await loadUserData(user);
                     navigate('home');
                 } else {
-                    persistSession(null, null); // Clear invalid session
+                    persistSession(null); // Clear invalid session
                     navigate('login');
                 }
             } else {
@@ -141,25 +133,23 @@ const App: React.FC = () => {
     }, [screen, screenProps, currentUser, goHome, navigate]);
 
     // === Handlers ===
-    const handleLogin = async (email: string, pass: string, userApiKey: string) => {
+    const handleLogin = async (email: string, pass: string) => {
         const { user, expired } = await userService.authenticate(email, pass);
         if (user) {
             addToast(`Bentornato, ${user.firstName}!`, 'success');
             setCurrentUser(user);
-            setApiKey(userApiKey);
             await loadUserData(user);
-            persistSession(user.email, userApiKey);
+            persistSession(user.email);
             navigate('home');
         } else {
             throw new Error(expired ? 'Il tuo accesso è scaduto.' : 'Credenziali non valide.');
         }
     };
     
-    const handleGuestAccess = (userApiKey: string) => {
+    const handleGuestAccess = () => {
         setCurrentUser(null);
         setUserProgress(undefined);
         setEntitlements(null);
-        setApiKey(userApiKey);
         addToast("Accesso come ospite. I progressi non saranno salvati.", 'info');
         navigate('home');
     }
@@ -173,8 +163,7 @@ const App: React.FC = () => {
         setCurrentUser(null);
         setUserProgress(undefined);
         setEntitlements(null);
-        setApiKey(null);
-        persistSession(null, null);
+        persistSession(null);
         navigate('login');
     };
 
@@ -293,14 +282,12 @@ const App: React.FC = () => {
                             onStart={(scenario, task) => handleSelectExercise({ id: 'custom', title: 'Esercizio Personalizzato', difficulty: DifficultyLevel.BASE, scenario, task })}
                             onBack={() => navigate('module', screenProps)}
                             onApiKeyError={handleApiKeyError}
-                            apiKey={apiKey}
                         />;
             case 'chat_trainer':
                 return <StrategicChatTrainerScreen 
                             {...screenProps}
                             onBack={goHome}
                             onApiKeyError={handleApiKeyError}
-                            apiKey={apiKey}
                         />;
             case 'exercise':
                 return <ExerciseScreen 
@@ -311,7 +298,6 @@ const App: React.FC = () => {
                             onBack={() => navigate('module', { module: screenProps.module, moduleColor: screenProps.moduleColor })}
                             onApiKeyError={handleApiKeyError}
                             entitlements={entitlements}
-                            apiKey={apiKey}
                        />;
             case 'analysis':
                 return <AnalysisReportScreen {...screenProps} entitlements={entitlements} onNavigateToPaywall={() => navigate('paywall')} onPurchase={handlePurchase} />;
@@ -320,7 +306,7 @@ const App: React.FC = () => {
             case 'paywall':
                 return <PaywallScreen entitlements={entitlements!} onPurchase={handlePurchase} onRestore={handleRestore} onBack={goHome} />;
             case 'checkup':
-                return <StrategicCheckupScreen onSelectExercise={handleSelectExercise} onCompleteCheckup={handleCompleteCheckup} onApiKeyError={handleApiKeyError} onBack={goHome} entitlements={entitlements} apiKey={apiKey} />;
+                return <StrategicCheckupScreen onSelectExercise={handleSelectExercise} onCompleteCheckup={handleCompleteCheckup} onApiKeyError={handleApiKeyError} onBack={goHome} entitlements={entitlements} />;
             case 'profile':
                 return <CommunicatorProfileScreen {...screenProps} onContinue={goHome} />;
             case 'api_key_error':

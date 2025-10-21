@@ -11,13 +11,10 @@ import type {
 import { hasProAccess } from './monetizationService';
 import { VOICE_RUBRIC_CRITERIA } from '../constants';
 
-const getAi = (apiKey: string | null) => {
-    // The guidelines strictly state to use process.env.API_KEY.
-    // However, the application is designed to accept a key from the user.
-    // We prioritize the user-provided key and fallback to the environment variable.
-    const key = apiKey || process.env.API_KEY;
+const getAi = () => {
+    const key = process.env.API_KEY;
     if (!key) {
-        throw new Error('API key is missing. Please provide your Gemini API key on the login screen or set the API_KEY environment variable.');
+        throw new Error('La chiave API non è configurata correttamente nel sistema. Contattare l\'amministratore.');
     }
     return new GoogleGenAI({ apiKey: key });
 };
@@ -40,9 +37,8 @@ export async function analyzeResponse(
     entitlements: Entitlements | null,
     isVerbal: boolean,
     customObjective: string | undefined,
-    apiKey: string | null
 ): Promise<AnalysisResult> {
-    const ai = getAi(apiKey);
+    const ai = getAi();
     const isPro = hasProAccess(entitlements);
 
     const proFeaturesSchema = isPro ? {
@@ -112,7 +108,7 @@ export async function analyzeResponse(
     ${isPro ? "6. COMPILA LA SEZIONE PRO: Fornisci una valutazione dettagliata secondo la rubrica (punteggi 1-10). Se il compito è fare una domanda, valuta anche Utilità e Chiarezza." : ""}
     7.  Fornisci l'output ESCLUSIVAMENTE in formato JSON secondo lo schema specificato. Non includere testo al di fuori del JSON.`;
 
-    const response = await getAi(apiKey).models.generateContent({
+    const response = await getAi().models.generateContent({
         model: modelToUse,
         contents: prompt,
         config: {
@@ -128,9 +124,8 @@ export async function analyzeParaverbalResponse(
     transcript: string,
     scenario: string,
     task: string,
-    apiKey: string | null
 ): Promise<VoiceAnalysisResult> {
-    const ai = getAi(apiKey);
+    const ai = getAi();
     const modelToUse = 'gemini-2.5-pro'; // Paraverbal analysis is more complex
 
     const responseSchema = {
@@ -179,7 +174,7 @@ export async function analyzeParaverbalResponse(
     5.  Fornisci una 'risposta consigliata' che includa: istruzioni, il testo dell'utente annotato con simboli per pause (☐) ed enfasi (△), e una versione ideale del testo da leggere.
     6.  Fornisci l'output ESCLUSIVAMENTE in formato JSON secondo lo schema.`;
 
-    const response = await getAi(apiKey).models.generateContent({
+    const response = await getAi().models.generateContent({
         model: modelToUse,
         contents: prompt,
         config: {
@@ -194,9 +189,8 @@ export async function analyzeParaverbalResponse(
 
 export async function generateCustomExercise(
     personalizationData: PersonalizationData,
-    apiKey: string | null
 ): Promise<{ scenario: string, task: string }> {
-    const ai = getAi(apiKey);
+    const ai = getAi();
     const modelToUse = 'gemini-2.5-flash';
 
     const prompt = `Crea uno scenario di allenamento per la comunicazione basato sul seguente profilo utente.
@@ -212,7 +206,7 @@ export async function generateCustomExercise(
     2. Scrivi un 'task' chiaro e attuabile (1 frase) che l'utente deve completare.
     3. Restituisci l'output solo in formato JSON con le chiavi "scenario" e "task".`;
 
-    const response = await getAi(apiKey).models.generateContent({
+    const response = await getAi().models.generateContent({
         model: modelToUse,
         contents: prompt,
         config: {
@@ -233,9 +227,8 @@ export async function generateCustomExercise(
 
 export async function generateCommunicatorProfile(
     analysisResults: { exerciseId: string; analysis: AnalysisResult }[],
-    apiKey: string | null
 ): Promise<CommunicatorProfile> {
-    const ai = getAi(apiKey);
+    const ai = getAi();
     const modelToUse = 'gemini-2.5-pro';
 
     const formattedResults = analysisResults.map(r => `
@@ -258,7 +251,7 @@ export async function generateCommunicatorProfile(
     5. Elenca 2-3 "areasToImprove" (aree di miglioramento) che rappresentano le sfide principali per l'utente.
     6. L'output deve essere SOLO un oggetto JSON con le chiavi: "profileTitle", "profileDescription", "strengths", "areasToImprove".`;
 
-    const response = await getAi(apiKey).models.generateContent({
+    const response = await getAi().models.generateContent({
         model: modelToUse,
         contents: prompt,
         config: {
@@ -285,9 +278,8 @@ export async function generateStrategicChatResponse(
   objective: string,
   context: string,
   tone: 'Empatico' | 'Diretto' | 'Chiarificatore',
-  apiKey: string | null
 ): Promise<string> {
-    const ai = getAi(apiKey);
+    const ai = getAi();
     const modelToUse = 'gemini-2.5-flash';
 
     const toneInstruction = {
@@ -322,7 +314,7 @@ export async function generateStrategicChatResponse(
         - Titolo: "Spiegazione della Strategia"
         - Elenco puntato della spiegazione`;
     
-    const response = await getAi(apiKey).models.generateContent({
+    const response = await getAi().models.generateContent({
         model: modelToUse,
         contents: prompt,
     });

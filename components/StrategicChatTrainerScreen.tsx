@@ -13,7 +13,6 @@ interface StrategicChatTrainerScreenProps {
   module: Module;
   onBack: () => void;
   onApiKeyError: (error: string) => void;
-  apiKey: string | null;
 }
 
 const ResponseDisplay: React.FC<{ markdownText: string }> = ({ markdownText }) => {
@@ -56,7 +55,7 @@ const ResponseDisplay: React.FC<{ markdownText: string }> = ({ markdownText }) =
 };
 
 
-const StrategicChatTrainerScreen: React.FC<StrategicChatTrainerScreenProps> = ({ module, onBack, onApiKeyError, apiKey }) => {
+const StrategicChatTrainerScreen: React.FC<StrategicChatTrainerScreenProps> = ({ module, onBack, onApiKeyError }) => {
     const [receivedMessage, setReceivedMessage] = useState('');
     const [objective, setObjective] = useState('');
     const [context, setContext] = useState('');
@@ -76,7 +75,7 @@ const StrategicChatTrainerScreen: React.FC<StrategicChatTrainerScreenProps> = ({
         setIsLoading(true);
         setGeneratedResponse(null);
         try {
-            const response = await generateStrategicChatResponse(receivedMessage, objective, context, tone, apiKey);
+            const response = await generateStrategicChatResponse(receivedMessage, objective, context, tone);
             setGeneratedResponse(response);
         } catch (error: any) {
             console.error(error);

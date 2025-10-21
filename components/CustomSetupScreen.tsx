@@ -12,11 +12,10 @@ interface CustomSetupScreenProps {
   onStart: (scenario: string, task: string, customObjective?: string) => void;
   onBack: () => void;
   onApiKeyError: (error: string) => void;
-  apiKey: string | null;
 }
 
 
-const CustomSetupScreen: React.FC<CustomSetupScreenProps> = ({ module, onStart, onBack, onApiKeyError, apiKey }) => {
+const CustomSetupScreen: React.FC<CustomSetupScreenProps> = ({ module, onStart, onBack, onApiKeyError }) => {
     const [personalizationData, setPersonalizationData] = useState<PersonalizationData>({
         professione: '',
         livelloCarriera: '',
@@ -44,7 +43,7 @@ const CustomSetupScreen: React.FC<CustomSetupScreenProps> = ({ module, onStart, 
         
         setIsGenerating(true);
         try {
-            const { scenario, task } = await generateCustomExercise(personalizationData, apiKey);
+            const { scenario, task } = await generateCustomExercise(personalizationData);
             onStart(scenario, task);
         } catch (error: any) {
             console.error(error);

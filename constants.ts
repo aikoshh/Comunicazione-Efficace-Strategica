@@ -5,7 +5,7 @@ import {
     HRIcon, SalesIcon, LeadershipIcon, VoiceIcon, WrittenIcon, VerbalIcon, ChatIcon
 } from './components/Icons';
 import { 
-    cardImage1, cardImage2, cardImage3, cardImage4, cardImage5, cardImage6,
+    cardImage2, cardImage3, cardImage4, cardImage5, cardImage6,
     gestireConversazioniDifficiliHeaderVideo, domandeStrategicheHeaderVideo,
     ascoltoStrategicoHeaderVideo, allenamentoPersonalizzatoVideo,
     dareFeedbackEfficaceHeaderVideo, voceStrategicaHeaderVideo, chatTrainerCardImage,
@@ -132,7 +132,7 @@ export const MODULES: Module[] = [
     title: 'Dare un Feedback Efficace',
     description: 'Impara a fornire feedback costruttivi che motivano il cambiamento senza demotivare.',
     icon: FeedbackIcon,
-    cardImage: cardImage1,
+    cardImage: dareFeedbackEfficaceHeaderVideo,
     headerImage: dareFeedbackEfficaceHeaderVideo,
     category: 'Fondamentali',
     exercises: [
