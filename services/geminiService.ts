@@ -1,4 +1,5 @@
-// FIX: Removed invalid file header comments that were causing compilation errors.
+// services/geminiService.ts
+
 import { GoogleGenAI, Type } from "@google/genai";
 import type {
   AnalysisResult,
@@ -10,14 +11,18 @@ import type {
 } from '../types';
 import { hasProAccess } from './monetizationService';
 import { VOICE_RUBRIC_CRITERIA } from '../constants';
+import { FALLBACK_API_KEY } from '../config'; // Import the fallback key
 
 const getAi = () => {
-    const key = process.env.API_KEY;
-    if (!key) {
-        throw new Error('La chiave API non è configurata correttamente nel sistema. Contattare l\'amministratore.');
+    // Prioritize the secure environment variable, but use the fallback if it's not set.
+    const key = process.env.API_KEY || FALLBACK_API_KEY;
+    
+    if (!key || key === 'INCOLLA-QUI-LA-TUA-CHIAVE-API-GEMINI') {
+        throw new Error('La chiave API non è configurata. Inseriscila nel file `config.ts` o come variabile d\'ambiente per continuare.');
     }
     return new GoogleGenAI({ apiKey: key });
 };
+
 
 const safeJsonParse = <T>(text: string): T => {
     try {
