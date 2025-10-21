@@ -1,133 +1,139 @@
-import { initializeApp } from 'firebase/app';
-import { getFirestore, doc, getDoc, setDoc, onSnapshot, FirestoreError } from 'firebase/firestore';
-import { firebaseConfig } from '../firebaseConfig';
+// services/databaseService.ts
+import { initialUserDatabase } from '../database';
 import type { User, UserProgress, StorableEntitlements, Database } from '../types';
+import { PRODUCTS } from '../products';
 
-// Inizializza Firebase
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+const DB_KEY = 'ces_coach_database';
 
-// Usiamo un singolo documento per mantenere una struttura simile a prima
-const DB_DOC_REF = doc(db, 'ces-coach', 'main-database');
+// Helper to simulate password hashing
+const simpleHash = (password: string): string => {
+  // In a real app, use a strong hashing library like bcrypt.
+  // This is just for demonstration.
+  return `hashed_${password}`;
+};
 
 class DatabaseService {
-    private dbState: Database = { users: [], userProgress: {}, entitlements: {} };
-    private subscribers: (() => void)[] = [];
-    private isInitialized = false;
-    private unsubscribeFromFirestore: (() => void) | null = null;
+  private db: Database;
 
-    constructor() {
-        this.listenForRealtimeUpdates();
+  constructor() {
+    this.db = this.loadDatabase();
+  }
+
+  private loadDatabase(): Database {
+    try {
+      const storedDb = localStorage.getItem(DB_KEY);
+      if (storedDb) {
+        return JSON.parse(storedDb);
+      }
+    } catch (error) {
+      console.error("Failed to load database from localStorage, initializing.", error);
     }
+    return this.initializeDatabase();
+  }
 
-    private listenForRealtimeUpdates() {
-        // Disiscriviti da eventuali listener precedenti per evitare duplicati
-        if (this.unsubscribeFromFirestore) {
-            this.unsubscribeFromFirestore();
-        }
+  private initializeDatabase(): Database {
+    const newDb: Database = {
+      users: [],
+      userProgress: {},
+      entitlements: {},
+    };
 
-        this.unsubscribeFromFirestore = onSnapshot(DB_DOC_REF, (docSnap) => {
-            if (docSnap.exists()) {
-                // Esegui una validazione di base della struttura dati
-                const data = docSnap.data();
-                if (data && typeof data === 'object' && 'users' in data && 'userProgress' in data && 'entitlements' in data) {
-                    this.dbState = data as Database;
-                } else {
-                    console.warn("Firestore document has an invalid structure. Resetting to default.");
-                    this.dbState = { users: [], userProgress: {}, entitlements: {} };
-                }
-            } else {
-                console.log("No database found in Firestore. A new one will be created on first save.");
-                this.dbState = { users: [], userProgress: {}, entitlements: {} };
-            }
-            this.isInitialized = true;
-            this.notify();
-        }, (error: FirestoreError) => {
-            console.error("Error listening to database updates:", error.message);
-            // Se c'è un errore (es. permessi), usiamo uno stato vuoto e notifichiamo l'app.
-            this.dbState = { users: [], userProgress: {}, entitlements: {} };
-            this.isInitialized = true;
-            this.notify();
+    // Parse initial users from the CSV-like string
+    initialUserDatabase.trim().split('\n').forEach(line => {
+      const [email, password, firstName, lastName] = line.split(',');
+      if (email && password && firstName && lastName) {
+        newDb.users.push({
+          email: email.toLowerCase(),
+          passwordHash: simpleHash(password),
+          firstName,
+          lastName,
+          createdAt: new Date().toISOString(),
+          expiryDate: email.toLowerCase() === 'admin@ces.coach' ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString() : null,
+          isAdmin: email.toLowerCase() === 'admin@ces.coach',
+          enabled: true,
         });
-    }
+      }
+    });
 
-    public subscribe(callback: () => void): () => void {
-        this.subscribers.push(callback);
-        if(this.isInitialized) {
-            // Se il DB è già stato caricato, notifica subito il nuovo subscriber
-            callback();
-        }
-        return () => {
-            this.subscribers = this.subscribers.filter(sub => sub !== callback);
-        };
-    }
+    // Give admin user PRO entitlements
+    newDb.entitlements['admin@ces.coach'] = {
+        productIDs: [PRODUCTS[0].id],
+        teamSeats: 1,
+        teamActive: false,
+    };
 
-    private notify(): void {
-        this.subscribers.forEach(callback => callback());
-    }
+    this.saveDatabase(newDb);
+    return newDb;
+  }
 
-    private async saveDatabase(): Promise<void> {
-        try {
-            // Il salvataggio sovrascrive l'intero documento
-            await setDoc(DB_DOC_REF, this.dbState);
-            // La notifica avverrà automaticamente grazie a onSnapshot
-        } catch (error) {
-            console.error('Error saving database to Firestore:', error);
-            throw new Error("Impossibile salvare i dati nel database cloud. Controlla la configurazione di Firebase e i permessi.");
-        }
+  private saveDatabase(db: Database) {
+    try {
+      localStorage.setItem(DB_KEY, JSON.stringify(db));
+      this.db = db;
+    } catch (error) {
+      console.error("Failed to save database to localStorage.", error);
     }
+  }
 
-    public exportDatabase(): string {
-        return JSON.stringify(this.dbState, null, 2);
-    }
+  public findUserByEmail(email: string): User | undefined {
+    return this.db.users.find(u => u.email.toLowerCase() === email.toLowerCase());
+  }
 
-    public async importDatabase(jsonString: string): Promise<{ users: number; progress: number; entitlements: number }> {
-        try {
-            const importedDb: Database = JSON.parse(jsonString);
-            if (!importedDb || typeof importedDb.users === 'undefined' || typeof importedDb.userProgress === 'undefined' || typeof importedDb.entitlements === 'undefined') {
-                throw new Error("Il file JSON non ha una struttura valida.");
-            }
-            
-            this.dbState = importedDb;
-            await this.saveDatabase();
+  public verifyPassword(user: User, pass: string): boolean {
+    return user.passwordHash === simpleHash(pass);
+  }
 
-            return {
-                users: this.dbState.users.length,
-                progress: Object.keys(this.dbState.userProgress).length,
-                entitlements: Object.keys(this.dbState.entitlements).length,
-            };
-        } catch (e: any) {
-            console.error("Failed to import database:", e);
-            throw new Error(`Errore durante l'importazione: ${e.message}`);
-        }
+  public createUser(data: Omit<User, 'passwordHash' | 'createdAt' | 'expiryDate' | 'isAdmin' | 'enabled'> & { password: string }): User {
+    const existingUser = this.findUserByEmail(data.email);
+    if (existingUser) {
+      throw new Error('User with this email already exists.');
     }
+    const newUser: User = {
+      ...data,
+      email: data.email.toLowerCase(),
+      passwordHash: simpleHash(data.password),
+      createdAt: new Date().toISOString(),
+      expiryDate: null, // New users start without an expiry date
+      isAdmin: false,
+      enabled: true,
+    };
+    this.db.users.push(newUser);
+    this.saveDatabase(this.db);
+    return newUser;
+  }
 
-    public getAllUsers(): User[] {
-        return JSON.parse(JSON.stringify(this.dbState.users));
-    }
+  public getUserProgress(email: string): UserProgress {
+    return this.db.userProgress[email.toLowerCase()] || { scores: [] };
+  }
 
-    public async saveAllUsers(users: User[]): Promise<void> {
-        this.dbState.users = users;
-        await this.saveDatabase();
-    }
+  public saveUserProgress(email: string, progress: UserProgress) {
+    this.db.userProgress[email.toLowerCase()] = progress;
+    this.saveDatabase(this.db);
+  }
 
-    public getAllProgress(): Record<string, UserProgress> {
-        return JSON.parse(JSON.stringify(this.dbState.userProgress));
-    }
+  public getUserEntitlements(email: string): StorableEntitlements {
+    return this.db.entitlements[email.toLowerCase()] || { productIDs: [], teamSeats: 0, teamActive: false };
+  }
 
-    public async saveAllProgress(progress: Record<string, UserProgress>): Promise<void> {
-        this.dbState.userProgress = progress;
-        await this.saveDatabase();
-    }
-
-    public getAllEntitlements(): Record<string, StorableEntitlements> {
-        return JSON.parse(JSON.stringify(this.dbState.entitlements));
-    }
-    
-    public async saveAllEntitlements(entitlements: Record<string, StorableEntitlements>): Promise<void> {
-        this.dbState.entitlements = entitlements;
-        await this.saveDatabase();
-    }
+  public saveUserEntitlements(email: string, entitlements: StorableEntitlements) {
+    this.db.entitlements[email.toLowerCase()] = entitlements;
+    this.saveDatabase(this.db);
+  }
+  
+  // Admin methods
+  public getAllUsers(): User[] {
+      return [...this.db.users];
+  }
+  
+  public updateUser(updatedUser: User) {
+      const userIndex = this.db.users.findIndex(u => u.email === updatedUser.email);
+      if (userIndex > -1) {
+          this.db.users[userIndex] = updatedUser;
+          this.saveDatabase(this.db);
+      } else {
+          throw new Error("User not found for update.");
+      }
+  }
 }
 
 export const databaseService = new DatabaseService();
