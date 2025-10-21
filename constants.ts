@@ -47,6 +47,11 @@ export const MODULE_PALETTE = [
   '#E74C3C', // Alizarin Crimson
 ];
 
+export const EXERCISE_TYPE_ICONS: { [key in ExerciseType]: IconComponent } = {
+  [ExerciseType.WRITTEN]: WrittenIcon,
+  [ExerciseType.VERBAL]: VerbalIcon,
+};
+
 export const VOICE_RUBRIC_CRITERIA = [
     { id: "pacing_breath", label: "Ritmo & Respirazione" },
     { id: "speed", label: "Velocità (parole/minuto)" },
@@ -268,132 +273,132 @@ export const MODULES: Module[] = [
         id: 'v2',
         title: 'Gestire un\'Interruzione con Fermezza',
         scenario: 'Durante una riunione importante, un collega ti interrompe ripetutamente mentre stai presentando i tuoi dati. Devi riprendere la parola e mantenere il controllo della conversazione senza apparire aggressivo, usando un tono di voce fermo ma collaborativo.',
-        task: 'Registra la frase che useresti per fermare l\'interruzione e riportare l\'attenzione sul tuo punto. Concentrati su un ritmo pacato e un volume costante per proiettare sicurezza.',
+        task: 'Registra la frase che useresti per riprendere la parola in modo assertivo. Es: "Un attimo, vorrei finire questo punto, poi ascolterò volentieri la tua osservazione."',
         difficulty: DifficultyLevel.INTERMEDIO,
         exerciseType: ExerciseType.VERBAL,
       },
       {
         id: 'v3',
-        title: 'Comunicare una Visione Complessa',
-        scenario: 'Sei il leader di un team e devi presentare una nuova strategia aziendale che comporterà cambiamenti significativi e possibili incertezze. Il tuo obiettivo è ispirare fiducia e motivare il team, nonostante le difficoltà.',
-        task: 'Registra un discorso di 45-60 secondi in cui introduci la nuova visione. Usa variazioni di intonazione, pause strategiche prima dei concetti chiave ed enfasi sulle parole che trasmettono ottimismo e determinazione.',
+        title: 'Comunicare Urgenza senza Ansia',
+        scenario: 'Devi comunicare al tuo team che una scadenza critica è stata anticipata e che è necessario un grande sforzo per rispettarla. L\'obiettivo è trasmettere urgenza e motivazione, senza generare panico o ansia.',
+        task: 'Registra un breve messaggio audio (30-45 secondi) per il tuo team, usando un tono energico e rassicurante per comunicare la nuova sfida.',
         difficulty: DifficultyLevel.AVANZATO,
         exerciseType: ExerciseType.VERBAL,
-      }
+      },
     ],
   },
   {
-    id: 'custom',
+    id: 'm6',
     title: 'Allenamento Personalizzato',
-    description: 'Crea il tuo scenario di allenamento su misura per affrontare le sfide di comunicazione che ti stanno più a cuore.',
+    description: 'Crea uno scenario di allenamento basato sulle tue sfide reali e ricevi un esercizio su misura dall\'AI.',
     icon: CustomIcon,
     cardImage: cardImage4,
     headerImage: allenamentoPersonalizzatoVideo,
-    exercises: [],
     isCustom: true,
     category: 'Fondamentali',
+    exercises: [], // Gli esercizi sono generati dinamicamente
   },
+
   // Pacchetti Speciali
   {
-    id: 'chat_trainer',
-    title: 'Crea la tua risposta strategica in chat',
-    description: 'Allenati a rispondere in modo efficace a messaggi difficili ricevuti su WhatsApp, email o altri canali.',
+    id: 's-chat',
+    title: 'Crea la tua risposta strategica per le conversazioni in chat e sui social',
+    description: 'Allenati a rispondere a messaggi difficili ricevuti su WhatsApp, email, ecc. con il supporto dell\'AI per creare risposte potenti.',
     icon: ChatIcon,
     cardImage: chatTrainerCardImage,
     headerImage: chatTrainerHeaderVideo,
-    exercises: [],
-    specialModuleType: 'chat_trainer',
     category: 'Pacchetti Speciali',
+    specialModuleType: 'chat_trainer',
+    exercises: [],
   },
-  // Pacchetti Settoriali
+
+  // Pacchetti Settoriali Professionali
   {
     id: 's1',
-    title: 'Sanità',
-    description: 'Comunica con empatia e chiarezza con pazienti e colleghi in contesti sanitari complessi.',
+    title: 'CES per il Settore Sanitario',
+    description: 'Comunicare con pazienti, familiari e colleghi in contesti ad alta pressione emotiva.',
     icon: HealthcareIcon,
     category: 'Pacchetti Settoriali',
-    prerequisites: ['m4', 'm2'], // Requires Listening and Conflict Management
+    prerequisites: ['m4', 'm2'], // Richiede Ascolto e Gestione Conversazioni Difficili
     exercises: [
         {
-            id: 's1e1',
-            title: 'Comunicare una Diagnosi Difficile',
-            scenario: 'Sei un medico e devi comunicare a un paziente e alla sua famiglia una diagnosi di una malattia cronica. L\'atmosfera è tesa e carica di ansia.',
-            task: 'Comunica la diagnosi in modo chiaro, empatico e supportivo, rispondendo alle domande e gestendo le reazioni emotive della famiglia.',
-            difficulty: DifficultyLevel.AVANZATO,
+          id: 's1e1',
+          title: 'Comunicare una Diagnosi Complessa',
+          scenario: 'Sei un medico e devi comunicare a un paziente e alla sua famiglia una diagnosi difficile, che richiede un lungo percorso di cura. Devi essere chiaro, empatico e rassicurante.',
+          task: 'Prepara e registra la prima parte della tua comunicazione (circa 60 secondi), focalizzandoti su come introdurre la notizia e stabilire un rapporto di fiducia.',
+          difficulty: DifficultyLevel.AVANZATO,
+          exerciseType: ExerciseType.VERBAL,
         }
-    ],
+    ]
   },
   {
     id: 's2',
-    title: 'Scuola',
-    description: 'Gestisci la comunicazione con studenti, genitori e colleghi per un ambiente educativo più efficace.',
+    title: 'CES per l\'Insegnamento',
+    description: 'Gestire la classe, comunicare con i genitori e motivare gli studenti con efficacia.',
     icon: EducationIcon,
     category: 'Pacchetti Settoriali',
-    prerequisites: ['m1', 'm2'], // Requires Feedback and Conflict Management
+    prerequisites: ['m1', 'm3'], // Richiede Feedback e Domande
     exercises: [
         {
             id: 's2e1',
-            title: 'Colloquio con un Genitore Preoccupato',
-            scenario: 'Sei un insegnante e devi incontrare i genitori di uno studente che sta avendo difficoltà comportamentali in classe. I genitori sono sulla difensiva.',
-            task: 'Conduci la conversazione in modo collaborativo, presentando i fatti in modo oggettivo e lavorando con i genitori per creare un piano di supporto per lo studente.',
+            title: 'Conversazione con un Genitore Preoccupato',
+            scenario: 'Un genitore ti ha chiesto un colloquio ed è molto preoccupato per i recenti risultati scolastici del figlio. Tende a essere iperprotettivo e a dare la colpa al metodo di insegnamento.',
+            task: 'Avvia la conversazione con il genitore. Utilizza l\'ascolto attivo e le domande per capire le sue preoccupazioni, creare un\'alleanza e spostare il focus sulla collaborazione per aiutare lo studente.',
             difficulty: DifficultyLevel.INTERMEDIO,
         }
-    ],
+    ]
   },
-  {
+   {
     id: 's3',
-    title: 'Customer Care',
-    description: 'Trasforma clienti insoddisfatti in sostenitori del brand attraverso una comunicazione magistrale.',
+    title: 'CES per il Customer Care',
+    description: 'Trasformare clienti insoddisfatti in sostenitori del brand attraverso una comunicazione empatica e risolutiva.',
     icon: CustomerCareIcon,
     category: 'Pacchetti Settoriali',
-    prerequisites: ['m4', 'm2'], // Requires Listening and Conflict Management
+    prerequisites: ['m4', 'm2'],
     exercises: [
         {
             id: 's3e1',
-            title: 'De-escalare un Cliente Arrabbiato',
-            scenario: 'Un cliente ti chiama, estremamente arrabbiato perché il suo prodotto non è arrivato in tempo per un evento importante. Minaccia di lasciare una recensione negativa ovunque.',
-            task: 'Ascolta attivamente la sua frustrazione, mostra empatia, de-escala la situazione e proponi una soluzione che lo faccia sentire ascoltato e valorizzato.',
-            difficulty: DifficultyLevel.INTERMEDIO,
+            title: 'Gestire un Cliente Molto Arrabbiato',
+            scenario: 'Un cliente chiama il servizio clienti ed è estremamente arrabbiato per un disservizio. Sta urlando, minacciando di scrivere recensioni negative e non ti lascia parlare.',
+            task: 'Registra le prime frasi che diresti per calmare il cliente, dimostrare che lo stai ascoltando e prendere il controllo della conversazione in modo professionale.',
+            difficulty: DifficultyLevel.AVANZATO,
+            exerciseType: ExerciseType.VERBAL,
         }
-    ],
+    ]
   },
   {
     id: 's7',
-    title: 'Vendita Consulenziale',
-    description: 'Passa dalla vendita di prodotti alla creazione di partnership strategiche attraverso l\'ascolto e le domande.',
+    title: 'CES per le Vendite',
+    description: 'Capire i bisogni profondi del cliente, gestire le obiezioni e chiudere trattative complesse.',
     icon: SalesIcon,
     category: 'Pacchetti Settoriali',
-    prerequisites: ['m4', 'm3'], // Requires Listening and Questioning
+    prerequisites: ['m3', 'm4'],
     exercises: [
         {
             id: 's7e1',
-            title: 'Superare un\'Obiezione sul Prezzo',
-            scenario: 'Un potenziale cliente è convinto del valore della tua soluzione, ma dice: "È fantastico, ma costa il doppio del vostro concorrente principale".',
-            task: 'Invece di giustificare il prezzo, usa domande strategiche per spostare la conversazione dal costo al valore e al ritorno sull\'investimento, differenziandoti dalla concorrenza.',
-            difficulty: DifficultyLevel.AVANZATO,
+            title: 'Rispondere all\'Obiezione "È troppo caro"',
+            scenario: 'Hai appena presentato la tua offerta a un cliente che sembrava molto interessato. Alla fine, ti dice: "Tutto molto bello, ma il prezzo è troppo alto rispetto alla concorrenza".',
+            task: 'Formula la prima domanda che faresti per esplorare questa obiezione, invece di giustificare subito il prezzo. Il tuo obiettivo è capire cosa c\'è dietro la sua affermazione.',
+            difficulty: DifficultyLevel.INTERMEDIO,
         }
-    ],
+    ]
   },
   {
     id: 's8',
-    title: 'Leadership',
-    description: 'Ispira il tuo team, gestisci il cambiamento e comunica la visione con l\'impatto di un vero leader.',
+    title: 'CES per la Leadership',
+    description: 'Delegare con efficacia, motivare il team e comunicare visioni strategiche in modo ispiratore.',
     icon: LeadershipIcon,
     category: 'Pacchetti Settoriali',
-    prerequisites: ['m1', 'm2', 'm5'], // Requires Feedback, Conflict and Voice
+    prerequisites: ['m1', 'm2', 'm3'],
     exercises: [
         {
             id: 's8e1',
-            title: 'Motivare il Team Dopo un Fallimento',
-            scenario: 'Il progetto chiave del tuo team è fallito, mancando un obiettivo importante per l\'azienda. Il morale è a terra e c\'è paura per le conseguenze.',
-            task: 'Tieni una riunione con il team. Comunica un messaggio che riconosca il fallimento senza cercare colpevoli, che ispiri resilienza e che rimetta a fuoco il team sugli apprendimenti e sui prossimi passi.',
+            title: 'Delegare un Compito Critico',
+            scenario: 'Devi delegare un compito molto importante e delicato a un membro del tuo team. Vuoi assicurarti che comprenda pienamente la responsabilità, si senta motivato e abbia tutti gli strumenti per avere successo, senza percepire il compito come un peso.',
+            task: 'Prepara e registra la conversazione di delega (circa 60-90 secondi), focalizzandoti su come presenti il compito, chiarisci le aspettative e offri supporto.',
             difficulty: DifficultyLevel.AVANZATO,
+            exerciseType: ExerciseType.VERBAL,
         }
-    ],
-  },
+    ]
+  }
 ];
-
-export const EXERCISE_TYPE_ICONS: Record<ExerciseType, IconComponent> = {
-  [ExerciseType.WRITTEN]: WrittenIcon,
-  [ExerciseType.VERBAL]: VerbalIcon,
-};

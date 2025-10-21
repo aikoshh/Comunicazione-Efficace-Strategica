@@ -1,42 +1,47 @@
-import type { Database, User, UserProgress, StorableEntitlements } from '../types';
+import type { User, UserProgress, StorableEntitlements, Database } from '../types';
 
-const DB_STORAGE_KEY = 'ces_coach_database.txt';
+const DB_KEY = 'ces_coach_app_state';
 
 class DatabaseService {
     private db: Database;
+    private subscribers: (() => void)[] = [];
 
     constructor() {
         this.db = this.loadDatabase();
     }
 
+    public subscribe(callback: () => void): () => void {
+        this.subscribers.push(callback);
+        return () => {
+            this.subscribers = this.subscribers.filter(sub => sub !== callback);
+        };
+    }
+
+    private notify(): void {
+        this.subscribers.forEach(callback => callback());
+    }
+
     private loadDatabase(): Database {
         try {
-            const dbString = localStorage.getItem(DB_STORAGE_KEY);
-            if (dbString) {
-                const parsedDb = JSON.parse(dbString);
-                // Ensure all keys exist to prevent errors on older db versions
-                return {
-                    users: parsedDb.users || [],
-                    userProgress: parsedDb.userProgress || {},
-                    entitlements: parsedDb.entitlements || {},
-                };
+            const storedState = localStorage.getItem(DB_KEY);
+            if (storedState) {
+                const parsed = JSON.parse(storedState);
+                if (parsed.users && parsed.userProgress && parsed.entitlements) {
+                    return parsed;
+                }
             }
-        } catch (e) {
-            console.error("Failed to load database from storage, starting fresh.", e);
+        } catch (error) {
+            console.error('Error loading database from localStorage:', error);
         }
-        // Return a default empty database structure if loading fails
-        return {
-            users: [],
-            userProgress: {},
-            entitlements: {},
-        };
+        return { users: [], userProgress: {}, entitlements: {} };
     }
 
     private saveDatabase(): void {
         try {
-            localStorage.setItem(DB_STORAGE_KEY, JSON.stringify(this.db));
-        } catch (e) {
-            console.error("Failed to save database to storage", e);
+            localStorage.setItem(DB_KEY, JSON.stringify(this.db));
+            this.notify();
+        } catch (error) {
+            console.error('Error saving database to localStorage:', error);
         }
     }
 
@@ -44,49 +49,30 @@ class DatabaseService {
         return JSON.stringify(this.db, null, 2);
     }
 
-    public importDatabase(jsonString: string): void {
+    public importDatabase(jsonString: string): { users: number; progress: number; entitlements: number } {
         try {
-            const newDb = JSON.parse(jsonString);
+            const importedDb: Database = JSON.parse(jsonString);
 
-            if (typeof newDb !== 'object' || newDb === null) {
-                throw new Error("Il file non contiene un oggetto JSON valido.");
+            if (!importedDb || typeof importedDb.users === 'undefined' || typeof importedDb.userProgress === 'undefined' || typeof importedDb.entitlements === 'undefined') {
+                throw new Error("Il file JSON non ha una struttura valida (mancano 'users', 'userProgress', o 'entitlements').");
             }
-    
-            const missingKeys: string[] = [];
-            if (!('users' in newDb)) missingKeys.push('users');
-            if (!('userProgress' in newDb)) missingKeys.push('userProgress');
-            if (!('entitlements' in newDb)) missingKeys.push('entitlements');
-    
-            if (missingKeys.length > 0) {
-                throw new Error(`Il file di database non è valido. Chiavi mancanti: ${missingKeys.join(', ')}.`);
-            }
-    
-            if (!Array.isArray(newDb.users)) {
-                throw new Error("La chiave 'users' nel database deve essere un array.");
-            }
-            if (typeof newDb.userProgress !== 'object' || Array.isArray(newDb.userProgress)) {
-                 throw new Error("La chiave 'userProgress' nel database deve essere un oggetto.");
-            }
-            if (typeof newDb.entitlements !== 'object' || Array.isArray(newDb.entitlements)) {
-                 throw new Error("La chiave 'entitlements' nel database deve essere un oggetto.");
-            }
-
-            this.db = newDb as Database;
-            this.saveDatabase();
             
+            this.db = importedDb;
+            this.saveDatabase();
+
+            return {
+                users: this.db.users.length,
+                progress: Object.keys(this.db.userProgress).length,
+                entitlements: Object.keys(this.db.entitlements).length,
+            };
         } catch (e: any) {
-            console.error("Errore durante l'importazione del database", e);
-            if (e instanceof SyntaxError) {
-                 throw new Error("Errore nel parsing del file di database. Assicurati che sia un file JSON valido.");
-            }
-            throw e;
+            console.error("Failed to import database:", e);
+            throw new Error(`Errore durante l'importazione: ${e.message}`);
         }
     }
 
-
-    // --- Users ---
     public getAllUsers(): User[] {
-        return this.db.users;
+        return JSON.parse(JSON.stringify(this.db.users));
     }
 
     public saveAllUsers(users: User[]): void {
@@ -94,19 +80,17 @@ class DatabaseService {
         this.saveDatabase();
     }
 
-    // --- User Progress ---
-    public getAllUserProgress(): Record<string, UserProgress> {
-        return this.db.userProgress;
+    public getAllProgress(): Record<string, UserProgress> {
+        return JSON.parse(JSON.stringify(this.db.userProgress));
     }
 
-    public saveAllUserProgress(progress: Record<string, UserProgress>): void {
+    public saveAllProgress(progress: Record<string, UserProgress>): void {
         this.db.userProgress = progress;
         this.saveDatabase();
     }
 
-    // --- Entitlements ---
     public getAllEntitlements(): Record<string, StorableEntitlements> {
-        return this.db.entitlements;
+        return JSON.parse(JSON.stringify(this.db.entitlements));
     }
     
     public saveAllEntitlements(entitlements: Record<string, StorableEntitlements>): void {

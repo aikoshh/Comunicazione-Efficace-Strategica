@@ -168,7 +168,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectModule, onSelect
       {modules.map((module, index) => {
         const prerequisites = module.prerequisites || [];
         const isLocked = prerequisites.length > 0 && !prerequisites.every(id => completedModuleIds.includes(id));
-        const isCompleted = !isLocked && completedModuleIds.includes(module.id);
+        const isCompleted = !isLocked && completedModuleIds.includes(module.id) && module.specialModuleType !== 'chat_trainer';
         const completedExercisesInModule = module.exercises.filter(e => completedExerciseIds.includes(e.id)).length;
         const totalExercisesInModule = module.exercises.length;
         const moduleColor = MODULE_PALETTE[(index + colorOffset) % MODULE_PALETTE.length];
@@ -202,7 +202,14 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectModule, onSelect
                 </div>
             )}
             <div style={{ ...styles.cardImageContainer, filter: isLocked ? 'grayscale(80%)' : 'none' }}>
-                {module.cardImage && <img src={module.cardImage} alt={module.title} style={styles.cardImage} className="card-image" loading="lazy"/>}
+                {module.cardImage && 
+                    <MediaDisplay 
+                        src={module.cardImage} 
+                        alt={module.title} 
+                        style={styles.cardImage} 
+                        className="card-image" 
+                    />
+                }
             </div>
             <div style={styles.cardContent}>
               <div style={styles.cardHeader}>
@@ -246,6 +253,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectModule, onSelect
                 alt="Ivano Cincinnato - CES Coach" 
                 style={styles.headerImage}
                 className="header-image-media"
+                autoPlay={false}
             />
             <div style={styles.playIconOverlay} className="play-icon-overlay">
                 <PlayIcon color="white" width={48} height={48} style={{filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))'}}/>

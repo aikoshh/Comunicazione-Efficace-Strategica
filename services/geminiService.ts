@@ -1,3 +1,4 @@
+// FIX: Removed invalid file header comments that were causing compilation errors.
 import { GoogleGenAI, Type } from "@google/genai";
 import type {
   AnalysisResult,
@@ -6,7 +7,7 @@ import type {
   CommunicatorProfile,
   Entitlements,
   DetailedRubricScore
-} from './types';
+} from '../types';
 import { hasProAccess } from './monetizationService';
 import { VOICE_RUBRIC_CRITERIA } from '../constants';
 
@@ -310,18 +311,16 @@ export async function generateStrategicChatResponse(
     ISTRUZIONI:
     1.  Analizza il messaggio, l'obiettivo e il contesto fornito.
     2.  Formula una risposta che segua ESATTAMENTE le direttive per il tono "${tone}": ${toneInstruction[tone]}.
-    3.  Genera due versioni della risposta: una "Risposta Breve" (massimo 2 frasi, ideale per chat veloci) e una "Risposta Elaborata" (più dettagliata, per email o contesti formali).
-    4.  Aggiungi una sezione "Spiegazione della Strategia" dove spieghi in 2-3 punti elenco perché la risposta è efficace in relazione all'obiettivo e al tono scelti. Usa il marcatore '*' per ogni punto elenco.
-    5.  Aggiungi una sezione "Avvertenza fondamentale" dove fornisci un consiglio cruciale o un'avvertenza sull'uso di questo tipo di risposta. Usa il marcatore '###' prima di questa sezione.
-    6.  Restituisci l'output ESCLUSIVAMENTE come testo formattato in Markdown, senza JSON. Struttura la risposta come segue:
+    3.  Genera due versioni della risposta: una "Risposta Breve" e una "Risposta Elaborata".
+    4.  Aggiungi una sezione "Spiegazione della Strategia" dove spieghi in 2-3 punti elenco perché la risposta è efficace. Usa il marcatore '*' per ogni punto elenco.
+    5.  Evidenzia le frasi o parole chiave strategiche all'interno delle risposte e della spiegazione usando **asterischi**.
+    6.  Restituisci l'output ESCLUSIVAMENTE come testo formattato in Markdown. Struttura la risposta come segue, SENZA la sezione "Avvertenza":
         - Titolo: "Risposta Breve"
         - Testo della risposta breve
         - Titolo: "Risposta Elaborata"
         - Testo della risposta elaborata
         - Titolo: "Spiegazione della Strategia"
-        - Elenco puntato della spiegazione
-        - Marcatore e Titolo: "### Avvertenza fondamentale"
-        - Testo dell'avvertenza`;
+        - Elenco puntato della spiegazione`;
     
     const response = await getAi(apiKey).models.generateContent({
         model: modelToUse,

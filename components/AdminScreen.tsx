@@ -1,484 +1,294 @@
-import React, { useState, useRef } from 'react';
-import { User } from '../types';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import type { User } from '../types';
 import { userService } from '../services/userService';
 import { databaseService } from '../services/databaseService';
 import { COLORS } from '../constants';
-import { BackIcon, SettingsIcon } from './Icons';
 import { useToast } from '../hooks/useToast';
-import { soundService } from '../services/soundService';
+import { HomeIcon, CloseIcon, UploadIcon, DownloadIcon } from './Icons';
+import { Spinner } from './Loader';
 
-interface AdminScreenProps {
-  onBack: () => void;
-  onUsersUpdate: () => void;
-}
+const UserModal: React.FC<{
+    user: Partial<User> | null;
+    onClose: () => void;
+    onSave: (user: Partial<User> & { password?: string }) => Promise<void>;
+}> = ({ user, onClose, onSave }) => {
+    const [formData, setFormData] = useState<Partial<User> & { password?: string }>({});
+    const [isLoading, setIsLoading] = useState(false);
+    const isNewUser = !user?.email;
 
-// A type for the data being edited to avoid type conflicts with the main User type
-type EditableUserData = Partial<Pick<User, 'firstName' | 'lastName' | 'isAdmin' | 'enabled' | 'expiryDate'>> & { password?: string };
+    useEffect(() => {
+        setFormData(user ? { ...user } : { isAdmin: false, enabled: true });
+    }, [user]);
 
-const isoToDateTimeLocal = (isoString: string | null): string => {
-  if (!isoString) return "";
-  try {
-    const date = new Date(isoString);
-    const timezoneOffset = date.getTimezoneOffset() * 60000;
-    const localTime = new Date(date.getTime() - timezoneOffset);
-    return localTime.toISOString().slice(0, 16);
-  } catch (e) {
-    return "";
-  }
-};
-
-export const AdminScreen: React.FC<AdminScreenProps> = ({ onBack, onUsersUpdate }) => {
-  const [users, setUsers] = useState<User[]>(() => userService.listUsers());
-  const { addToast } = useToast();
-  const importInputRef = useRef<HTMLInputElement>(null);
-
-  const [newEmail, setNewEmail] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [newFirstName, setNewFirstName] = useState('');
-  const [newLastName, setNewLastName] = useState('');
-  const [isAdding, setIsAdding] = useState(false);
-
-  const [editingUserEmail, setEditingUserEmail] = useState<string | null>(null);
-  const [editedUserData, setEditedUserData] = useState<EditableUserData>({});
-  
-  const [fileToImport, setFileToImport] = useState<File | null>(null);
-
-
-  const handleAddUser = async (e: React.FormEvent) => {
-    e.preventDefault();
-    soundService.playClick();
-    if (!newEmail || !newPassword || !newFirstName) {
-        addToast("Email, Nome e Password sono obbligatori.", "error");
-        return;
-    }
-    setIsAdding(true);
-    try {
-        await userService.addUser(newEmail, newPassword, newFirstName, newLastName);
-        addToast("Utente aggiunto con successo.", "success");
-        setUsers(userService.listUsers());
-        onUsersUpdate();
-        // Reset form
-        setNewEmail('');
-        setNewPassword('');
-        setNewFirstName('');
-        setNewLastName('');
-    } catch (e: any) {
-        addToast(e.message, 'error');
-    } finally {
-        setIsAdding(false);
-    }
-  };
-
-  const startEditing = (user: User) => {
-    soundService.playClick();
-    setEditingUserEmail(user.email);
-    setEditedUserData({
-      firstName: user.firstName,
-      lastName: user.lastName,
-      isAdmin: user.isAdmin,
-      enabled: user.enabled,
-      expiryDate: user.expiryDate,
-      password: '',
-    });
-  };
-
-  const cancelEditing = () => {
-    soundService.playClick();
-    setEditingUserEmail(null);
-    setEditedUserData({});
-  };
-
-  const handleSaveUser = async (email: string) => {
-    soundService.playClick();
-    try {
-      const updates: EditableUserData = { ...editedUserData };
-      // Only include the password in the update if it's not empty
-      if (!updates.password?.trim()) {
-        delete updates.password;
-      }
-
-      await userService.updateUser(email, updates);
-      addToast("Utente aggiornato con successo.", "success");
-      setUsers(userService.listUsers());
-      onUsersUpdate();
-      cancelEditing();
-    } catch (e: any) {
-      addToast(e.message, 'error');
-    }
-  };
-
-  const handleInputChange = (field: keyof EditableUserData, value: string | boolean) => {
-    if (field === 'expiryDate' && typeof value === 'string') {
-        const isoValue = value ? new Date(value).toISOString() : null;
-        setEditedUserData(prev => ({ ...prev, [field]: isoValue }));
-    } else {
-        setEditedUserData(prev => ({ ...prev, [field]: value }));
-    }
-  };
-
-  const handleDeleteUser = (email: string) => {
-    soundService.playClick();
-    if (confirm(`Sei sicuro di voler eliminare l'utente ${email}? L'azione è irreversibile.`)) {
-        if (userService.deleteUser(email)) {
-            addToast("Utente eliminato.", "success");
-            setUsers(userService.listUsers());
-            onUsersUpdate();
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+        const { name, value, type } = e.target;
+        if (type === 'checkbox') {
+            const { checked } = e.target as HTMLInputElement;
+            setFormData(prev => ({ ...prev, [name]: checked }));
         } else {
-            addToast("Impossibile trovare l'utente.", "error");
-        }
-    }
-  };
-
-  const handleExtendSubscription = (email: string) => {
-    soundService.playClick();
-    const daysStr = prompt("Quanti giorni vuoi aggiungere? (default: 30)", "30");
-    const days = parseInt(daysStr || '30', 10);
-    if (isNaN(days) || days <= 0) {
-        addToast("Numero di giorni non valido.", "error");
-        return;
-    }
-    
-    const updatedUser = userService.extendSubscription(email, days);
-    if (updatedUser) {
-        addToast(`Abbonamento esteso. Nuova scadenza: ${updatedUser.expiryDate ? new Date(updatedUser.expiryDate).toLocaleDateString() : 'Nessuna'}`, "success");
-        setUsers(userService.listUsers());
-        onUsersUpdate();
-    } else {
-        addToast("Impossibile trovare l'utente.", "error");
-    }
-  };
-  
-  const handleExport = () => {
-    soundService.playClick();
-    try {
-        const jsonString = databaseService.exportDatabase();
-        const blob = new Blob([jsonString], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `ces_coach_backup_${new Date().toISOString().split('T')[0]}.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        addToast("Database esportato con successo.", "success");
-    } catch (e) {
-        addToast("Errore durante l'esportazione del database.", "error");
-    }
-  };
-
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    setFileToImport(file || null);
-  };
-
-  const handleImport = () => {
-    if (!fileToImport) {
-        addToast("Nessun file selezionato per l'importazione.", "error");
-        return;
-    }
-
-    soundService.playClick();
-    if (!confirm("Sei sicuro di voler importare questo file? L'operazione sovrascriverà TUTTI i dati attuali (utenti, progressi, acquisti). Questa azione è irreversibile.")) {
-        setFileToImport(null);
-        if (importInputRef.current) importInputRef.current.value = '';
-        return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        try {
-            const content = e.target?.result as string;
-            databaseService.importDatabase(content);
-            userService.reloadUsers();
-            setUsers(userService.listUsers());
-            onUsersUpdate();
-            addToast("Database importato con successo. La lista utenti è stata aggiornata.", "success");
-        } catch (error: any) {
-            addToast(error.message, 'error');
-        } finally {
-            setFileToImport(null);
-            if (importInputRef.current) importInputRef.current.value = '';
+            setFormData(prev => ({ ...prev, [name]: value }));
         }
     };
-    reader.readAsText(fileToImport);
-  };
+    
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsLoading(true);
+        await onSave(formData);
+        setIsLoading(false);
+    };
 
+    if (!user) return null;
 
-  return (
-    <div style={styles.container}>
-      <header style={styles.header}>
-        <div style={styles.titleContainer}>
-            <SettingsIcon width={32} height={32} color={COLORS.primary} />
-            <h1 style={styles.title}>Pannello di Amministrazione</h1>
-        </div>
-        <button onClick={onBack} style={styles.backButton}><BackIcon/> Torna alla Home</button>
-      </header>
-      
-      <div style={styles.addUserForm}>
-        <h2 style={styles.formTitle}>Aggiungi Nuovo Utente</h2>
-        <form onSubmit={handleAddUser} style={styles.formGrid}>
-          <input
-            type="email"
-            placeholder="Email"
-            value={newEmail}
-            onChange={(e) => setNewEmail(e.target.value)}
-            style={styles.formInput}
-            required
-            disabled={isAdding}
-          />
-          <input
-            type="password"
-            placeholder="Password"
-            value={newPassword}
-            onChange={(e) => setNewPassword(e.target.value)}
-            style={styles.formInput}
-            required
-            disabled={isAdding}
-          />
-          <input
-            type="text"
-            placeholder="Nome"
-            value={newFirstName}
-            onChange={(e) => setNewFirstName(e.target.value)}
-            style={styles.formInput}
-            required
-            disabled={isAdding}
-          />
-          <input
-            type="text"
-            placeholder="Cognome (Opzionale)"
-            value={newLastName}
-            onChange={(e) => setNewLastName(e.target.value)}
-            style={styles.formInput}
-            disabled={isAdding}
-          />
-          <button type="submit" style={styles.addButton} disabled={isAdding}>
-            {isAdding ? 'Aggiungendo...' : 'Aggiungi'}
-          </button>
-        </form>
-      </div>
-
-      <div style={styles.addUserForm}>
-        <h2 style={styles.formTitle}>Import / Export Dati</h2>
-        <div style={styles.importExportSection}>
-            <div style={styles.importExportActions}>
-                <button onClick={handleExport} style={{...styles.actionButton, ...styles.exportButton}}>
-                    Esporta Database (.json)
-                </button>
-                <button onClick={() => importInputRef.current?.click()} style={{...styles.actionButton, ...styles.importButton}}>
-                    Seleziona File di Backup...
-                </button>
-                <input
-                    type="file"
-                    ref={importInputRef}
-                    style={{ display: 'none' }}
-                    accept=".json,.txt"
-                    onChange={handleFileSelect}
-                />
+    return (
+        <div style={styles.modalOverlay} onClick={onClose}>
+            <div style={styles.modalContent} onClick={e => e.stopPropagation()}>
+                <header style={styles.modalHeader}>
+                    <h3 style={styles.modalTitle}>{isNewUser ? 'Aggiungi Nuovo Utente' : 'Modifica Utente'}</h3>
+                    <button onClick={onClose} style={styles.closeButton}><CloseIcon /></button>
+                </header>
+                <form onSubmit={handleSubmit} style={styles.modalForm}>
+                    <div style={styles.inputGroup}>
+                        <label htmlFor="email" style={styles.modalLabel}>Email</label>
+                        <input style={styles.modalInput} type="email" id="email" name="email" value={formData.email || ''} onChange={handleChange} required disabled={!isNewUser} />
+                    </div>
+                    <div style={styles.inputGroup}>
+                        <label htmlFor="firstName" style={styles.modalLabel}>Nome</label>
+                        <input style={styles.modalInput} type="text" id="firstName" name="firstName" value={formData.firstName || ''} onChange={handleChange} required />
+                    </div>
+                    <div style={styles.inputGroup}>
+                        <label htmlFor="lastName" style={styles.modalLabel}>Cognome</label>
+                        <input style={styles.modalInput} type="text" id="lastName" name="lastName" value={formData.lastName || ''} onChange={handleChange} required />
+                    </div>
+                    <div style={styles.inputGroup}>
+                        <label htmlFor="password" style={styles.modalLabel}>{isNewUser ? 'Password' : 'Nuova Password (opzionale)'}</label>
+                        <input style={styles.modalInput} type="password" id="password" name="password" value={formData.password || ''} onChange={handleChange} required={isNewUser} />
+                    </div>
+                    <div style={styles.inputGroup}>
+                        <label htmlFor="expiryDate" style={styles.modalLabel}>Data Scadenza (YYYY-MM-DD o vuoto per illimitato)</label>
+                        <input style={styles.modalInput} type="text" id="expiryDate" name="expiryDate" value={formData.expiryDate || ''} onChange={handleChange} placeholder="es. 2025-12-31" />
+                    </div>
+                    <div style={styles.checkboxGroup}>
+                        <input type="checkbox" id="isAdmin" name="isAdmin" checked={!!formData.isAdmin} onChange={handleChange} />
+                        <label htmlFor="isAdmin">È Amministratore</label>
+                    </div>
+                    <div style={styles.checkboxGroup}>
+                        <input type="checkbox" id="enabled" name="enabled" checked={!!formData.enabled} onChange={handleChange} />
+                        <label htmlFor="enabled">Account Attivo</label>
+                    </div>
+                    <div style={styles.modalFooter}>
+                        <button type="button" onClick={onClose} style={styles.secondaryButton}>Annulla</button>
+                        <button type="submit" style={styles.primaryButton} disabled={isLoading}>
+                            {isLoading ? <Spinner size={20} color="white" /> : 'Salva Utente'}
+                        </button>
+                    </div>
+                </form>
             </div>
-            {fileToImport && (
-                <div style={styles.fileSelectedContainer}>
-                    <span style={styles.fileName}>{fileToImport.name}</span>
-                    <button onClick={handleImport} style={{...styles.actionButton, ...styles.loadButton}}>
-                        Carica File
-                    </button>
-                </div>
-            )}
         </div>
-        <p style={styles.importExportDescription}>
-            Esporta tutti i dati (utenti, progressi, acquisti) in un singolo file. Importa un file per ripristinare lo stato dell'applicazione.
-        </p>
-      </div>
+    );
+};
 
-      <div style={styles.userListHeader}>
-        <h2 style={styles.userCount}>{users.length} Utenti Registrati</h2>
-      </div>
 
-      <div style={styles.userListContainer}>
-        {users.length === 0 ? (
-            <p>Nessun utente trovato.</p>
-        ) : (
-            users.map(user => (
-              editingUserEmail === user.email ? (
-                <div key={user.email} style={{...styles.userCard, ...styles.editingCard}}>
-                    <div style={styles.editForm}>
-                      <div style={styles.editGroup}>
-                          <label style={styles.editLabel}>Email</label>
-                          <input type="text" value={user.email} style={styles.editInput} disabled />
-                      </div>
-                       <div style={styles.editGroup}>
-                          <label style={styles.editLabel}>Nome</label>
-                          <input type="text" value={editedUserData.firstName} onChange={e => handleInputChange('firstName', e.target.value)} style={styles.editInput} />
-                      </div>
-                       <div style={styles.editGroup}>
-                          <label style={styles.editLabel}>Cognome</label>
-                          <input type="text" value={editedUserData.lastName} onChange={e => handleInputChange('lastName', e.target.value)} style={styles.editInput} />
-                      </div>
-                      <div style={styles.editGroup}>
-                          <label style={styles.editLabel}>Nuova Password</label>
-                          <input type="password" placeholder="Lascia vuoto per non cambiare" value={editedUserData.password} onChange={e => handleInputChange('password', e.target.value)} style={styles.editInput} />
-                      </div>
-                       <div style={styles.editGroup}>
-                          <label style={styles.editLabel}>Scadenza</label>
-                          <input type="datetime-local" value={isoToDateTimeLocal(editedUserData.expiryDate ?? null)} onChange={e => handleInputChange('expiryDate', e.target.value)} style={styles.editInput} />
-                      </div>
-                      <div style={styles.checkboxGroup}>
-                          <label style={styles.checkboxLabel}>
-                              <input type="checkbox" checked={!!editedUserData.isAdmin} onChange={e => handleInputChange('isAdmin', e.target.checked)} />
-                              Amministratore
-                          </label>
-                          <label style={styles.checkboxLabel}>
-                              <input type="checkbox" checked={!!editedUserData.enabled} onChange={e => handleInputChange('enabled', e.target.checked)} />
-                              Abilitato
-                          </label>
-                      </div>
-                    </div>
-                    <div style={styles.userActions}>
-                        <button onClick={() => handleSaveUser(user.email)} style={{...styles.actionButton, ...styles.saveButton}}>Salva</button>
-                        <button onClick={cancelEditing} style={{...styles.actionButton, ...styles.cancelButton}}>Annulla</button>
-                    </div>
+export const AdminScreen: React.FC<{ onBack: () => void }> = ({ onBack }) => {
+    const [users, setUsers] = useState<User[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [editingUser, setEditingUser] = useState<Partial<User> | null>(null);
+    const { addToast } = useToast();
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const fetchUsers = useCallback(() => {
+        setIsLoading(true);
+        userService.reloadUsers();
+        setUsers(userService.listUsers());
+        setIsLoading(false);
+    }, []);
+
+    useEffect(() => {
+        const unsubscribe = databaseService.subscribe(fetchUsers);
+        fetchUsers();
+        return () => unsubscribe();
+    }, [fetchUsers]);
+
+    const handleEdit = (user: User) => {
+        setEditingUser({ ...user });
+    };
+
+    const handleAddUser = () => {
+        setEditingUser({});
+    };
+
+    const handleDelete = async (email: string) => {
+        if (window.confirm(`Sei sicuro di voler eliminare l'utente ${email}? L'azione è irreversibile.`)) {
+            const success = userService.deleteUser(email);
+            if (success) {
+                addToast('Utente eliminato.', 'success');
+            } else {
+                addToast("Impossibile eliminare l'utente.", 'error');
+            }
+        }
+    };
+    
+    const handleExtend = async (email: string) => {
+        const user = userService.extendSubscription(email, 30);
+        if (user) {
+            addToast(`Abbonamento per ${email} esteso di 30 giorni.`, 'success');
+        } else {
+             addToast('Utente non trovato.', 'error');
+        }
+    };
+
+    const handleSaveUser = async (userData: Partial<User> & { password?: string }) => {
+        try {
+            if (userData.email && !userService.getUser(userData.email)) {
+                if (!userData.password) {
+                    addToast('La password è obbligatoria per i nuovi utenti.', 'error');
+                    return;
+                }
+                await userService.addUser(userData.email, userData.password, userData.firstName || '', userData.lastName || '', !!userData.isAdmin, 30);
+                addToast('Utente creato con successo.', 'success');
+            } else if (userData.email) {
+                await userService.updateUser(userData.email, userData);
+                addToast('Utente aggiornato con successo.', 'success');
+            }
+            setEditingUser(null);
+        } catch (e: any) {
+            addToast(e.message || 'Errore durante il salvataggio.', 'error');
+        }
+    };
+
+    const handleExport = () => {
+        try {
+            const jsonData = databaseService.exportDatabase();
+            const blob = new Blob([jsonData], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            const date = new Date().toISOString().split('T')[0];
+            a.href = url;
+            a.download = `ces_coach_backup_${date}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            addToast('Database esportato con successo.', 'success');
+        } catch (e) {
+            console.error(e);
+            addToast('Errore durante l\'esportazione del database.', 'error');
+        }
+    };
+
+    const handleImportClick = () => {
+        fileInputRef.current?.click();
+    };
+
+    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const content = e.target?.result as string;
+                const stats = databaseService.importDatabase(content);
+                addToast(`Database importato: ${stats.users} utenti.`, 'success');
+            } catch (err: any) {
+                addToast(err.message || 'Errore nell\'importazione del file.', 'error');
+            } finally {
+                if (event.target) {
+                    event.target.value = '';
+                }
+            }
+        };
+        reader.onerror = () => {
+            addToast('Impossibile leggere il file.', 'error');
+        };
+        reader.readAsText(file);
+    };
+
+    if (isLoading) {
+        return <div style={styles.container}><Spinner size={48} color={COLORS.primary} /></div>;
+    }
+
+    return (
+        <div style={styles.container}>
+            <input
+                type="file"
+                ref={fileInputRef}
+                style={{ display: 'none' }}
+                accept=".json"
+                onChange={handleFileChange}
+            />
+            <header style={styles.header}>
+                <h1 style={styles.title}>Pannello di Amministrazione</h1>
+                <div style={styles.headerActions}>
+                    <button onClick={onBack} style={styles.secondaryButton}><HomeIcon/> Torna alla Home</button>
+                    <button onClick={handleExport} style={styles.secondaryButton}><DownloadIcon/> Esporta Database</button>
+                    <button onClick={handleImportClick} style={styles.secondaryButton}><UploadIcon/> Carica Database</button>
+                    <button onClick={handleAddUser} style={styles.primaryButton}>Aggiungi Utente</button>
                 </div>
-              ) : (
-                <div key={user.email} style={styles.userCard}>
-                    <div style={styles.userInfo}>
-                        <div style={styles.userName}>{user.firstName} {user.lastName}</div>
-                        <div style={styles.userEmail}>{user.email}</div>
-                        <div style={styles.userDetails}>
-                            <span>Admin: <strong style={{color: user.isAdmin ? COLORS.success : COLORS.error}}>{user.isAdmin ? 'Sì' : 'No'}</strong></span>
-                            <span>Abilitato: <strong style={{color: user.enabled ? COLORS.success : COLORS.error}}>{user.enabled ? 'Sì' : 'No'}</strong></span>
-                        </div>
-                         <div style={styles.userExpiry}>
-                           Scadenza: {user.expiryDate ? new Date(user.expiryDate).toLocaleString() : 'Nessuna'}
-                        </div>
-                    </div>
-                    <div style={styles.userActions}>
-                        <button onClick={() => startEditing(user)} style={{...styles.actionButton, ...styles.editButton}}>Modifica</button>
-                        <button onClick={() => handleDeleteUser(user.email)} style={{...styles.actionButton, ...styles.deleteButton}}>Elimina</button>
-                        {!user.isAdmin && <button onClick={() => handleExtendSubscription(user.email)} style={{...styles.actionButton, ...styles.extendButton}}>Estendi</button>}
-                    </div>
-                </div>
-              )
-            ))
-        )}
-      </div>
-    </div>
-  );
+            </header>
+            <div style={styles.tableContainer}>
+                <table style={styles.table}>
+                    <thead>
+                        <tr>
+                            <th style={styles.tableHeader}>Email</th>
+                            <th style={styles.tableHeader}>Nome</th>
+                            <th style={styles.tableHeader}>Stato</th>
+                            <th style={styles.tableHeader}>Scadenza</th>
+                            <th style={styles.tableHeader}>Admin</th>
+                            <th style={styles.tableHeader}>Azioni</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {users.map(user => {
+                            const isExpired = user.expiryDate ? new Date(user.expiryDate) < new Date() : false;
+                            return (
+                                <tr key={user.email}>
+                                    <td style={styles.tableCell}>{user.email}</td>
+                                    <td style={styles.tableCell}>{user.firstName} {user.lastName}</td>
+                                    <td style={styles.tableCell}>
+                                        <span style={{...styles.statusPill, backgroundColor: user.enabled && !isExpired ? COLORS.success : COLORS.error}}>
+                                            {user.enabled && !isExpired ? 'Attivo' : (isExpired ? 'Scaduto' : 'Disabilitato')}
+                                        </span>
+                                    </td>
+                                    <td style={styles.tableCell}>{user.expiryDate ? new Date(user.expiryDate).toLocaleDateString() : 'Illimitato'}</td>
+                                    <td style={styles.tableCell}>{user.isAdmin ? 'Sì' : 'No'}</td>
+                                    <td style={{...styles.tableCell, ...styles.actionsCell}}>
+                                        <button onClick={() => handleEdit(user)}>Modifica</button>
+                                        <button onClick={() => handleExtend(user.email)}>+30gg</button>
+                                        <button onClick={() => handleDelete(user.email)} style={{color: COLORS.error}}>Elimina</button>
+                                    </td>
+                                </tr>
+                            )
+                        })}
+                    </tbody>
+                </table>
+            </div>
+            {editingUser && <UserModal user={editingUser} onClose={() => setEditingUser(null)} onSave={handleSaveUser} />}
+        </div>
+    );
 };
 
 const styles: { [key: string]: React.CSSProperties } = {
-    container: { maxWidth: '1000px', margin: '0 auto', padding: '40px 20px', backgroundColor: COLORS.base, minHeight: '100vh' },
-    header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '32px' },
-    titleContainer: { display: 'flex', alignItems: 'center', gap: '16px' },
-    title: { fontSize: '28px', color: COLORS.textPrimary, fontWeight: 'bold', margin: 0 },
-    backButton: { display: 'flex', alignItems: 'center', gap: '8px', background: 'transparent', border: `1px solid ${COLORS.divider}`, borderRadius: '8px', padding: '8px 16px', cursor: 'pointer', fontSize: '15px', color: COLORS.textSecondary, fontWeight: '500' },
-    addUserForm: {
-        backgroundColor: COLORS.card,
-        padding: '24px',
-        borderRadius: '12px',
-        marginBottom: '32px',
-        boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
-    },
-    formTitle: {
-        fontSize: '20px',
-        color: COLORS.textPrimary,
-        margin: '0 0 16px 0',
-        paddingBottom: '8px',
-        borderBottom: `1px solid ${COLORS.divider}`
-    },
-    importExportSection: {
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '16px',
-    },
-    importExportActions: {
-        display: 'flex',
-        gap: '16px',
-        flexWrap: 'wrap',
-    },
-    fileSelectedContainer: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '12px',
-        backgroundColor: COLORS.cardDark,
-        padding: '8px 12px',
-        borderRadius: '8px',
-        width: '100%',
-        boxSizing: 'border-box'
-    },
-    fileName: {
-        flex: 1,
-        fontSize: '14px',
-        color: COLORS.textSecondary,
-        fontStyle: 'italic',
-        whiteSpace: 'nowrap',
-        overflow: 'hidden',
-        textOverflow: 'ellipsis',
-    },
-    loadButton: {
-        backgroundColor: COLORS.success,
-        flexShrink: 0,
-    },
-    exportButton: {
-        backgroundColor: COLORS.primary,
-    },
-    importButton: {
-        backgroundColor: COLORS.secondary,
-    },
-    importExportDescription: {
-        fontSize: '14px',
-        color: COLORS.textSecondary,
-        marginTop: '16px',
-        lineHeight: 1.5,
-    },
-    formGrid: {
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-        gap: '16px',
-        alignItems: 'flex-end',
-    },
-    formInput: {
-        padding: '10px',
-        fontSize: '14px',
-        borderRadius: '8px',
-        border: `1px solid ${COLORS.divider}`,
-        width: '100%',
-        boxSizing: 'border-box',
-    },
-    userListHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' },
-    userCount: { fontSize: '20px', color: COLORS.textPrimary, margin: 0 },
-    addButton: { padding: '10px 18px', fontSize: '15px', fontWeight: 'bold', color: 'white', backgroundColor: COLORS.success, border: 'none', borderRadius: '8px', cursor: 'pointer', height: '40px' },
-    userListContainer: { display: 'flex', flexDirection: 'column', gap: '16px' },
-    userCard: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', backgroundColor: COLORS.card, padding: '20px', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', transition: 'all 0.3s ease' },
-    editingCard: {
-        backgroundColor: COLORS.cardDark,
-        borderColor: COLORS.secondary,
-        boxShadow: `0 0 0 2px ${COLORS.secondary}, 0 4px 12px rgba(0,0,0,0.1)`,
-        flexDirection: 'column',
-        alignItems: 'stretch',
-    },
-    editForm: {
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-        gap: '16px',
-        width: '100%',
-        marginBottom: '16px'
-    },
-    editGroup: { display: 'flex', flexDirection: 'column' },
-    editLabel: { fontSize: '12px', color: COLORS.textSecondary, marginBottom: '4px', fontWeight: 500 },
-    editInput: { padding: '8px', fontSize: '14px', borderRadius: '6px', border: `1px solid ${COLORS.divider}` },
-    checkboxGroup: { gridColumn: '1 / -1', display: 'flex', gap: '20px', alignItems: 'center', marginTop: '8px' },
-    checkboxLabel: { display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', cursor: 'pointer' },
-    userInfo: { display: 'flex', flexDirection: 'column', gap: '4px' },
-    userName: { fontSize: '18px', fontWeight: '600', color: COLORS.textPrimary },
-    userEmail: { fontSize: '14px', color: COLORS.textSecondary },
-    userDetails: { display: 'flex', gap: '16px', fontSize: '14px', color: COLORS.textSecondary, marginTop: '8px' },
-    userExpiry: { fontSize: '13px', color: COLORS.textSecondary, fontStyle: 'italic', marginTop: '4px' },
-    userActions: { display: 'flex', flexWrap: 'wrap', gap: '12px', flexShrink: 0, alignSelf: 'center' },
-    actionButton: { padding: '8px 16px', fontSize: '14px', fontWeight: '500', border: 'none', borderRadius: '8px', cursor: 'pointer', color: 'white' },
-    editButton: { backgroundColor: COLORS.secondary },
-    deleteButton: { backgroundColor: COLORS.error },
-    extendButton: { backgroundColor: COLORS.warning, color: COLORS.textPrimary },
-    saveButton: { backgroundColor: COLORS.success },
-    cancelButton: { backgroundColor: COLORS.textSecondary },
+    container: { maxWidth: '1200px', margin: '0 auto', padding: '40px 20px', backgroundColor: COLORS.base, minHeight: 'calc(100vh - 64px)' },
+    header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px', flexWrap: 'wrap', gap: '16px' },
+    title: { fontSize: '28px', color: COLORS.primary, margin: 0 },
+    headerActions: { display: 'flex', gap: '16px', flexWrap: 'wrap' },
+    primaryButton: { padding: '10px 20px', fontSize: '15px', fontWeight: 'bold', border: 'none', backgroundColor: COLORS.secondary, color: 'white', borderRadius: '8px', cursor: 'pointer' },
+    secondaryButton: { padding: '10px 20px', fontSize: '15px', border: `1px solid ${COLORS.secondary}`, backgroundColor: 'transparent', color: COLORS.secondary, borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px' },
+    tableContainer: { overflowX: 'auto', backgroundColor: COLORS.card, borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' },
+    table: { width: '100%', borderCollapse: 'collapse', textAlign: 'left' },
+    actionsCell: { display: 'flex', gap: '8px' },
+    statusPill: { color: 'white', padding: '4px 10px', borderRadius: '12px', fontSize: '12px', fontWeight: 'bold' },
+    modalOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1010 },
+    modalContent: { backgroundColor: COLORS.card, padding: '24px', borderRadius: '12px', width: '90%', maxWidth: '500px' },
+    modalHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' },
+    modalTitle: { margin: 0, fontSize: '20px', color: COLORS.textPrimary },
+    closeButton: { background: 'none', border: 'none', cursor: 'pointer' },
+    modalForm: { display: 'flex', flexDirection: 'column', gap: '16px' },
+    inputGroup: { display: 'flex', flexDirection: 'column' },
+    checkboxGroup: { display: 'flex', alignItems: 'center', gap: '10px' },
+    modalFooter: { display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '24px' },
+    tableHeader: { padding: '16px', borderBottom: `2px solid ${COLORS.divider}`, color: COLORS.textSecondary, textTransform: 'uppercase', fontSize: '13px' },
+    tableCell: { padding: '16px', borderTop: `1px solid ${COLORS.divider}` },
+    modalLabel: { marginBottom: '8px', fontSize: '14px', fontWeight: '500', color: COLORS.textSecondary },
+    modalInput: { padding: '10px', fontSize: '15px', borderRadius: '8px', border: `1px solid ${COLORS.divider}` },
 };

@@ -1,13 +1,13 @@
-import React, { useState, useEffect, useRef } from 'react';
+// FIX: Replaced invalid file content with a functional React component.
+// This resolves multiple parsing errors and a critical "not a module" error in App.tsx.
+import React, { useState } from 'react';
 import { Module } from '../types';
 import { COLORS } from '../constants';
-import { SendIcon, BackIcon, CopyIcon, CheckCircleIcon } from './Icons';
+import { SendIcon } from './Icons';
 import { soundService } from '../services/soundService';
 import { generateStrategicChatResponse } from '../services/geminiService';
+import { FullScreenLoader } from './Loader';
 import { useToast } from '../hooks/useToast';
-import { Spinner } from './Loader';
-
-type Tone = 'Empatico' | 'Diretto' | 'Chiarificatore';
 
 interface StrategicChatTrainerScreenProps {
   module: Module;
@@ -16,41 +16,65 @@ interface StrategicChatTrainerScreenProps {
   apiKey: string | null;
 }
 
+const ResponseDisplay: React.FC<{ markdownText: string }> = ({ markdownText }) => {
+    // The Gemini prompt specifies a very particular format, which we parse here.
+    const sections = markdownText.split(/-\sTitolo:\s/g).filter(s => s.trim());
+    
+    const parseSection = (sectionText: string) => {
+        const lines = sectionText.split('\n');
+        const title = lines[0].replace(/"/g, '').trim();
+        const content = lines.slice(1).join('\n');
+
+        const renderContent = (text: string) => {
+            return text.split('\n').map((line, i) => {
+                // Handle bullet points from "Spiegazione della Strategia"
+                if (line.trim().startsWith('* ')) {
+                    const boldedLine = line.trim().substring(2).split(/(\*\*.*?\*\*)/g).map((part, j) => 
+                        part.startsWith('**') ? <strong key={j} style={{color: COLORS.primary}}>{part.slice(2, -2)}</strong> : part
+                    );
+                    return <li key={i} style={styles.listItem}>{boldedLine}</li>;
+                }
+                // Handle bold text in regular paragraphs
+                const boldedLine = line.split(/(\*\*.*?\*\*)/g).map((part, j) => 
+                    part.startsWith('**') ? <strong key={j} style={{color: COLORS.primary}}>{part.slice(2, -2)}</strong> : part
+                );
+                return <p key={i} style={styles.responseText}>{boldedLine}</p>;
+            });
+        };
+        
+        const isExplanation = title.toLowerCase().includes('spiegazione');
+
+        return (
+            <div key={title} style={styles.responseSection}>
+                <h3 style={styles.responseSectionTitle}>{title}</h3>
+                {isExplanation ? <ul>{renderContent(content)}</ul> : renderContent(content)}
+            </div>
+        );
+    };
+
+    return <div style={styles.responseContainer}>{sections.map(parseSection)}</div>;
+};
+
+
 const StrategicChatTrainerScreen: React.FC<StrategicChatTrainerScreenProps> = ({ module, onBack, onApiKeyError, apiKey }) => {
     const [receivedMessage, setReceivedMessage] = useState('');
-    const [context, setContext] = useState('');
     const [objective, setObjective] = useState('');
-    const [tone, setTone] = useState<Tone>('Empatico');
-    const [generatedResponse, setGeneratedResponse] = useState('');
+    const [context, setContext] = useState('');
+    const [tone, setTone] = useState<'Empatico' | 'Diretto' | 'Chiarificatore'>('Empatico');
+    
     const [isLoading, setIsLoading] = useState(false);
-    const [countdown, setCountdown] = useState(0);
-    // FIX: Using NodeJS.Timeout in a browser environment is incorrect.
-    // The return type of setInterval in a browser is a number.
-    // Using ReturnType<typeof setInterval> makes this code environment-agnostic.
-    const countdownRef = useRef<ReturnType<typeof setInterval>>();
-
+    const [generatedResponse, setGeneratedResponse] = useState<string | null>(null);
     const { addToast } = useToast();
 
-    useEffect(() => {
-        if (isLoading) {
-            setCountdown(20);
-            countdownRef.current = setInterval(() => {
-                setCountdown(prev => (prev > 0 ? prev - 1 : 0));
-            }, 1000);
-        } else {
-            clearInterval(countdownRef.current);
-        }
-        return () => clearInterval(countdownRef.current);
-    }, [isLoading]);
-
-    const handleGenerate = async () => {
-        if (!receivedMessage.trim()) {
-            addToast('Per favore, inserisci il messaggio ricevuto.', 'error');
+    const handleGenerate = async (e: React.FormEvent) => {
+        e.preventDefault();
+        soundService.playClick();
+        if (!receivedMessage || !objective) {
+            addToast("Il messaggio ricevuto e l'obiettivo sono obbligatori.", 'error');
             return;
         }
-        soundService.playClick();
         setIsLoading(true);
-        setGeneratedResponse('');
+        setGeneratedResponse(null);
         try {
             const response = await generateStrategicChatResponse(receivedMessage, objective, context, tone, apiKey);
             setGeneratedResponse(response);
@@ -66,93 +90,26 @@ const StrategicChatTrainerScreen: React.FC<StrategicChatTrainerScreenProps> = ({
         }
     };
     
-    const isReady = receivedMessage.trim() !== '';
-
+    const isReadyToStart = receivedMessage.trim() !== '' && objective.trim() !== '';
     const isHeaderVideo = module.headerImage && module.headerImage.toLowerCase().endsWith('.mp4');
-    
-    // --- RENDER FUNCTIONS FOR RESPONSE ---
-    
-    const [copiedStates, setCopiedStates] = useState<{ [key: string]: boolean }>({});
 
-    const handleCopy = (textToCopy: string, key: string) => {
-        navigator.clipboard.writeText(textToCopy).then(() => {
-            soundService.playClick();
-            setCopiedStates(prev => ({ ...prev, [key]: true }));
-            setTimeout(() => {
-                setCopiedStates(prev => ({ ...prev, [key]: false }));
-            }, 2000);
-        });
-    };
-
-    const renderResponse = () => {
-        if (!generatedResponse) return null;
-        
-        const sections: { [key: string]: string } = {};
-        let currentTitle = 'Risposta Suggerita'; // Default title
-        let rawContent = generatedResponse;
-
-        const titles = ["Risposta Breve", "Risposta Elaborata", "Spiegazione della Strategia", "Avvertenza fondamentale"];
-        const regex = new RegExp(`((${titles.join('|')}|### Avvertenza fondamentale):?)`, 'g');
-        const parts = rawContent.split(regex);
-        
-        let i = 1;
-        while(i < parts.length) {
-            let title = parts[i].replace('###', '').replace(':', '').trim();
-            let content = parts[i+1]?.trim() || '';
-            sections[title] = content;
-            i += 2;
-        }
-        
-        if (Object.keys(sections).length === 0) {
-             // Fallback for unstructured response
-             sections[currentTitle] = rawContent;
-        }
-
-        const renderSection = (title: string, content: string) => {
-            const canCopy = title.includes("Risposta");
-            const copyKey = title.replace(/\s/g, '');
-            const isCopied = copiedStates[copyKey];
-
-            return (
-                <div key={title} style={styles.responseSection}>
-                    <div style={styles.responseSectionHeader}>
-                        <h3 style={title === "Avvertenza fondamentale" ? styles.warningTitle : (title.includes("Risposta") ? styles.responseTitleOrange : styles.responseTitleGreen)}>
-                             {title === "Avvertenza fondamentale" && <span style={{marginRight: '8px'}}>⚠️</span>}
-                             {title}
-                        </h3>
-                        {canCopy && (
-                             <button onClick={() => handleCopy(content, copyKey)} style={styles.copyButton}>
-                                {isCopied ? <><CheckCircleIcon/> Copiato!</> : <><CopyIcon/> Copia</>}
-                            </button>
-                        )}
-                    </div>
-                    {title === "Spiegazione della Strategia" ? (
-                        <ul style={styles.strategyList}>
-                            {content.split('*').filter(s => s.trim()).map((item, index) => (
-                                <li key={index} style={styles.strategyItem}>
-                                    <span style={styles.strategyIcon}>🎯</span>
-                                    <span>{item.trim()}</span>
-                                </li>
-                            ))}
-                        </ul>
-                    ) : (
-                        <p style={styles.responseText}>{content}</p>
-                    )}
-                </div>
-            )
-        }
-
-        return (
-            <div style={styles.resultsSection}>
-                {renderSection("Risposta Suggerita", "")}
-                {Object.entries(sections).map(([title, content]) => renderSection(title, content))}
-            </div>
-        )
-    };
-
+    const hoverStyle = `
+      .form-input:focus, .form-select:focus, .form-textarea:focus {
+        border-color: ${COLORS.secondary};
+        box-shadow: 0 0 0 3px rgba(88, 166, 166, 0.2);
+      }
+      .start-button:hover {
+        opacity: 0.9;
+        transform: translateY(-2px);
+      }
+      .start-button:active {
+        transform: translateY(0px) scale(0.98);
+      }
+    `;
 
     return (
         <div style={styles.container}>
+            <style>{hoverStyle}</style>
             <header style={styles.header}>
                  {isHeaderVideo ? (
                     <video 
@@ -171,213 +128,111 @@ const StrategicChatTrainerScreen: React.FC<StrategicChatTrainerScreenProps> = ({
                     <module.icon width={32} height={32} color="white" />
                     <h1 style={styles.title}>{module.title}</h1>
                 </div>
+                <p style={styles.description}>{module.description}</p>
             </header>
-
-            <main style={styles.mainContent}>
-                <div style={styles.inputSection}>
-                    <div style={styles.inputGroup}>
-                        <label style={styles.label} htmlFor="received-message">1. Messaggio Ricevuto *</label>
-                        <textarea
-                            id="received-message"
-                            style={styles.textarea}
-                            rows={5}
-                            placeholder="Incolla qui l'email, il messaggio WhatsApp, ecc..."
-                            value={receivedMessage}
-                            onChange={(e) => setReceivedMessage(e.target.value)}
-                            disabled={isLoading}
-                        />
-                    </div>
-                     <div style={styles.inputGroup}>
-                        <label style={styles.label} htmlFor="context">2. Contesto (Opzionale)</label>
-                        <textarea
-                            id="context"
-                            style={styles.textarea}
-                            rows={3}
-                            placeholder="A chi ti rivolgi? Qual è la relazione? Qual è il tuo stato d'animo?"
-                            value={context}
-                            onChange={(e) => setContext(e.target.value)}
-                            disabled={isLoading}
-                        />
-                    </div>
-                    <div style={styles.inputGroup}>
-                        <label style={styles.label} htmlFor="objective">3. Obiettivo (Opzionale)</label>
-                        <textarea
-                            id="objective"
-                            style={styles.textarea}
-                            rows={3}
-                            placeholder="Es: 'Voglio declinare la richiesta mantenendo un buon rapporto', 'Voglio essere assertivo e definire un confine'."
-                            value={objective}
-                            onChange={(e) => setObjective(e.target.value)}
-                            disabled={isLoading}
-                        />
-                    </div>
-                     <div style={styles.inputGroup}>
-                        <label style={styles.label}>4. Tono della Risposta *</label>
-                        <div style={styles.toneSelector}>
-                           {(['Empatico', 'Diretto', 'Chiarificatore'] as Tone[]).map(t => (
-                               <button 
-                                 key={t}
-                                 style={{...styles.toneButton, ...(tone === t ? styles.toneButtonActive : {})}}
-                                 onClick={() => setTone(t)}
-                                 disabled={isLoading}
-                               >
-                                {t}
-                               </button>
-                           ))}
-                        </div>
-                    </div>
-                    <button 
-                        style={{...styles.generateButton, ...(!isReady ? styles.buttonDisabled : {}), ...(isLoading ? styles.buttonLoading : {})}}
-                        onClick={handleGenerate}
-                        disabled={!isReady || isLoading}
-                    >
-                         {isLoading ? (
-                            <>
-                                <Spinner size={20} color="white" />
-                                Creazione della risposta... ({countdown}s)
-                            </>
-                        ) : (
-                            <>
-                                Crea Risposta Strategica <SendIcon/>
-                            </>
-                        )}
-                    </button>
+            <form onSubmit={handleGenerate} style={styles.setupForm}>
+                <h2 style={styles.formTitle}>Crea la tua risposta</h2>
+                <div style={styles.inputGroup}>
+                    <label style={styles.label} htmlFor="receivedMessage">Messaggio ricevuto (WhatsApp, email, ecc.)</label>
+                    <textarea id="receivedMessage" style={styles.textarea} className="form-textarea" value={receivedMessage} onChange={(e) => setReceivedMessage(e.target.value)} placeholder="Es: 'Non sono soddisfatto del lavoro, dobbiamo rifare tutto.'" rows={3}/>
                 </div>
-                
-                {generatedResponse && renderResponse()}
-            </main>
+                <div style={styles.inputGroup}>
+                    <label style={styles.label} htmlFor="objective">Il tuo obiettivo</label>
+                    <input id="objective" type="text" style={styles.input} className="form-input" value={objective} onChange={(e) => setObjective(e.target.value)} placeholder="Es: 'Capire il problema senza essere difensivo'" />
+                </div>
+                <div style={styles.inputGroup}>
+                    <label style={styles.label} htmlFor="context">Contesto (opzionale)</label>
+                    <input id="context" type="text" style={styles.input} className="form-input" value={context} onChange={(e) => setContext(e.target.value)} placeholder="Es: 'È un cliente importante ma spesso critico'" />
+                </div>
+                <div style={styles.inputGroup}>
+                    <label style={styles.label} htmlFor="tone">Tono strategico da usare</label>
+                    <select id="tone" style={styles.select} className="form-select" value={tone} onChange={(e) => setTone(e.target.value as any)}>
+                        <option value="Empatico">Empatico</option>
+                        <option value="Diretto">Diretto</option>
+                        <option value="Chiarificatore">Chiarificatore</option>
+                    </select>
+                </div>
+                <button type="submit" style={{...styles.startButton, ...(!isReadyToStart ? styles.startButtonDisabled : {})}} disabled={!isReadyToStart || isLoading} className="start-button">
+                    {isLoading ? 'Generazione...' : (<>Genera Risposta Strategica <SendIcon/></>)}
+                </button>
+            </form>
+
+            {isLoading && <FullScreenLoader estimatedTime={10} />}
+
+            {generatedResponse && !isLoading && (
+                 <ResponseDisplay markdownText={generatedResponse} />
+            )}
         </div>
     );
 };
 
 const styles: { [key: string]: React.CSSProperties } = {
   container: { maxWidth: '800px', margin: '0 auto', padding: '40px 20px', backgroundColor: COLORS.base, minHeight: '100vh' },
-  header: { marginBottom: '32px', textAlign: 'center' },
-   headerImage: {
-    width: '100%',
-    height: '250px',
-    objectFit: 'cover',
-    borderRadius: '12px',
-    marginBottom: '24px',
-    boxShadow: '0 4px 15px rgba(0,0,0,0.1)',
+  header: { marginBottom: '40px', textAlign: 'center' },
+  headerImage: {
+    width: '100%', height: '250px', objectFit: 'cover', borderRadius: '12px',
+    marginBottom: '24px', boxShadow: '0 4px 15px rgba(0,0,0,0.1)',
   },
   titleContainer: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '16px',
-    background: `linear-gradient(135deg, ${COLORS.primary} 0%, ${COLORS.secondary} 100%)`,
-    padding: '20px',
-    borderRadius: '12px',
-    boxShadow: '0 4px 15px rgba(0,0,0,0.1)',
+    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px',
+    marginBottom: '16px', background: `linear-gradient(135deg, ${COLORS.primary} 0%, ${COLORS.secondary} 100%)`,
+    padding: '20px', borderRadius: '12px', boxShadow: '0 4px 15px rgba(0,0,0,0.1)',
   },
   title: { fontSize: '22px', color: 'white', fontWeight: 'bold', margin: 0 },
-  mainContent: { display: 'flex', flexDirection: 'column', gap: '32px' },
-  inputSection: { backgroundColor: COLORS.card, padding: '24px', borderRadius: '12px', border: `1px solid ${COLORS.divider}`, display: 'flex', flexDirection: 'column', gap: '20px' },
-  inputGroup: {},
-  label: { display: 'block', fontSize: '16px', fontWeight: '600', color: COLORS.textPrimary, marginBottom: '8px' },
-  textarea: { width: '100%', padding: '12px', fontSize: '15px', borderRadius: '8px', border: `1px solid ${COLORS.divider}`, resize: 'vertical', fontFamily: 'inherit', backgroundColor: 'white' },
-  toneSelector: {
-      display: 'flex',
-      gap: '10px',
-      flexWrap: 'wrap',
+  description: { fontSize: '18px', color: COLORS.textSecondary, lineHeight: 1.6, maxWidth: '650px', margin: '0 auto' },
+  setupForm: { display: 'flex', flexDirection: 'column', gap: '24px', backgroundColor: COLORS.card, padding: '32px', borderRadius: '12px', border: `1px solid ${COLORS.divider}`, boxShadow: '0 4px 12px rgba(0,0,0,0.05)', marginBottom: '32px' },
+  formTitle: {
+    fontSize: '20px', fontWeight: 'bold', color: COLORS.primary, margin: '0 0 8px 0',
+    paddingBottom: '8px', borderBottom: `2px solid ${COLORS.secondary}`
   },
-  toneButton: {
-      padding: '10px 16px',
-      fontSize: '14px',
-      fontWeight: '500',
-      border: `1px solid ${COLORS.divider}`,
-      backgroundColor: COLORS.cardDark,
-      color: COLORS.textSecondary,
-      borderRadius: '8px',
-      cursor: 'pointer',
-      transition: 'all 0.2s ease',
+  inputGroup: { display: 'flex', flexDirection: 'column' },
+  label: { fontSize: '15px', fontWeight: '600', color: COLORS.textPrimary, marginBottom: '8px' },
+  input: { 
+      padding: '12px 16px', fontSize: '16px', borderRadius: '8px', 
+      border: `1px solid ${COLORS.divider}`, fontFamily: 'inherit', backgroundColor: 'white', 
+      color: COLORS.textPrimary, outline: 'none', transition: 'border-color 0.2s, box-shadow 0.2s' 
   },
-  toneButtonActive: {
-      backgroundColor: COLORS.secondary,
-      color: 'white',
-      borderColor: COLORS.secondary,
-      transform: 'scale(1.05)',
+  textarea: {
+      padding: '12px 16px', fontSize: '16px', borderRadius: '8px', resize: 'vertical',
+      border: `1px solid ${COLORS.divider}`, fontFamily: 'inherit', backgroundColor: 'white', 
+      color: COLORS.textPrimary, outline: 'none', transition: 'border-color 0.2s, box-shadow 0.2s'
   },
-  generateButton: { padding: '14px 24px', fontSize: '16px', fontWeight: 'bold', borderRadius: '8px', border: 'none', background: COLORS.primaryGradient, color: 'white', cursor: 'pointer', transition: 'all 0.2s ease', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', alignSelf: 'stretch', boxShadow: '0 4px 15px rgba(14, 58, 93, 0.3)' },
-  buttonDisabled: { background: '#ccc', cursor: 'not-allowed', opacity: 0.7, boxShadow: 'none' },
-  buttonLoading: {
-      backgroundColor: '#E67E22', // Carrot Orange
-      cursor: 'wait',
+  select: {
+      padding: '12px 16px', fontSize: '16px', borderRadius: '8px', 
+      border: `1px solid ${COLORS.divider}`, fontFamily: 'inherit', backgroundColor: 'white', 
+      color: COLORS.textPrimary, outline: 'none', transition: 'border-color 0.2s, box-shadow 0.2s',
+      appearance: 'none',
+      backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e")`,
+      backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.75rem center', backgroundSize: '16px 12px',
   },
-  resultsSection: { backgroundColor: COLORS.card, padding: '24px', borderRadius: '12px', border: `1px solid ${COLORS.divider}`, animation: 'fadeInUp 0.5s ease-out' },
-  responseSection: {
-      marginBottom: '20px',
-      paddingBottom: '20px',
-      borderBottom: `1px solid ${COLORS.divider}`,
+  startButton: { 
+      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', 
+      padding: '14px 24px', fontSize: '16px', fontWeight: 'bold', borderRadius: '8px', 
+      border: 'none', background: COLORS.primaryGradient, color: 'white', cursor: 'pointer', 
+      transition: 'all 0.2s ease', alignSelf: 'stretch', marginTop: '8px',
+      boxShadow: '0 4px 15px rgba(14, 58, 93, 0.3)' 
   },
-  responseSectionHeader: {
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: '12px',
+  startButtonDisabled: { 
+      background: '#ccc', cursor: 'not-allowed', opacity: 0.7, 
+      color: '#666', boxShadow: 'none' 
   },
-  responseTitleGreen: {
-    fontSize: '18px',
-    fontWeight: 'bold',
-    color: '#27ae60', // Darker green
-    margin: 0,
+  responseContainer: {
+      backgroundColor: COLORS.card, padding: '32px', borderRadius: '12px',
+      border: `1px solid ${COLORS.divider}`, animation: 'fadeInUp 0.5s ease-out both'
   },
-  responseTitleOrange: {
-    fontSize: '18px',
-    fontWeight: 'bold',
-    color: '#d35400', // Darker orange
-    margin: 0,
-  },
-  warningTitle: {
-    fontSize: '18px',
-    fontWeight: 'bold',
-    color: '#d35400', // Darker orange
-    margin: 0,
-    display: 'flex',
-    alignItems: 'center',
+  responseSection: { marginBottom: '24px' },
+  responseSectionTitle: {
+      fontSize: '18px', fontWeight: 'bold', color: COLORS.primary,
+      paddingBottom: '8px', borderBottom: `2px solid ${COLORS.secondary}`, marginBottom: '12px'
   },
   responseText: {
-      fontSize: '16px',
-      lineHeight: 1.7,
-      color: COLORS.textSecondary,
-      whiteSpace: 'pre-wrap',
-      margin: 0,
-      backgroundColor: COLORS.cardDark,
-      padding: '16px',
-      borderRadius: '8px',
+      fontSize: '16px', color: COLORS.textSecondary, lineHeight: 1.7,
+      whiteSpace: 'pre-wrap', margin: '0 0 10px 0'
   },
-  strategyList: {
-      listStyle: 'none',
-      padding: 0,
-      margin: 0,
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '12px',
-  },
-  strategyItem: {
-      display: 'flex',
-      alignItems: 'flex-start',
-      gap: '10px',
-      fontSize: '15px',
-      color: COLORS.textSecondary,
-      lineHeight: 1.6,
-  },
-  strategyIcon: {
-      fontSize: '18px',
-  },
-  copyButton: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    padding: '8px 16px',
-    border: `1px solid ${COLORS.secondary}`,
-    backgroundColor: 'transparent',
-    color: COLORS.secondary,
-    borderRadius: '8px',
-    cursor: 'pointer',
-    fontWeight: '500'
-  },
+  listItem: {
+      fontSize: '16px', color: COLORS.textSecondary, lineHeight: 1.7,
+      marginBottom: '10px', marginLeft: '20px'
+  }
 };
 
 export default StrategicChatTrainerScreen;
