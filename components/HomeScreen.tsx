@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import type { Module, User, UserProgress, Exercise } from '../types';
+import type { Module, UserProfile, UserProgress, Exercise } from '../types';
 import { MODULES, COLORS, MODULE_PALETTE } from '../constants';
 import { homeScreenHeaderVideo, dailyChallengeMedia, checkupMedia, ivanoCincinnatoImage } from '../assets';
 import { ProgressOverview } from './ProgressOverview';
@@ -13,7 +13,7 @@ interface HomeScreenProps {
   onSelectModule: (module: Module, color: string) => void;
   onSelectExercise: (exercise: Exercise, isCheckup?: boolean, checkupStep?: number, totalCheckupSteps?: number, moduleColor?: string) => void;
   onStartCheckup: () => void;
-  currentUser: User | null;
+  currentUser: UserProfile | null;
   userProgress: UserProgress | undefined;
 }
 
@@ -281,7 +281,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectModule, onSelect
             </section>
           )}
 
-          {dailyChallenge && (
+          {dailyChallenge && currentUser && (
               <section style={{marginBottom: '48px'}}>
                    <div style={styles.dailyChallenge} className="daily-challenge" onClick={handleDailyChallengeClick} onMouseEnter={() => soundService.playHover()}>
                       <MediaDisplay src={dailyChallengeMedia} alt="Persona sorridente per la sfida del giorno" style={styles.challengeImage} />

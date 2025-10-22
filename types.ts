@@ -98,9 +98,9 @@ export interface AnalysisHistoryEntry {
 }
 
 // === User and Progress ===
-export interface User {
+export interface UserProfile {
+  uid: string; // Firebase Auth UID
   email: string;
-  passwordHash: string;
   firstName: string;
   lastName: string;
   createdAt: string;
@@ -210,11 +210,4 @@ export interface StrategicQuestionCategory {
 export interface ChecklistItem {
     id: string;
     text: string;
-}
-
-// === Database ===
-export interface Database {
-    users: User[];
-    userProgress: Record<string, UserProgress>;
-    entitlements: Record<string, StorableEntitlements>;
 }

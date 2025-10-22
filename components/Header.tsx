@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import type { User, Breadcrumb } from '../types';
+import type { UserProfile, Breadcrumb } from '../types';
 import { COLORS } from '../constants';
 import { Logo } from './Logo';
 import { ChevronRightIcon, SpeakerIcon, SpeakerOffIcon, SettingsIcon, CloseIcon, CrownIcon } from './Icons';
@@ -7,11 +7,10 @@ import { mainLogoUrl } from '../assets';
 
 
 interface HeaderProps {
-  currentUser: User | null;
+  currentUser: UserProfile | null;
   breadcrumbs: Breadcrumb[];
   onLogout: () => void;
   onGoToPaywall: () => void;
-  onGoToAdmin: () => void;
   isPro: boolean;
   isSoundEnabled: boolean;
   onToggleSound: () => void;
@@ -49,10 +48,11 @@ const scrollbarStyle = `
   }
 `;
 
-export const Header: React.FC<HeaderProps> = ({ currentUser, breadcrumbs, onLogout, onGoToPaywall, onGoToAdmin, isPro, isSoundEnabled, onToggleSound }) => {
+export const Header: React.FC<HeaderProps> = ({ currentUser, breadcrumbs, onLogout, onGoToPaywall, isPro, isSoundEnabled, onToggleSound }) => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   
-  const getInitials = (user: User) => {
+  const getInitials = (user: UserProfile) => {
+    if (!user.firstName || !user.lastName) return '??';
     return `${user.firstName[0]}${user.lastName[0]}`.toUpperCase();
   };
 
@@ -62,11 +62,6 @@ export const Header: React.FC<HeaderProps> = ({ currentUser, breadcrumbs, onLogo
 
   const handleGoToPaywallClick = () => {
     onGoToPaywall();
-    setIsSettingsOpen(false);
-  };
-
-  const handleGoToAdminClick = () => {
-    onGoToAdmin();
     setIsSettingsOpen(false);
   };
 
@@ -175,12 +170,6 @@ export const Header: React.FC<HeaderProps> = ({ currentUser, breadcrumbs, onLogo
                             </div>
                         );
                     })()}
-
-                    {currentUser?.isAdmin && (
-                        <button onClick={handleGoToAdminClick} style={{...styles.settingsPanelButton, ...styles.adminButton}} className="admin-button">
-                            Pannello di Amministrazione
-                        </button>
-                    )}
 
                     {!isPro && (
                         <button onClick={handleGoToPaywallClick} style={{...styles.settingsPanelButton, ...styles.proPanelButton}} className="pro-panel-button">

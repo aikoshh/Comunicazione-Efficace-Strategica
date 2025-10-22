@@ -1,26 +1,11 @@
 // firebaseConfig.ts
-// 1. Vai su https://console.firebase.google.com/ e crea un nuovo progetto (è gratuito).
-// 2. Nel tuo progetto, vai su "Impostazioni progetto" (icona a forma di ingranaggio).
-// 3. Nella tab "Generali", in fondo, clicca su "Aggiungi app" e seleziona l'icona web </>.
-// 4. Registra l'app (puoi usare un nome come "ces-coach-web").
-// 5. Firebase ti fornirà un oggetto `firebaseConfig`. Copia i valori e incollali qui sotto.
-
-import { initializeApp } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
-
-// === INCOLLA QUI LA TUA CONFIGURAZIONE FIREBASE ===
-const firebaseConfig = {
-  apiKey: "INCOLLA-QUI-apiKey",
-  authDomain: "INCOLLA-QUI-authDomain",
-  projectId: "INCOLLA-QUI-projectId",
-  storageBucket: "INCOLLA-QUI-storageBucket",
-  messagingSenderId: "INCOLLA-QUI-messagingSenderId",
-  appId: "INCOLLA-QUI-appId"
+// IMPORTANTE: Sostituisci questi valori con la configurazione del tuo progetto Firebase.
+// Puoi trovarli nella console di Firebase > Impostazioni Progetto > Le tue app > Configurazione SDK.
+export const firebaseConfig = {
+  apiKey: "AIzaSyBS0-SBoG2Z4ImpWhThgmPSvr5FPqD_WgA",
+  authDomain: "ces-coach.firebaseapp.com",
+  projectId: "ces-coach",
+  storageBucket: "ces-coach.firebasestorage.app",
+  messagingSenderId: "160061983953",
+  appId: "1:160061983953:web:3242d5838c2fe9deed09f0"
 };
-// =================================================
-
-// Inizializza Firebase
-const app = initializeApp(firebaseConfig);
-
-// Esporta l'istanza di Firestore
-export const db = getFirestore(app);

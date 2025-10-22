@@ -1,4 +1,4 @@
-import type { ProgressOverviewData, ScoreExplanation, User, UserProgress, Exercise } from '../types';
+import type { ProgressOverviewData, ScoreExplanation, UserProfile, UserProgress, Exercise } from '../types';
 import { MODULES } from '../constants';
 import { dailyChallengeHeaderImage } from '../assets';
 
@@ -26,7 +26,7 @@ const getLevelForScore = (score: number): string => {
 };
 
 // Simulate async API calls to mimic real-world fetching
-export const getProgressOverview = async (user: User, progress: UserProgress | undefined): Promise<ProgressOverviewData> => {
+export const getProgressOverview = async (user: UserProfile, progress: UserProgress | undefined): Promise<ProgressOverviewData> => {
   return new Promise(resolve => {
     setTimeout(() => {
         let score = 0;

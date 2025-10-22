@@ -4,6 +4,7 @@ import { mainLogoUrl } from '../assets';
 import { soundService } from '../services/soundService';
 import { Spinner } from './Loader';
 import { useToast } from '../hooks/useToast';
+import { login, register } from '../services/authService';
 
 interface RegistrationData {
   firstName: string;
@@ -13,15 +14,12 @@ interface RegistrationData {
 }
 
 interface LoginScreenProps {
-  onLogin: (email: string, pass: string) => Promise<void>;
-  onRegister: (data: RegistrationData) => Promise<void>;
   onGuestAccess: () => void;
 }
 
 const RegistrationForm: React.FC<{
-    onRegister: (data: RegistrationData) => Promise<void>;
     setView: (view: 'login') => void;
-}> = ({ onRegister, setView }) => {
+}> = ({ setView }) => {
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
     const [email, setEmail] = useState('');
@@ -65,7 +63,7 @@ const RegistrationForm: React.FC<{
         
         setIsLoading(true);
         try {
-            await onRegister({ firstName, lastName, email, password });
+            await register(email, password, firstName, lastName);
             addToast("Registrazione completata! Ora puoi accedere.", 'success');
             setTimeout(() => {
                 setView('login');
@@ -123,7 +121,7 @@ const RegistrationForm: React.FC<{
     );
 };
 
-export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onRegister, onGuestAccess }) => {
+export const LoginScreen: React.FC<LoginScreenProps> = ({ onGuestAccess }) => {
   const [view, setView] = useState<'login' | 'register'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -136,10 +134,10 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onRegister, o
     setIsLoading(true);
 
     try {
-        await onLogin(email, password);
-        // On success, App component will switch screens, unmounting this one.
+        await login(email, password);
+        // On success, the auth listener in App.tsx will handle navigation
     } catch (err: any) {
-        addToast(err.message || "Errore sconosciuto.", 'error');
+        addToast("Credenziali non valide o utente non trovato.", 'error');
         setIsLoading(false);
     }
   };
@@ -204,7 +202,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onRegister, o
             </button>
           </>
         ) : (
-          <RegistrationForm onRegister={onRegister} setView={setView} />
+          <RegistrationForm setView={setView} />
         )}
         <div style={styles.copyrightContainer}>
             <div style={styles.footerLinks}>

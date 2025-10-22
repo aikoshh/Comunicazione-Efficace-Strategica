@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ProgressOverviewData, ScoreExplanation, User, UserProgress } from '../types';
+import { ProgressOverviewData, ScoreExplanation, UserProfile, UserProgress } from '../types';
 import { getProgressOverview, getScoreExplanation } from '../services/progressionService';
 import { COLORS } from '../constants';
 import { InfoIcon } from './Icons';
@@ -13,7 +13,7 @@ const levelThresholds = [
 ];
 
 interface ProgressOverviewProps {
-  user: User;
+  user: UserProfile;
   progress: UserProgress | undefined;
 }
 
