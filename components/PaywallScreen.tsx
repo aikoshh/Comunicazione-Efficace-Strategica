@@ -126,7 +126,12 @@ export const PaywallScreen: React.FC<PaywallScreenProps> = ({ entitlements, onPu
                                     onClick={() => handlePurchase(product)}
                                     disabled={!!isLoading}
                                 >
-                                    {isLoading === product.id ? <Spinner size={20} color="white"/> : 'Sblocca Tutti i Vantaggi'}
+                                    {isLoading === product.id ? <Spinner size={20} color="white"/> : (
+                                        <>
+                                            <CrownIcon width={22} height={22} />
+                                            Sblocca Tutti i Vantaggi
+                                        </>
+                                    )}
                                 </button>
                             )}
                             <p style={styles.oneTimePaymentText}>Valido per 365 giorni!</p>
@@ -261,7 +266,23 @@ const styles: { [key: string]: React.CSSProperties } = {
         margin: '8px 0 0 0'
     },
     price: { fontSize: '28px', fontWeight: 'bold', color: COLORS.textPrimary },
-    buyButton: { padding: '14px 28px', fontSize: '18px', fontWeight: 'bold', color: 'white', background: COLORS.primaryGradient, border: 'none', borderRadius: '8px', cursor: 'pointer', transition: 'all 0.2s ease', minWidth: '280px', minHeight: '52px' },
+    buyButton: {
+        padding: '14px 28px',
+        fontSize: '18px',
+        fontWeight: 'bold',
+        color: 'white',
+        background: COLORS.primaryGradient,
+        border: 'none',
+        borderRadius: '8px',
+        cursor: 'pointer',
+        transition: 'all 0.2s ease',
+        minWidth: '280px',
+        minHeight: '52px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '10px'
+    },
     purchasedBadge: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '14px 28px', fontSize: '18px', fontWeight: 'bold', color: '#B8860B', backgroundColor: 'rgba(255, 215, 0, 0.2)', borderRadius: '8px', width: '100%', maxWidth: '280px' },
     footer: { textAlign: 'center', marginTop: '48px', borderTop: `1px solid ${COLORS.divider}`, paddingTop: '32px' },
     restoreButton: { padding: '12px 24px', fontSize: '16px', border: `1px solid ${COLORS.secondary}`, backgroundColor: 'transparent', color: COLORS.secondary, borderRadius: '8px', cursor: 'pointer', fontWeight: 500, transition: 'all 0.2s ease', minHeight: '48px' },

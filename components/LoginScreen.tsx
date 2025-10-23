@@ -14,7 +14,7 @@ interface RegistrationData {
 }
 
 interface LoginScreenProps {
-  onGuestAccess: () => void;
+  // No props needed now
 }
 
 const RegistrationForm: React.FC<{
@@ -121,7 +121,7 @@ const RegistrationForm: React.FC<{
     );
 };
 
-export const LoginScreen: React.FC<LoginScreenProps> = ({ onGuestAccess }) => {
+export const LoginScreen: React.FC<LoginScreenProps> = () => {
   const [view, setView] = useState<'login' | 'register'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -142,11 +142,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onGuestAccess }) => {
     }
   };
 
-  const handleGuestAccessClick = async () => {
-      soundService.playClick();
-      onGuestAccess();
-  };
-  
   const dynamicStyles = `
     .login-input::placeholder {
       color: ${COLORS.textAccent};
@@ -196,9 +191,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onGuestAccess }) => {
             </form>
             <button onClick={() => { soundService.playClick(); setView('register'); }} style={styles.switchLink} disabled={isLoading}>
                 Non hai un account? Registrati adesso
-            </button>
-            <button onClick={handleGuestAccessClick} style={styles.guestLink} disabled={isLoading}>
-                Accedi senza essere registrato
             </button>
           </>
         ) : (

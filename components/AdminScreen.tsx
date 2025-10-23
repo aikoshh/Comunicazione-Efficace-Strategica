@@ -171,8 +171,18 @@ export const AdminScreen: React.FC<{ onBack: () => void; }> = ({ onBack }) => {
     return (
         <div style={styles.container}>
             <header style={styles.header}>
-                <button onClick={onBack} style={styles.backButton}><BackIcon /></button>
-                <h1 style={styles.title}>Pannello Amministratore</h1>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                    <button onClick={onBack} style={styles.backButton}><BackIcon /></button>
+                    <h1 style={styles.title}>Pannello Amministratore</h1>
+                </div>
+                 <a 
+                    href="https://console.firebase.google.com/project/ces-coach/authentication/users" 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    style={styles.firebaseButton}
+                >
+                    Pannello FireBase
+                </a>
             </header>
 
             <div style={styles.section}>
@@ -223,9 +233,23 @@ export const AdminScreen: React.FC<{ onBack: () => void; }> = ({ onBack }) => {
 
 const styles: { [key: string]: React.CSSProperties } = {
     container: { maxWidth: '1200px', margin: '0 auto', padding: '40px 20px', minHeight: 'calc(100vh - 64px)', display: 'flex', flexDirection: 'column', gap: '32px' },
-    header: { display: 'flex', alignItems: 'center', gap: '16px', paddingBottom: '16px', borderBottom: `1px solid ${COLORS.divider}` },
+    header: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', paddingBottom: '16px', borderBottom: `1px solid ${COLORS.divider}` },
     title: { fontSize: '24px', fontWeight: 'bold', color: COLORS.textPrimary, margin: 0 },
     backButton: { background: 'none', border: 'none', cursor: 'pointer', color: COLORS.textSecondary, padding: '8px' },
+    firebaseButton: {
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '8px',
+        padding: '10px 20px',
+        fontSize: '15px',
+        fontWeight: 'bold',
+        border: 'none',
+        backgroundColor: COLORS.warning,
+        color: 'white',
+        borderRadius: '6px',
+        cursor: 'pointer',
+        textDecoration: 'none',
+    },
     section: { backgroundColor: COLORS.card, padding: '24px', borderRadius: '12px', border: `1px solid ${COLORS.divider}` },
     sectionTitle: { fontSize: '20px', fontWeight: 'bold', color: COLORS.primary, margin: '0 0 16px 0' },
     addUserForm: { display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center' },

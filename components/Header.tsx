@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import type { UserProfile, Entitlements } from '../types';
 import { COLORS } from '../constants';
 import { Logo } from './Logo';
-import { SettingsIcon, CrownIcon, LogOutIcon, SpeakerIcon, SpeakerOffIcon, AdminIcon } from './Icons';
+import { SettingsIcon, CrownIcon, LogOutIcon, SpeakerIcon, SpeakerOffIcon, AdminIcon, HomeIcon } from './Icons';
 import { hasProAccess } from '../services/monetizationService';
 import { soundService } from '../services/soundService';
 
@@ -12,10 +12,11 @@ interface HeaderProps {
     onLogout: () => void;
     onNavigateToAdmin: () => void;
     onNavigateToPaywall: () => void;
+    onNavigateToHome: () => void;
 }
 
 const hoverStyle = `
-  .header-button:hover, .menu-item:hover {
+  .header-button:hover, .menu-item:hover, .home-button:hover {
     background-color: ${COLORS.cardDark};
   }
   .pro-badge:hover {
@@ -23,7 +24,7 @@ const hoverStyle = `
   }
 `;
 
-export const Header: React.FC<HeaderProps> = ({ currentUser, entitlements, onLogout, onNavigateToAdmin, onNavigateToPaywall }) => {
+export const Header: React.FC<HeaderProps> = ({ currentUser, entitlements, onLogout, onNavigateToAdmin, onNavigateToPaywall, onNavigateToHome }) => {
     const isPro = hasProAccess(entitlements);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isSoundEnabled, setIsSoundEnabled] = useState(soundService.isEnabled);
@@ -60,12 +61,28 @@ export const Header: React.FC<HeaderProps> = ({ currentUser, entitlements, onLog
         setIsMenuOpen(false);
     };
 
+    const handleActivateProClick = () => {
+        onNavigateToPaywall();
+        setIsMenuOpen(false);
+    }
+    
+    const handleHomeClick = () => {
+        soundService.playClick();
+        onNavigateToHome();
+    }
+
     return (
         <header style={styles.header}>
             <style>{hoverStyle}</style>
             <div style={styles.logoContainer}>
                 <Logo style={styles.logo} />
-                <span style={styles.appName}>CES Coach</span>
+                <span style={styles.appName}>
+                    CES Coach {isPro && <span style={styles.proText}>Pro</span>}
+                </span>
+                <button style={styles.homeButton} className="home-button" onClick={handleHomeClick} title="Home">
+                    <HomeIcon />
+                    <span>Home</span>
+                </button>
             </div>
             {currentUser && (
                 <div style={styles.userInfo}>
@@ -75,7 +92,6 @@ export const Header: React.FC<HeaderProps> = ({ currentUser, entitlements, onLog
                             <span>PRO</span>
                         </div>
                     )}
-                    <span style={styles.userName}>Ciao, {currentUser.firstName}</span>
                     <div style={styles.settingsContainer} ref={menuRef}>
                         <button style={styles.settingsButton} className="header-button" onClick={toggleMenu} title="Impostazioni">
                             <SettingsIcon />
@@ -88,9 +104,18 @@ export const Header: React.FC<HeaderProps> = ({ currentUser, entitlements, onLog
                                         <span>Pannello Admin</span>
                                     </button>
                                 )}
+                                {!isPro && (
+                                    <>
+                                        <button style={styles.menuItem} className="menu-item" onClick={handleActivateProClick}>
+                                            <CrownIcon style={styles.menuIcon} />
+                                            <span>Attiva PRO</span>
+                                        </button>
+                                        <div style={styles.menuDivider}></div>
+                                    </>
+                                )}
                                 <button style={styles.menuItem} className="menu-item" onClick={handleToggleSound}>
                                     {isSoundEnabled ? <SpeakerIcon style={styles.menuIcon} /> : <SpeakerOffIcon style={styles.menuIcon} />}
-                                    <span>{isSoundEnabled ? 'Togli Volume' : 'Metti Volume'}</span>
+                                    <span>{isSoundEnabled ? 'Disattiva Audio' : 'Attiva Audio'}</span>
                                 </button>
                                 <div style={styles.menuDivider}></div>
                                 <button style={{...styles.menuItem, color: COLORS.error}} className="menu-item" onClick={handleLogoutClick}>
@@ -132,6 +157,25 @@ const styles: { [key: string]: React.CSSProperties } = {
         fontSize: '20px',
         fontWeight: 'bold',
         color: COLORS.primary,
+    },
+    proText: {
+        color: COLORS.secondary,
+        fontWeight: 'bold',
+    },
+    homeButton: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        background: 'transparent',
+        border: 'none',
+        cursor: 'pointer',
+        padding: '8px 16px',
+        borderRadius: '8px',
+        marginLeft: '24px',
+        color: COLORS.textPrimary,
+        fontWeight: '600',
+        fontSize: '16px',
+        transition: 'background-color 0.2s ease',
     },
     userInfo: {
         display: 'flex',

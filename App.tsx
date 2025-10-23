@@ -350,7 +350,7 @@ function App() {
       case 'PRELOADING':
         return <PreloadingScreen onComplete={handlePreloadingComplete} />;
       case 'LOGIN':
-        return <LoginScreen onGuestAccess={() => navigate('HOME')} />;
+        return <LoginScreen />;
       case 'HOME':
         return <HomeScreen
           currentUser={currentUser}
@@ -443,7 +443,7 @@ function App() {
       case 'ADMIN':
         return <AdminScreen onBack={handleBackToHome} />;
       default:
-        return <LoginScreen onGuestAccess={() => navigate('HOME')} />;
+        return <LoginScreen />;
     }
   };
 
@@ -458,6 +458,7 @@ function App() {
           onLogout={handleLogout}
           onNavigateToAdmin={() => navigate('ADMIN')}
           onNavigateToPaywall={() => navigate('PAYWALL')}
+          onNavigateToHome={handleBackToHome}
         />
       )}
       <main>
