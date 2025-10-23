@@ -12,6 +12,7 @@ export interface Module {
   exercises: Exercise[];
   isCustom?: boolean;
   isPro?: boolean;
+  prerequisites?: string[]; // ID dei moduli da completare per sbloccare questo
 }
 
 export interface Exercise {
@@ -59,6 +60,7 @@ export interface AnalysisResult {
         long: string;
     };
     // PRO Features
+    evolutionary_feedback?: string; // New contextual feedback
     detailedRubric?: DetailedRubricScore[];
     utilityScore?: number;
     clarityScore?: number;
@@ -107,20 +109,29 @@ export interface CompetenceScores {
     gestione_conflitto: number;
 }
 
+export interface AnalysisHistoryItem {
+    result: AnalysisResult | VoiceAnalysisResult;
+    userResponse: string;
+    timestamp: string;
+    type: 'written' | 'verbal';
+}
+
 export interface UserProgress {
     completedExerciseIds: string[];
     scores: number[];
     checkupProfile?: CommunicatorProfile;
     competenceScores: CompetenceScores;
     analysisHistory: {
-        [exerciseId: string]: {
-            result: AnalysisResult | VoiceAnalysisResult;
-            userResponse: string;
-            timestamp: string;
-            type: 'written' | 'verbal';
-        }
+        [exerciseId: string]: AnalysisHistoryItem
     };
+    // Gamification
+    xp: number;
+    level: number;
+    streak: number;
+    lastCompletionDate: string | null;
+    unlockedBadges: string[];
 }
+
 
 export interface CommunicatorProfile {
     profileTitle: string;
@@ -203,16 +214,20 @@ export interface StorableEntitlements extends Omit<Entitlements, 'productIDs'> {
 
 // === UI & App State ===
 
-export type ToastType = 'success' | 'error' | 'info';
+export type ToastType = 'success' | 'error' | 'info' | 'badge';
 
 export interface ToastMessage {
   id: string;
   message: string;
   type: ToastType;
+  badge?: {
+      title: string;
+      icon: React.FC<any>;
+  }
 }
 
 export interface ToastContextType {
-  addToast: (message: string, type?: ToastType) => void;
+  addToast: (message: string, type?: ToastType, badge?: ToastMessage['badge']) => void;
 }
 
 export type AppScreen = 
@@ -229,7 +244,8 @@ export type AppScreen =
   | 'admin'
   | 'chat_trainer'
   | 'api_key_error'
-  | 'competence_report';
+  | 'competence_report'
+  | 'achievements';
 
 export interface AppState {
     currentScreen: AppScreen;
@@ -244,6 +260,15 @@ export interface AppState {
 }
 
 // Gamification
+export interface Badge {
+    id: string;
+    title: string;
+    description: string;
+    icon: React.FC<any>;
+    isPro?: boolean;
+    condition: (progress: UserProgress) => boolean;
+}
+// FIX: Added Achievement interface to resolve missing type error.
 export interface Achievement {
     id: string;
     title: string;

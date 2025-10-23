@@ -1,6 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-// FIX: Removed .tsx extension from the import path to resolve module loading issue.
+// The App component is now provided as a valid module, resolving the import error.
 import App from './App';
 import { ToastProvider } from './hooks/useToast';
 

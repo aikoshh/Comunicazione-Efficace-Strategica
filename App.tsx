@@ -1,224 +1,210 @@
 import React, { useState, useEffect, useCallback } from 'react';
+// FIX: Changed to a value import to bring in the DifficultyLevel enum and be consistent with other files.
+import { type UserProfile, type UserProgress, type Entitlements, type AppState, type AnalysisResult, type Module, type Exercise, type CommunicatorProfile, type Product, type Achievement, type VoiceAnalysisResult, type AnalysisHistoryItem, DifficultyLevel } from './types';
 import { onAuthUserChanged, logout } from './services/authService';
 import { databaseService } from './services/databaseService';
 import { getUserEntitlements, purchaseProduct, restorePurchases } from './services/monetizationService';
+import { gamificationService } from './services/gamificationService';
 import { updateCompetenceScores } from './services/competenceService';
-
-// FIX: Changed to a regular import to allow importing the DifficultyLevel enum value.
-import {
-    AppState, UserProfile, UserProgress, Module, Exercise,
-    AnalysisResult, VoiceAnalysisResult, Entitlements,
-    CommunicatorProfile, Product, DifficultyLevel
-} from './types';
-import { MODULES, STRATEGIC_CHECKUP_EXERCISES, COLORS } from './constants';
-
-// Screens
+import { MODULES, STRATEGIC_CHECKUP_EXERCISES } from './constants';
+import { useToast } from './hooks/useToast';
+import { Header } from './components/Header';
 import { LoginScreen } from './components/LoginScreen';
 import { HomeScreen } from './components/HomeScreen';
 import { ModuleScreen } from './components/ModuleScreen';
 import { ExerciseScreen } from './components/ExerciseScreen';
 import { AnalysisReportScreen } from './components/AnalysisReportScreen';
-import { VoiceAnalysisReportScreen } from './components/VoiceAnalysisReportScreen';
 import { CustomSetupScreen } from './components/CustomSetupScreen';
+import { PreloadingScreen } from './components/PreloadingScreen';
 import { StrategicCheckupScreen } from './components/StrategicCheckupScreen';
 import { CommunicatorProfileScreen } from './components/CommunicatorProfileScreen';
 import { PaywallScreen } from './components/PaywallScreen';
 import { AdminScreen } from './components/AdminScreen';
-import { StrategicChatTrainerScreen } from './components/StrategicChatTrainerScreen';
 import { ApiKeyErrorScreen } from './components/ApiKeyErrorScreen';
+import { VoiceAnalysisReportScreen } from './components/VoiceAnalysisReportScreen';
 import { CompetenceReportScreen } from './components/CompetenceReportScreen';
-import { PreloadingScreen } from './components/PreloadingScreen';
-import { Header } from './components/Header';
-import { FullScreenLoader } from './components/Loader';
+import { AchievementsScreen } from './components/AchievementsScreen';
+import { StrategicChatTrainerScreen } from './components/StrategicChatTrainerScreen';
 
-import { useToast } from './hooks/useToast';
-import { gamificationService } from './services/gamificationService';
-
-const allExercises = MODULES.flatMap(m => m.exercises).concat(STRATEGIC_CHECKUP_EXERCISES);
-const dailyChallenge = STRATEGIC_CHECKUP_EXERCISES[new Date().getDate() % STRATEGIC_CHECKUP_EXERCISES.length];
+const getInitialAppState = (): AppState => ({
+    currentScreen: 'home',
+});
 
 const App: React.FC = () => {
     const [user, setUser] = useState<UserProfile | null>(null);
     const [progress, setProgress] = useState<UserProgress | undefined>(undefined);
     const [entitlements, setEntitlements] = useState<Entitlements | null>(null);
-    const [appState, setAppState] = useState<AppState>({ currentScreen: 'login' });
-    const [isInitializing, setIsInitializing] = useState(true);
-    const [isPreloading, setIsPreloading] = useState(true);
+    const [appState, setAppState] = useState<AppState>(getInitialAppState);
+    const [isAppLoading, setIsAppLoading] = useState(true);
+    const [dailyChallenge, setDailyChallenge] = useState<Exercise | null>(null);
 
     const { addToast } = useToast();
 
-    // Scroll to top on screen change
-    useEffect(() => {
-        window.scrollTo(0, 0);
-    }, [appState.currentScreen]);
+    // === Effects ===
 
+    // Auth listener
     useEffect(() => {
-        const savedState = localStorage.getItem('ces_coach_app_state');
-        if (savedState) {
-            try {
-                const parsedState = JSON.parse(savedState);
-                if (parsedState.currentScreen !== 'login' && parsedState.currentScreen !== 'api_key_error') {
-                    setAppState(parsedState);
-                }
-            } catch (error) {
-                console.error("Could not parse saved app state:", error);
-            }
-        }
+        const unsubscribe = onAuthUserChanged(setUser);
+        return () => unsubscribe();
     }, []);
 
+    // Fetch user data on login
     useEffect(() => {
-        if (!isInitializing && !isPreloading) {
-            localStorage.setItem('ces_coach_app_state', JSON.stringify(appState));
-        }
-    }, [appState, isInitializing, isPreloading]);
-
-    useEffect(() => {
-        const unsubscribe = onAuthUserChanged(async (authUser) => {
-            if (authUser) {
-                setUser(authUser);
+        const fetchData = async () => {
+            if (user) {
                 const [userProgress, userEntitlements] = await Promise.all([
-                    databaseService.getUserProgress(authUser.uid),
-                    getUserEntitlements(authUser)
+                    databaseService.getUserProgress(user.uid),
+                    getUserEntitlements(user),
                 ]);
                 setProgress(userProgress || gamificationService.getInitialProgress());
                 setEntitlements(userEntitlements);
-                if (appState.currentScreen === 'login') {
-                    setAppState({ currentScreen: 'home' });
-                }
+                setIsAppLoading(false);
             } else {
-                setUser(null);
-                setProgress(undefined);
-                setEntitlements(null);
-                setAppState({ currentScreen: 'login' });
-                localStorage.removeItem('ces_coach_app_state');
+                setIsAppLoading(false);
             }
-            setIsInitializing(false);
-        });
-        return () => unsubscribe();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        };
+        fetchData();
+    }, [user]);
+
+    // App state persistence
+    useEffect(() => {
+        if (user) {
+            const savedState = localStorage.getItem(`ces_coach_app_state_${user.email}`);
+            if (savedState) {
+                try {
+                    setAppState(JSON.parse(savedState));
+                } catch (e) {
+                    setAppState(getInitialAppState());
+                }
+            }
+        } else {
+            // Clear state on logout
+            setAppState(getInitialAppState());
+        }
+    }, [user]);
+
+    useEffect(() => {
+        if (user) {
+            localStorage.setItem(`ces_coach_app_state_${user.email}`, JSON.stringify(appState));
+        }
+    }, [appState, user]);
+
+    // Daily challenge selection
+    useEffect(() => {
+        const allExercises = MODULES.flatMap(m => m.exercises).filter(e => e.id.startsWith('e'));
+        if (allExercises.length > 0) {
+            const dayOfYear = Math.floor((new Date().getTime() - new Date(new Date().getFullYear(), 0, 0).getTime()) / (1000 * 60 * 60 * 24));
+            setDailyChallenge(allExercises[dayOfYear % allExercises.length]);
+        }
     }, []);
 
-    const saveProgress = useCallback(async (newProgress: UserProgress) => {
-        setProgress(newProgress);
-        if (user) {
-            try {
-                await databaseService.saveUserProgress(user.uid, newProgress);
-            } catch (error) {
-                console.error("Failed to save progress:", error);
-                addToast("Impossibile salvare i progressi.", "error");
-            }
-        }
-    }, [user, addToast]);
+    // === Callbacks & Handlers ===
+
+    const handleApiKeyError = useCallback((error: string) => {
+        setAppState(prev => ({ ...prev, currentScreen: 'api_key_error', apiKeyError: error }));
+    }, []);
     
-    const navigate = (newState: Partial<AppState>) => {
-        setAppState(prevState => ({ ...prevState, ...newState }));
-    };
+    const saveProgress = useCallback(async (newProgress: UserProgress) => {
+        if (user) {
+            setProgress(newProgress);
+            await databaseService.saveUserProgress(user.uid, newProgress);
+        }
+    }, [user]);
 
-    const handleBackToHome = () => navigate({ currentScreen: 'home' });
-
+    const showNewAchievementToast = useCallback((achievement: Achievement) => {
+        addToast(`Traguardo Sbloccato!`, 'badge', {
+            title: achievement.title,
+            icon: achievement.icon,
+        });
+    }, [addToast]);
+    
     const handleLogout = async () => {
         await logout();
-        navigate({ currentScreen: 'login' });
+        setUser(null);
+        setProgress(undefined);
+        setEntitlements(null);
+        localStorage.removeItem(`ces_coach_app_state_${user?.email}`);
+        setAppState(getInitialAppState());
     };
+
+    const handleNavigateToHome = () => setAppState(getInitialAppState());
 
     const handleSelectModule = (module: Module) => {
-        if (module.id === 'm6') navigate({ currentScreen: 'custom_setup', currentModuleId: module.id });
-        else if (module.id === 'm7') navigate({ currentScreen: 'chat_trainer', currentModuleId: module.id });
-        else navigate({ currentScreen: 'module', currentModuleId: module.id });
-    };
-
-    const handleSelectExercise = (exercise: Exercise, isCheckup?: boolean, checkupStep?: number, totalCheckupSteps?: number) => {
-        navigate({
-            currentScreen: 'exercise',
-            currentExerciseId: exercise.id,
-            isReviewMode: false,
-        });
+        if (module.isCustom) {
+            if (module.id === 'm6') { // Custom Training
+                setAppState(prev => ({ ...prev, currentScreen: 'custom_setup', currentModuleId: module.id }));
+            } else if (module.id === 'm7') { // Chat Trainer
+                setAppState(prev => ({ ...prev, currentScreen: 'chat_trainer', currentModuleId: module.id }));
+            }
+        } else {
+            setAppState(prev => ({ ...prev, currentScreen: 'module', currentModuleId: module.id }));
+        }
     };
     
-    const currentModule = appState.currentModuleId ? MODULES.find(m => m.id === appState.currentModuleId) : undefined;
-    const currentExercise = appState.currentExerciseId ? allExercises.find(e => e.id === appState.currentExerciseId) : undefined;
+    const handleSelectExercise = (exercise: Exercise) => {
+        setAppState(prev => ({ ...prev, currentScreen: 'exercise', currentExerciseId: exercise.id }));
+    };
 
-    const handleBackToModule = () => navigate({ currentScreen: 'module' });
-
-    const handleApiKeyError = (error: string) => navigate({ currentScreen: 'api_key_error', apiKeyError: error });
-
-    const handleCompleteExercise = async (result: AnalysisResult | VoiceAnalysisResult, userResponse: string, type: 'written' | 'verbal') => {
-        if (!progress || !currentExercise) return;
-
-        const newScore = type === 'written' ? (result as AnalysisResult).score : Math.round(((result as VoiceAnalysisResult).scores.reduce((a, b) => a + b.score, 0) / (result as VoiceAnalysisResult).scores.length) * 10);
-
-        const updatedProgress: UserProgress = {
-            ...progress,
-            scores: [...progress.scores, newScore],
-            completedExerciseIds: [...new Set([...progress.completedExerciseIds, currentExercise.id])],
-            analysisHistory: {
-                ...progress.analysisHistory,
-                [currentExercise.id]: { result, userResponse, timestamp: new Date().toISOString(), type }
-            },
-            competenceScores: updateCompetenceScores(progress.competenceScores, currentExercise.id, newScore)
-        };
+    const handleExerciseComplete = async (
+        result: AnalysisResult | VoiceAnalysisResult,
+        userResponse: string,
+        exerciseId: string,
+        type: 'written' | 'verbal'
+    ) => {
+        if (!progress || !dailyChallenge) return;
+        const oldProgress = { ...progress };
+        const isRetake = oldProgress.completedExerciseIds.includes(exerciseId);
         
+        const newScore = 'score' in result ? result.score : Math.round(result.scores.reduce((sum, s) => sum + s.score, 0) / result.scores.length * 10);
+
+        // 1. Update analysis history
+        const historyItem: AnalysisHistoryItem = { result, userResponse, timestamp: new Date().toISOString(), type };
+        const updatedHistory = { ...oldProgress.analysisHistory, [exerciseId]: historyItem };
+        
+        // 2. Update competence scores
+        const updatedCompetenceScores = updateCompetenceScores(oldProgress.competenceScores, exerciseId, newScore);
+
+        // 3. Process gamification
+        const { updatedProgress, levelUp, newBadges } = gamificationService.processCompletion(
+            { ...oldProgress, analysisHistory: updatedHistory, competenceScores: updatedCompetenceScores },
+            exerciseId,
+            newScore,
+            isRetake,
+            dailyChallenge.id
+        );
+        
+        // 4. Save everything
         await saveProgress(updatedProgress);
+        
+        // 5. Show toasts
+        newBadges.forEach(showNewAchievementToast);
+        if (levelUp) {
+            addToast(`Level Up! Sei ora un ${levelUp.label}.`, 'success');
+        }
 
-        if (type === 'written') {
-            navigate({ currentScreen: 'analysis_report', analysisResult: result as AnalysisResult, userResponse });
-        } else {
-            navigate({ currentScreen: 'voice_analysis_report', voiceAnalysisResult: result as VoiceAnalysisResult, userResponse });
-        }
+        // 6. Navigate to report
+        setAppState(prev => ({
+            ...prev,
+            currentScreen: type === 'verbal' ? 'voice_analysis_report' : 'analysis_report',
+            analysisResult: type === 'written' ? result as AnalysisResult : undefined,
+            voiceAnalysisResult: type === 'verbal' ? result as VoiceAnalysisResult : undefined,
+            userResponse: userResponse,
+            isReviewMode: false
+        }));
     };
-    
-    const handleSkipExercise = async (exerciseId: string) => {
-        if (!progress) return;
-        const updatedProgress = {
-            ...progress,
-            completedExerciseIds: [...new Set([...progress.completedExerciseIds, exerciseId])]
-        };
-        await saveProgress(updatedProgress);
-        addToast('Esercizio saltato.', 'info');
-        if (currentModule && currentModule.exercises.length > 1) {
-            handleBackToModule();
-        } else {
-            handleBackToHome();
-        }
-    };
-
-    const handleNextExercise = () => {
-        if (!currentModule || !currentExercise) {
-            handleBackToHome();
-            return;
-        }
-        const currentIndex = currentModule.exercises.findIndex(e => e.id === currentExercise.id);
-        if (currentIndex !== -1 && currentIndex < currentModule.exercises.length - 1) {
-            const nextExercise = currentModule.exercises[currentIndex + 1];
-            handleSelectExercise(nextExercise);
-        } else {
-            handleBackToModule();
-        }
-    };
-
-    const handleRetryExercise = () => navigate({ currentScreen: 'exercise' });
 
     const handleReviewExercise = (exerciseId: string) => {
-        const historyItem = progress?.analysisHistory?.[exerciseId];
+        const historyItem = progress?.analysisHistory[exerciseId];
         if (historyItem) {
-            const exercise = allExercises.find(e => e.id === exerciseId);
-            if (historyItem.type === 'written') {
-                navigate({
-                    currentScreen: 'analysis_report',
-                    currentExerciseId: exerciseId,
-                    isReviewMode: true,
-                    analysisResult: historyItem.result as AnalysisResult,
-                    userResponse: historyItem.userResponse,
-                });
-            } else {
-                 navigate({
-                    currentScreen: 'voice_analysis_report',
-                    currentExerciseId: exerciseId,
-                    isReviewMode: true,
-                    voiceAnalysisResult: historyItem.result as VoiceAnalysisResult,
-                    userResponse: historyItem.userResponse,
-                });
-            }
+            setAppState(prev => ({
+                ...prev,
+                currentScreen: historyItem.type === 'verbal' ? 'voice_analysis_report' : 'analysis_report',
+                currentExerciseId: exerciseId,
+                analysisResult: historyItem.type === 'written' ? historyItem.result as AnalysisResult : undefined,
+                voiceAnalysisResult: historyItem.type === 'verbal' ? historyItem.result as VoiceAnalysisResult : undefined,
+                userResponse: historyItem.userResponse,
+                isReviewMode: true,
+            }));
         }
     };
 
@@ -228,161 +214,113 @@ const App: React.FC = () => {
             title: 'Esercizio Personalizzato',
             scenario,
             task,
-            // FIX: Use the DifficultyLevel enum instead of a string literal.
+            // FIX: Use enum member instead of string literal for type safety.
             difficulty: DifficultyLevel.BASE,
             competence: null,
-            customObjective: 'Allenamento su scenario personalizzato'
         };
-        allExercises.push(customExercise); // Temporarily add to list
-        navigate({ currentScreen: 'exercise', currentExerciseId: customExercise.id });
+        handleSelectExercise(customExercise);
     };
 
-    const handleStartCheckup = () => navigate({ currentScreen: 'strategic_checkup' });
-    
-    const handleCompleteCheckup = async (profile: CommunicatorProfile) => {
+    const handleStartCheckup = () => setAppState(prev => ({ ...prev, currentScreen: 'strategic_checkup' }));
+
+    const handleCheckupComplete = async (profile: CommunicatorProfile) => {
         if (!progress) return;
+        const { newBadges } = gamificationService.processCheckupCompletion(progress);
+        
         const updatedProgress = { ...progress, checkupProfile: profile };
         await saveProgress(updatedProgress);
-        navigate({ currentScreen: 'communicator_profile', checkupProfile: profile });
+
+        newBadges.forEach(showNewAchievementToast);
+
+        setAppState(prev => ({
+            ...prev,
+            currentScreen: 'communicator_profile',
+            checkupProfile: profile,
+        }));
     };
 
-    const handlePurchaseFlow = async (product: Product) => {
-        if (!user) return;
+    const handleNavigateToPaywall = () => setAppState(prev => ({ ...prev, currentScreen: 'paywall' }));
+    
+    const handlePurchase = async (product: Product) => {
         try {
             const newEntitlements = await purchaseProduct(user, product);
             setEntitlements(newEntitlements);
             addToast(`Acquisto di ${product.name} completato!`, 'success');
-        } catch (error: any) {
-            addToast(error.message, 'error');
-        }
-    };
-
-    const handleRestore = async () => {
-        try {
-            const restoredEntitlements = await restorePurchases(user);
-            setEntitlements(restoredEntitlements);
-            addToast('Acquisti ripristinati con successo.', 'success');
-        } catch (error: any) {
-            addToast(error.message, 'error');
-        }
-    };
-
-    const renderScreen = () => {
-        if (!user) return <LoginScreen />;
-        
-        switch (appState.currentScreen) {
-            case 'home':
-                return <HomeScreen 
-                    user={user} 
-                    progress={progress} 
-                    entitlements={entitlements}
-                    dailyChallenge={dailyChallenge}
-                    onSelectModule={handleSelectModule}
-                    onStartDailyChallenge={(ex) => handleSelectExercise(ex, true, 1, 1)}
-                    onStartCheckup={handleStartCheckup}
-                    onStartChatTrainer={() => navigate({ currentScreen: 'chat_trainer', currentModuleId: 'm7'})}
-                    onNavigateToPaywall={() => navigate({ currentScreen: 'paywall' })}
-                    onNavigateToCompetenceReport={() => navigate({ currentScreen: 'competence_report'})}
-                />;
-            case 'module':
-                if (!currentModule) return <HomeScreen user={user} progress={progress} entitlements={entitlements} dailyChallenge={dailyChallenge} onSelectModule={handleSelectModule} onStartDailyChallenge={handleSelectExercise} onStartCheckup={handleStartCheckup} onStartChatTrainer={() => {}} onNavigateToPaywall={() => {}} onNavigateToCompetenceReport={() => {}} />;
-                return <ModuleScreen 
-                    module={currentModule} 
-                    moduleColor={COLORS.primary}
-                    onSelectExercise={(ex) => handleSelectExercise(ex)}
-                    onReviewExercise={handleReviewExercise}
-                    onBack={handleBackToHome}
-                    completedExerciseIds={progress?.completedExerciseIds || []}
-                    entitlements={entitlements}
-                    analysisHistory={progress?.analysisHistory || {}}
-                />;
-            case 'exercise':
-                if (!currentExercise) return <p>Esercizio non trovato.</p>;
-                return <ExerciseScreen 
-                    exercise={currentExercise}
-                    onCompleteWritten={(res, uRes) => handleCompleteExercise(res, uRes, 'written')}
-                    onCompleteVerbal={(res, uRes) => handleCompleteExercise(res, uRes, 'verbal')}
-                    onSkip={handleSkipExercise}
-                    onBack={currentModule ? handleBackToModule : handleBackToHome}
-                    onApiKeyError={handleApiKeyError}
-                    entitlements={entitlements}
-                />;
-            case 'analysis_report':
-                 if (!appState.analysisResult || !currentExercise) return <p>Risultato non trovato.</p>;
-                 return <AnalysisReportScreen 
-                    result={appState.analysisResult} 
-                    exercise={currentExercise}
-                    onRetry={handleRetryExercise}
-                    onNextExercise={handleNextExercise}
-                    nextExerciseLabel={currentModule?.exercises.slice(-1)[0].id === currentExercise.id ? 'Torna al Modulo' : 'Prossimo Esercizio'}
-                    entitlements={entitlements}
-                    onNavigateToPaywall={() => navigate({ currentScreen: 'paywall' })}
-                    onPurchase={handlePurchaseFlow}
-                    userResponse={appState.userResponse}
-                    isReview={appState.isReviewMode}
-                 />;
-            case 'voice_analysis_report':
-                if (!appState.voiceAnalysisResult || !currentExercise) return <p>Risultato non trovato.</p>;
-                return <VoiceAnalysisReportScreen 
-                    result={appState.voiceAnalysisResult}
-                    exercise={currentExercise}
-                    onRetry={handleRetryExercise}
-                    onNextExercise={handleNextExercise}
-                    nextExerciseLabel={currentModule?.exercises.slice(-1)[0].id === currentExercise.id ? 'Torna al Modulo' : 'Prossimo Esercizio'}
-                    entitlements={entitlements}
-                    onNavigateToPaywall={() => navigate({ currentScreen: 'paywall' })}
-                    userResponse={appState.userResponse}
-                    isReview={appState.isReviewMode}
-                />;
-            case 'custom_setup':
-                if (!currentModule) return null;
-                return <CustomSetupScreen module={currentModule} onStart={handleStartCustomExercise} onBack={handleBackToHome} onApiKeyError={handleApiKeyError} />;
-            case 'strategic_checkup':
-                return <StrategicCheckupScreen onSelectExercise={(ex) => {}} onCompleteCheckup={handleCompleteCheckup} onApiKeyError={handleApiKeyError} onBack={handleBackToHome} entitlements={entitlements} />;
-            case 'communicator_profile':
-                return <CommunicatorProfileScreen profile={appState.checkupProfile} onContinue={handleBackToHome} />;
-            case 'paywall':
-                 if (!entitlements) return null;
-                return <PaywallScreen entitlements={entitlements} onPurchase={handlePurchaseFlow} onRestore={handleRestore} onBack={() => navigate({ currentScreen: 'home' })} />;
-            case 'admin':
-                return <AdminScreen onBack={handleBackToHome} />;
-            case 'chat_trainer':
-                if (!currentModule) return null;
-                return <StrategicChatTrainerScreen module={currentModule} onBack={handleBackToHome} onApiKeyError={handleApiKeyError} />;
-            case 'api_key_error':
-                return <ApiKeyErrorScreen error={appState.apiKeyError || "Errore sconosciuto."} />;
-            case 'competence_report':
-                if (!progress) return null;
-                return <CompetenceReportScreen userProgress={progress} onBack={handleBackToHome} onSelectExercise={handleSelectExercise} />;
-            default:
-                return <HomeScreen user={user} progress={progress} entitlements={entitlements} dailyChallenge={dailyChallenge} onSelectModule={handleSelectModule} onStartDailyChallenge={handleSelectExercise} onStartCheckup={handleStartCheckup} onStartChatTrainer={() => {}} onNavigateToPaywall={() => {}} onNavigateToCompetenceReport={() => {}} />;
+            handleNavigateToHome();
+        } catch (e: any) {
+            addToast(e.message, 'error');
         }
     };
     
-    if (isPreloading) {
-        return <PreloadingScreen onComplete={() => setIsPreloading(false)} />;
+    const handleRestorePurchases = async () => {
+        try {
+            const restoredEntitlements = await restorePurchases(user);
+            setEntitlements(restoredEntitlements);
+            addToast('Acquisti ripristinati con successo.', 'info');
+        } catch (e: any) {
+            addToast(e.message, 'error');
+        }
+    };
+
+    const currentModule = MODULES.find(m => m.id === appState.currentModuleId);
+    const currentExercise = appState.currentExerciseId?.startsWith('custom_')
+        // FIX: Use enum member instead of string literal for type safety.
+        ? { id: appState.currentExerciseId, title: 'Esercizio Personalizzato', scenario: '', task: '', difficulty: DifficultyLevel.BASE, competence: null } // Placeholder for custom
+        : MODULES.flatMap(m => m.exercises).find(e => e.id === appState.currentExerciseId)
+        || STRATEGIC_CHECKUP_EXERCISES.find(e => e.id === appState.currentExerciseId)
+        || dailyChallenge;
+
+    // === Render Logic ===
+
+    if (isAppLoading) {
+        return <PreloadingScreen onComplete={() => {}} />;
     }
 
-    if (isInitializing) {
-        return <FullScreenLoader />;
+    if (!user) {
+        return <LoginScreen />;
     }
+
+    const renderContent = () => {
+        switch (appState.currentScreen) {
+            case 'home':
+                return dailyChallenge && <HomeScreen user={user} progress={progress} entitlements={entitlements} dailyChallenge={dailyChallenge} onSelectModule={handleSelectModule} onStartDailyChallenge={handleSelectExercise} onStartCheckup={handleStartCheckup} onStartChatTrainer={() => handleSelectModule({id: 'm7', isCustom: true} as Module)} onNavigateToPaywall={handleNavigateToPaywall} onNavigateToCompetenceReport={() => setAppState(prev => ({...prev, currentScreen: 'competence_report'}))} />;
+            case 'module':
+                return currentModule && <ModuleScreen module={currentModule} moduleColor="#1C3E5E" onSelectExercise={handleSelectExercise} onReviewExercise={handleReviewExercise} onBack={handleNavigateToHome} completedExerciseIds={progress?.completedExerciseIds || []} entitlements={entitlements} analysisHistory={progress?.analysisHistory || {}} />;
+            case 'exercise':
+                // FIX: Corrected typo in entitlements prop.
+                return currentExercise && <ExerciseScreen exercise={currentExercise} moduleColor="#1C3E5E" onComplete={handleExerciseComplete} onBack={() => setAppState(prev => ({ ...prev, currentScreen: 'module' }))} entitlements={entitlements} analysisHistory={progress?.analysisHistory || {}} onApiKeyError={handleApiKeyError} />;
+            case 'analysis_report':
+                return appState.analysisResult && currentExercise && <AnalysisReportScreen result={appState.analysisResult} exercise={currentExercise} onRetry={() => setAppState(prev => ({...prev, currentScreen: 'exercise'}))} onNextExercise={handleNavigateToHome} nextExerciseLabel="Torna alla Home" entitlements={entitlements} onNavigateToPaywall={handleNavigateToPaywall} onPurchase={handlePurchase} userResponse={appState.userResponse} isReview={appState.isReviewMode} />;
+            case 'voice_analysis_report':
+                return appState.voiceAnalysisResult && currentExercise && <VoiceAnalysisReportScreen result={appState.voiceAnalysisResult} exercise={currentExercise} onRetry={() => setAppState(prev => ({...prev, currentScreen: 'exercise'}))} onNextExercise={handleNavigateToHome} nextExerciseLabel="Torna alla Home" entitlements={entitlements} onNavigateToPaywall={handleNavigateToPaywall} userResponse={appState.userResponse} isReview={appState.isReviewMode} />;
+            case 'custom_setup':
+                return currentModule && <CustomSetupScreen module={currentModule} onStart={handleStartCustomExercise} onBack={() => setAppState(prev => ({ ...prev, currentScreen: 'module' }))} onApiKeyError={handleApiKeyError} />;
+            case 'strategic_checkup':
+                return <StrategicCheckupScreen onComplete={handleCheckupComplete} onBack={handleNavigateToHome} entitlements={entitlements} onApiKeyError={handleApiKeyError} />;
+            case 'communicator_profile':
+                return appState.checkupProfile && <CommunicatorProfileScreen profile={appState.checkupProfile} onContinue={handleNavigateToHome} />;
+            case 'paywall':
+                return entitlements && <PaywallScreen entitlements={entitlements} onPurchase={handlePurchase} onRestore={handleRestorePurchases} onBack={handleNavigateToHome} />;
+            case 'admin':
+                return <AdminScreen onBack={handleNavigateToHome} />;
+            case 'chat_trainer':
+                return currentModule && <StrategicChatTrainerScreen module={currentModule} onBack={handleNavigateToHome} onApiKeyError={handleApiKeyError} />;
+            case 'api_key_error':
+                return <ApiKeyErrorScreen error={appState.apiKeyError || 'Errore sconosciuto'} />;
+            case 'competence_report':
+                return progress && <CompetenceReportScreen userProgress={progress} onBack={handleNavigateToHome} onSelectExercise={handleSelectExercise} />;
+            case 'achievements':
+                return progress && <AchievementsScreen progress={progress} onBack={handleNavigateToHome} />;
+            default:
+                return <div>Schermata non trovata</div>;
+        }
+    };
 
     return (
-        <div style={{ backgroundColor: COLORS.base, minHeight: '100vh', color: COLORS.textPrimary }}>
-            {appState.currentScreen !== 'login' && user && (
-                <Header 
-                    user={user}
-                    onLogout={handleLogout}
-                    onNavigateToHome={handleBackToHome}
-                    onNavigateToPaywall={() => navigate({ currentScreen: 'paywall' })}
-                    onNavigateToAdmin={() => navigate({ currentScreen: 'admin' })}
-                    entitlements={entitlements}
-                    currentModule={currentModule}
-                    onNavigateToModule={currentModule ? handleBackToModule : handleBackToHome}
-                />
-            )}
-            {renderScreen()}
-        </div>
+        <>
+            <Header user={user} onLogout={handleLogout} onNavigateToHome={handleNavigateToHome} onNavigateToPaywall={handleNavigateToPaywall} onNavigateToAdmin={() => setAppState(prev => ({...prev, currentScreen: 'admin'}))} entitlements={entitlements} currentModule={currentModule} onNavigateToModule={() => setAppState(prev => ({...prev, currentScreen: 'module'}))} />
+            <main>{renderContent()}</main>
+        </>
     );
 };
 

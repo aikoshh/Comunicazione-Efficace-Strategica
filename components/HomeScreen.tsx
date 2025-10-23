@@ -1,4 +1,3 @@
-// components/HomeScreen.tsx
 import React, { useState } from 'react';
 import type { Module, UserProfile, UserProgress, Exercise, Entitlements } from '../types';
 import { COLORS, MODULES } from '../constants';
@@ -7,7 +6,8 @@ import { dailyChallengeHeaderImage, checkupHeaderImage, chatTrainerCardImage, iv
 import { VideoPlayerModal } from './VideoPlayerModal';
 import { soundService } from '../services/soundService';
 import { hasProAccess } from '../services/monetizationService';
-import { CrownIcon, PlayIcon, ArrowDownIcon } from './Icons';
+// FIX: Added LockIcon to imports.
+import { CrownIcon, PlayIcon, ArrowDownIcon, LockIcon } from './Icons';
 import { ProgressAnalytics } from './ProgressAnalytics';
 
 interface HomeScreenProps {
@@ -24,11 +24,11 @@ interface HomeScreenProps {
 }
 
 const hoverStyle = `
-  .module-card:hover, .action-card:hover {
+  .action-card:hover {
     transform: translateY(-8px);
     box-shadow: 0 12px 28px rgba(0, 0, 0, 0.15);
   }
-  .module-card:active, .action-card:active {
+  .action-card:active {
     transform: translateY(-4px) scale(0.99);
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
   }
@@ -42,58 +42,88 @@ const hoverStyle = `
   }
 `;
 
-const ModuleCard: React.FC<{
-  module: Module;
-  onClick: () => void;
-  completedExercises: number;
-  totalExercises: number;
-  isPro: boolean;
+const ProgressionPath: React.FC<{
+  userProgress: UserProgress | undefined;
   userHasPro: boolean;
-}> = ({ module, onClick, completedExercises, totalExercises, isPro, userHasPro }) => {
-  const progress = totalExercises > 0 ? (completedExercises / totalExercises) * 100 : 0;
-  const isLocked = isPro && !userHasPro;
+  onSelectModule: (module: Module) => void;
+  onNavigateToPaywall: () => void;
+}> = ({ userProgress, userHasPro, onSelectModule, onNavigateToPaywall }) => {
 
-  const cardStyle: React.CSSProperties = {
-    ...styles.moduleCard,
-    ...(isLocked ? styles.moduleCardLocked : {}),
-  };
-  
-  const isHeaderVideo = module.headerImage && module.headerImage.toLowerCase().endsWith('.mp4');
+    const isModuleCompleted = (module: Module) => {
+        if (module.exercises.length === 0) return false;
+        return module.exercises.every(ex => userProgress?.completedExerciseIds.includes(ex.id));
+    };
 
-  return (
-    <div style={cardStyle} onClick={!isLocked ? onClick : undefined} className="module-card">
-       {isHeaderVideo ? (
-        <video src={module.headerImage} style={styles.cardImage} autoPlay muted loop playsInline />
-      ) : (
-        <img src={module.headerImage} alt={module.title} style={styles.cardImage} />
-      )}
-      <div style={styles.cardContent}>
-        <div style={styles.cardHeader}>
-          <module.icon style={styles.cardIcon} />
-          <h3 style={styles.cardTitle}>{module.title}</h3>
+    const arePrerequisitesMet = (module: Module) => {
+        if (!module.prerequisites || module.prerequisites.length === 0) {
+            return true;
+        }
+        return module.prerequisites.every(prereqId => {
+            const prereqModule = MODULES.find(m => m.id === prereqId);
+            return prereqModule ? isModuleCompleted(prereqModule) : false;
+        });
+    };
+    
+    const nonCustomModules = MODULES.filter(m => !m.isCustom);
+
+    return (
+        <div style={styles.pathContainer}>
+            {nonCustomModules.map((module, index) => {
+                const isPrereqMet = arePrerequisitesMet(module);
+                const isModulePro = module.isPro ?? false;
+                const isLockedBySubscription = isModulePro && !userHasPro;
+                const isLocked = !isPrereqMet || isLockedBySubscription;
+
+                const completedCount = module.exercises.filter(e => userProgress?.completedExerciseIds.includes(e.id)).length;
+                const totalCount = module.exercises.length;
+                const progressPercentage = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
+                
+                const handleClick = () => {
+                    if (isLockedBySubscription) {
+                        onNavigateToPaywall();
+                    } else if (!isLocked) {
+                        onSelectModule(module);
+                    }
+                };
+                
+                return (
+                    <React.Fragment key={module.id}>
+                        <div 
+                            style={{ ...styles.pathNode, ...(isLocked ? styles.pathNodeLocked : {}) }}
+                            onClick={handleClick}
+                        >
+                            <div style={styles.nodeIconContainer}>
+                                <module.icon style={{...styles.nodeIcon, color: isLocked ? COLORS.textSecondary : COLORS.primary }}/>
+                            </div>
+                            <div style={styles.nodeContent}>
+                                <h3 style={styles.nodeTitle}>{module.title}</h3>
+                                {isLocked && (
+                                  <div style={styles.lockReason}>
+                                    <LockIcon style={{width: 16, height: 16}}/>
+                                    <span>
+                                      {isLockedBySubscription ? "Richiede PRO" : "Completa il modulo precedente"}
+                                    </span>
+                                  </div>
+                                )}
+                                <div style={styles.nodeProgressBar}>
+                                    <div style={{...styles.nodeProgressBarFill, width: `${progressPercentage}%`}}/>
+                                </div>
+                                <span style={styles.nodeProgressText}>{completedCount}/{totalCount}</span>
+                            </div>
+                             {isModulePro && <div style={styles.proBadge}><CrownIcon /> PRO</div>}
+                        </div>
+                        {index < nonCustomModules.length - 1 && <div style={styles.pathConnector} />}
+                    </React.Fragment>
+                );
+            })}
         </div>
-        <p style={styles.cardDescription}>{module.description}</p>
-      </div>
-      <div style={styles.cardFooter}>
-        <div style={styles.progressBar}>
-          <div style={{ ...styles.progressBarFill, width: `${progress}%` }} />
-        </div>
-        <span style={styles.progressText}>{completedExercises}/{totalExercises}</span>
-      </div>
-      {isLocked && (
-        <div style={styles.proBadge}>
-          <CrownIcon /> PRO
-        </div>
-      )}
-    </div>
-  );
+    );
 };
+
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({ user, progress, entitlements, onSelectModule, dailyChallenge, onStartDailyChallenge, onStartCheckup, onStartChatTrainer, onNavigateToPaywall, onNavigateToCompetenceReport }) => {
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const userHasPro = hasProAccess(entitlements);
-
-  const completedExerciseIds = progress?.completedExerciseIds || [];
 
   return (
     <div style={styles.container}>
@@ -120,7 +150,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ user, progress, entitlem
 
       <div style={styles.grid}>
         <div 
-          style={{...styles.actionCard, backgroundImage: `url(${dailyChallengeHeaderImage})`}} 
+          style={{...styles.actionCard, backgroundImage: `url(${dailyChallengeHeaderImage})`, border: `3px solid ${COLORS.warning}`}} 
           className="action-card"
           onClick={() => onStartDailyChallenge(dailyChallenge)}
         >
@@ -144,49 +174,33 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ user, progress, entitlem
                 </div>
             </div>
         )}
+
+         <div 
+            style={{...styles.actionCard, backgroundImage: `url(${chatTrainerCardImage})`}} 
+            className="action-card"
+            onClick={userHasPro ? onStartChatTrainer : onNavigateToPaywall}
+          >
+            <div style={styles.actionCardOverlay} />
+            <div style={styles.actionCardContent}>
+              <h2 style={styles.actionCardTitle}>Chat Strategica</h2>
+              <p style={styles.actionCardDescription}>Allenati a scrivere messaggi efficaci con l'AI Trainer.</p>
+            </div>
+            {!userHasPro && (
+                <div style={styles.proBadge}><CrownIcon /> PRO</div>
+            )}
+          </div>
       </div>
 
-      <h2 style={styles.sectionTitle}>Moduli di Allenamento</h2>
-      <div style={styles.grid}>
-        {MODULES.map((module) => {
-          if(module.id === 'm7') { // Special handling for chat trainer
-            return (
-              <div 
-                key={module.id}
-                style={{...styles.actionCard, backgroundImage: `url(${chatTrainerCardImage})`}} 
-                className="action-card"
-                onClick={userHasPro ? onStartChatTrainer : onNavigateToPaywall}
-              >
-                <div style={styles.actionCardOverlay} />
-                <div style={styles.actionCardContent}>
-                  <h2 style={styles.actionCardTitle}>{module.title}</h2>
-                  <p style={styles.actionCardDescription}>{module.description}</p>
-                </div>
-                {module.isPro && !userHasPro && (
-                    <div style={styles.proBadge}><CrownIcon /> PRO</div>
-                )}
-              </div>
-            );
-          }
+      <h2 style={styles.sectionTitle}>Il Tuo Percorso del Comunicatore</h2>
+      <ProgressionPath 
+        userProgress={progress}
+        userHasPro={userHasPro}
+        onSelectModule={onSelectModule}
+        onNavigateToPaywall={onNavigateToPaywall}
+      />
 
-          const completed = module.exercises.filter(e => completedExerciseIds.includes(e.id)).length;
-          const total = module.exercises.length;
-          
-          return (
-            <ModuleCard
-              key={module.id}
-              module={module}
-              onClick={() => (module.isPro && !userHasPro) ? onNavigateToPaywall() : onSelectModule(module)}
-              completedExercises={completed}
-              totalExercises={total}
-              isPro={!!module.isPro}
-              userHasPro={userHasPro}
-            />
-          );
-        })}
-      </div>
 
-      {progress && <ProgressAnalytics userProgress={progress} onNavigateToReport={onNavigateToCompetenceReport} />}
+      {progress && <ProgressAnalytics userProgress={progress} onNavigateToReport={onNavigateToCompetenceReport} onSelectModule={onSelectModule} />}
 
       {videoUrl && <VideoPlayerModal isOpen={!!videoUrl} onClose={() => setVideoUrl(null)} videoSrc={videoUrl} />}
     </div>
@@ -242,12 +256,6 @@ const styles: { [key: string]: React.CSSProperties } = {
     marginTop: '20px',
     marginBottom: '8px',
   },
-  videoIntroText: {
-    fontSize: '16px',
-    color: COLORS.textSecondary,
-    maxWidth: '500px',
-    margin: '0 auto',
-  },
   bouncingArrow: {
     color: COLORS.secondary,
     width: '48px',
@@ -268,76 +276,6 @@ const styles: { [key: string]: React.CSSProperties } = {
     marginBottom: '24px',
     borderBottom: `3px solid ${COLORS.secondary}`,
     paddingBottom: '8px',
-  },
-  moduleCard: {
-    backgroundColor: COLORS.card,
-    borderRadius: '16px',
-    boxShadow: '0 8px 20px rgba(0, 0, 0, 0.08)',
-    overflow: 'hidden',
-    display: 'flex',
-    flexDirection: 'column',
-    cursor: 'pointer',
-    transition: 'transform 0.3s, box-shadow 0.3s',
-    position: 'relative',
-  },
-  moduleCardLocked: {
-      cursor: 'default',
-      filter: 'grayscale(50%)',
-  },
-  cardImage: {
-    width: '100%',
-    height: '180px',
-    objectFit: 'cover',
-  },
-  cardContent: {
-    padding: '20px',
-    flex: '1',
-  },
-  cardHeader: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '12px',
-    marginBottom: '12px',
-  },
-  cardIcon: {
-    width: '28px',
-    height: '28px',
-    color: COLORS.primary,
-  },
-  cardTitle: {
-    fontSize: '18px',
-    fontWeight: 'bold',
-    margin: 0,
-    color: COLORS.textPrimary,
-  },
-  cardDescription: {
-    fontSize: '14px',
-    color: COLORS.textSecondary,
-    lineHeight: 1.6,
-    margin: 0,
-  },
-  cardFooter: {
-    padding: '20px',
-    borderTop: `1px solid ${COLORS.divider}`,
-    display: 'flex',
-    alignItems: 'center',
-    gap: '12px',
-  },
-  progressBar: {
-    flex: 1,
-    height: '8px',
-    backgroundColor: COLORS.divider,
-    borderRadius: '4px',
-  },
-  progressBarFill: {
-    height: '100%',
-    backgroundColor: COLORS.secondary,
-    borderRadius: '4px',
-  },
-  progressText: {
-    fontSize: '12px',
-    fontWeight: 'bold',
-    color: COLORS.textSecondary,
   },
   proBadge: {
     position: 'absolute',
@@ -388,5 +326,85 @@ const styles: { [key: string]: React.CSSProperties } = {
     lineHeight: 1.5,
     margin: 0,
     opacity: 0.9,
+  },
+  pathContainer: {
+    position: 'relative',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: '16px',
+    marginBottom: '40px',
+  },
+  pathNode: {
+    backgroundColor: COLORS.card,
+    borderRadius: '16px',
+    boxShadow: '0 8px 20px rgba(0, 0, 0, 0.08)',
+    display: 'flex',
+    alignItems: 'center',
+    width: '100%',
+    maxWidth: '600px',
+    padding: '16px',
+    cursor: 'pointer',
+    transition: 'transform 0.3s, box-shadow 0.3s',
+    border: `2px solid transparent`,
+    position: 'relative',
+  },
+  pathNodeLocked: {
+    cursor: 'not-allowed',
+    backgroundColor: COLORS.cardDark,
+    color: COLORS.textSecondary,
+    boxShadow: '0 4px 10px rgba(0, 0, 0, 0.05)',
+  },
+  nodeIconContainer: {
+    width: '60px',
+    height: '60px',
+    borderRadius: '50%',
+    backgroundColor: COLORS.divider,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+    marginRight: '16px',
+  },
+  nodeIcon: {
+    width: '32px',
+    height: '32px',
+  },
+  nodeContent: {
+    flex: 1,
+  },
+  nodeTitle: {
+    fontSize: '18px',
+    fontWeight: 'bold',
+    margin: '0 0 8px 0',
+  },
+  lockReason: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '8px',
+      fontSize: '14px',
+      color: COLORS.textSecondary,
+      marginBottom: '8px',
+  },
+  nodeProgressBar: {
+    height: '8px',
+    backgroundColor: COLORS.divider,
+    borderRadius: '4px',
+    marginBottom: '4px',
+  },
+  nodeProgressBarFill: {
+    height: '100%',
+    backgroundColor: COLORS.secondary,
+    borderRadius: '4px',
+  },
+  nodeProgressText: {
+      fontSize: '12px',
+      color: COLORS.textSecondary,
+      fontWeight: 500
+  },
+  pathConnector: {
+    width: '4px',
+    height: '32px',
+    backgroundColor: COLORS.accentBeige,
   },
 };

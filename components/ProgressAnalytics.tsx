@@ -1,13 +1,13 @@
 import React from 'react';
 import { ResponsiveContainer, PieChart, Pie, Cell, Legend, Tooltip } from 'recharts';
-// FIX: Import CompetenceKey directly from types.ts where it is defined.
-import type { UserProgress, CompetenceKey } from '../types';
-import { COLORS } from '../constants';
-import { TargetIcon } from './Icons';
+import type { UserProgress, CompetenceKey, Module } from '../types';
+import { COLORS, MODULES } from '../constants';
+import { TargetIcon, LightbulbIcon } from './Icons';
 
 interface ProgressAnalyticsProps {
   userProgress: UserProgress;
   onNavigateToReport: () => void;
+  onSelectModule: (module: Module) => void;
 }
 
 const COMPETENCE_LABELS: Record<CompetenceKey, string> = {
@@ -24,7 +24,6 @@ const BASE_PIE_COLORS: Record<CompetenceKey, { h: number; s: number; l_start: nu
   gestione_conflitto: { h: 354, s: 70, l_start: 85, l_end: 54 }, // error
 };
 
-// Generates a color from light to saturated based on progress
 const getProgressiveColor = (key: CompetenceKey, value: number): string => {
     const max = 33;
     const progress = Math.min(value / max, 1);
@@ -46,7 +45,7 @@ const CustomTooltip = ({ active, payload }: any) => {
 
 const RADIAN = Math.PI / 180;
 const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
-    if (percent * 100 < 5) return null; // Don't render tiny labels
+    if (percent * 100 < 5) return null;
     const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
     const x = cx + radius * Math.cos(-midAngle * RADIAN);
     const y = cy + radius * Math.sin(-midAngle * RADIAN);
@@ -58,7 +57,7 @@ const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, per
     );
 };
 
-export const ProgressAnalytics: React.FC<ProgressAnalyticsProps> = ({ userProgress, onNavigateToReport }) => {
+export const ProgressAnalytics: React.FC<ProgressAnalyticsProps> = ({ userProgress, onNavigateToReport, onSelectModule }) => {
     const competenceScores = userProgress.competenceScores || { ascolto: 0, riformulazione: 0, assertivita: 0, gestione_conflitto: 0 };
     
     const { ascolto, riformulazione, assertivita, gestione_conflitto } = competenceScores;
@@ -66,7 +65,6 @@ export const ProgressAnalytics: React.FC<ProgressAnalyticsProps> = ({ userProgre
     
     const overallProgress = sumOfCompetencies / 4;
 
-    // Logic from user script to normalize and calculate "nessuna competenza"
     let normalizedScores = { ascolto, riformulazione, assertivita, gestione_conflitto };
     let sumForNormalization = sumOfCompetencies;
 
@@ -85,19 +83,43 @@ export const ProgressAnalytics: React.FC<ProgressAnalyticsProps> = ({ userProgre
       { key: 'assertivita', name: COMPETENCE_LABELS.assertivita, value: normalizedScores.assertivita },
       { key: 'gestione_conflitto', name: COMPETENCE_LABELS.gestione_conflitto, value: normalizedScores.gestione_conflitto },
       { key: 'nessuna', name: 'Nessuna Competenza', value: nessunaValue },
-    ].filter(item => item.value > 0.01); // Filter out tiny slices to prevent render issues
+    ].filter(item => item.value > 0.01);
 
     const renderLegendText = (value: string) => {
         const isNoCompetence = value === 'Nessuna Competenza';
-        // Use a darker color for competence labels for better readability.
         const textColor = isNoCompetence ? COLORS.textSecondary : COLORS.primary;
         return <span style={{ color: textColor, fontWeight: 500 }}>{value}</span>;
     };
 
+    // --- Prescriptive Logic ---
+    let suggestion: { text: string; module?: Module } | null = null;
+    if (userProgress.completedExerciseIds.length > 0) {
+        const sortedCompetences = (Object.keys(competenceScores) as CompetenceKey[]).sort((a, b) => competenceScores[a] - competenceScores[b]);
+        const weakestCompetenceKey = sortedCompetences[0];
+        
+        const isModuleCompleted = (module: Module) => module.exercises.every(ex => userProgress.completedExerciseIds.includes(ex.id));
+
+        const suggestedModule = MODULES.find(module => 
+            !module.isCustom &&
+            !isModuleCompleted(module) &&
+            module.exercises.some(ex => ex.competence === weakestCompetenceKey)
+        );
+
+        if (suggestedModule) {
+            suggestion = {
+                text: `La tua area di miglioramento principale è "${COMPETENCE_LABELS[weakestCompetenceKey]}". Ti consigliamo di concentrarti sul modulo:`,
+                module: suggestedModule
+            };
+        } else {
+            suggestion = { text: "Ottimo lavoro! Hai completato tutti gli esercizi principali. Continua ad allenarti con le sfide giornaliere." };
+        }
+    }
+    // --- End Prescriptive Logic ---
+
     return (
-        <section style={styles.container} onClick={onNavigateToReport} >
+        <section style={styles.container}>
             <h2 style={styles.sectionTitle}>Statistiche di Progresso</h2>
-            <div style={styles.grid}>
+            <div style={{...styles.grid, cursor: 'pointer'}} onClick={onNavigateToReport}>
                 <div style={styles.card}>
                      <h3 style={styles.cardTitle}><TargetIcon/> Grafico delle competenze acquisite</h3>
                      <>
@@ -140,6 +162,17 @@ export const ProgressAnalytics: React.FC<ProgressAnalyticsProps> = ({ userProgre
                         </>
                 </div>
             </div>
+            {suggestion && (
+                <div style={styles.suggestionCard}>
+                    <h3 style={styles.cardTitle}><LightbulbIcon color={COLORS.warning}/> Il Tuo Prossimo Passo</h3>
+                    <p style={styles.suggestionText}>{suggestion.text}</p>
+                    {suggestion.module && (
+                        <button style={styles.suggestionButton} onClick={() => onSelectModule(suggestion.module!)}>
+                            Vai al modulo: {suggestion.module.title}
+                        </button>
+                    )}
+                </div>
+            )}
         </section>
     );
 };
@@ -148,7 +181,6 @@ const styles: { [key: string]: React.CSSProperties } = {
     container: {
         marginBottom: '48px',
         animation: 'fadeInUp 0.5s 0.2s ease-out both',
-        cursor: 'pointer',
     },
     sectionTitle: {
         fontSize: '24px',
@@ -220,5 +252,28 @@ const styles: { [key: string]: React.CSSProperties } = {
         fontSize: '14px',
         fontWeight: 'bold',
         color: COLORS.primary,
+    },
+    suggestionCard: {
+        backgroundColor: '#FFFBEA',
+        padding: '24px',
+        borderRadius: '12px',
+        marginTop: '24px',
+        border: `1px solid ${COLORS.warning}`,
+    },
+    suggestionText: {
+        fontSize: '16px',
+        color: COLORS.textPrimary,
+        lineHeight: 1.6,
+        margin: '0 0 16px 0',
+    },
+    suggestionButton: {
+        padding: '10px 20px',
+        fontSize: '15px',
+        fontWeight: 'bold',
+        color: 'white',
+        background: COLORS.primaryGradient,
+        border: 'none',
+        borderRadius: '8px',
+        cursor: 'pointer',
     },
 };

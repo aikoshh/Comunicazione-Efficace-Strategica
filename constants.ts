@@ -97,12 +97,27 @@ export const STRATEGIC_CHECKUP_EXERCISES: Exercise[] = checkupExercises;
 
 export const MODULES: Module[] = [
   {
+    id: 'm4',
+    title: 'Ascolto Attivo Strategico',
+    description: 'Vai oltre il "sentire". Impara ad ascoltare per capire veramente, creare sintonia e cogliere le opportunità nascoste.',
+    icon: CheckCircleIcon,
+    headerImage: assets.ascoltoStrategicoHeaderVideo,
+    isPro: false,
+    prerequisites: [], // Modulo base, nessun prerequisito
+    exercises: [
+        { id: 'e10', title: 'Riformulazione Empatica', scenario: 'Un amico ti confida: "Mi sento sopraffatto, ho troppe cose da fare e non riesco a stare dietro a nulla. Credo di non essere all\'altezza."', task: 'Rispondi con una riformulazione che validi la sua emozione e gli faccia capire che lo stai ascoltando veramente.', difficulty: DifficultyLevel.BASE, competence: 'ascolto' },
+        { id: 'e11', title: 'Ascoltare per Identificare il "Non Detto"', scenario: 'Durante una trattativa, il fornitore dice: "Possiamo discutere uno sconto, ma la nostra priorità è una partnership a lungo termine".', task: 'Formula una risposta che dimostri di aver colto il suo bisogno nascosto (la stabilità) oltre alla richiesta esplicita (lo sconto).', difficulty: DifficultyLevel.INTERMEDIO, competence: 'ascolto' },
+        { id: 'e12', title: 'Usare il Silenzio Strategicamente', scenario: 'Hai appena presentato una proposta complessa. L\'interlocutore rimane in silenzio, pensieroso.', task: 'Descrivi come gestiresti questo silenzio e quale breve frase (o domanda) useresti per riprendere il dialogo senza mettere pressione.', difficulty: DifficultyLevel.AVANZATO, competence: 'ascolto' },
+    ],
+  },
+  {
     id: 'm1',
     title: 'Dare un Feedback Efficace',
     description: 'Impara a dare feedback costruttivi che motivano al cambiamento invece di generare conflitto.',
     icon: LightbulbIcon,
     headerImage: assets.dareFeedbackEfficaceHeaderVideo,
     isPro: false,
+    prerequisites: ['m4'], // Si sblocca dopo "Ascolto Attivo"
     exercises: [
       { id: 'e1', title: 'Feedback Correttivo a un Collaboratore', scenario: 'Un tuo collaboratore, Marco, ha consegnato un report importante con diversi errori di battitura e dati imprecisi. È la seconda volta che succede.', task: 'Dai un feedback a Marco in modo costruttivo, focalizzandoti sul comportamento e sulla soluzione.', difficulty: DifficultyLevel.BASE, competence: 'riformulazione', headerImage: assets.riformulazioneSinteticaHeaderImg },
       { id: 'e2', title: 'Feedback Assertivo al Tuo Manager', scenario: 'Il tuo manager continua ad assegnarti compiti dell\'ultimo minuto che ti costringono a fare straordinari non pianificati, impattando sulla qualità del tuo lavoro principale.', task: 'Comunica al tuo manager l\'impatto di queste richieste e proponi una soluzione alternativa.', difficulty: DifficultyLevel.AVANZATO, competence: 'assertivita' },
@@ -116,6 +131,7 @@ export const MODULES: Module[] = [
     icon: BarChartIcon,
     headerImage: assets.gestireConversazioniDifficiliHeaderVideo,
     isPro: false,
+    prerequisites: ['m1'], // Si sblocca dopo "Dare Feedback"
     exercises: [
       { id: 'e3', title: 'Rispondere a una Critica Ingiusta', scenario: 'Un cliente ti accusa via email di "scarsa professionalità" perché non hai risposto a una sua richiesta inviata alle 22:00 della sera precedente.', task: 'Scrivi una risposta che sia professionale, assertiva e che ridefinisca i confini della collaborazione senza creare una rottura.', difficulty: DifficultyLevel.INTERMEDIO, competence: 'gestione_conflitto' },
       { id: 'e4', title: 'Comunicare una Decisione Impopolare', scenario: 'Devi comunicare al tuo team che, a causa di tagli al budget, il bonus annuale verrà ridotto del 50%.', task: 'Prepara un breve discorso per comunicare la notizia in modo trasparente, empatico ma fermo, gestendo il probabile malcontento.', difficulty: DifficultyLevel.AVANZATO, competence: 'assertivita' },
@@ -129,23 +145,11 @@ export const MODULES: Module[] = [
     icon: QuestionIcon,
     headerImage: assets.domandeStrategicheHeaderVideo,
     isPro: true,
+    prerequisites: ['m2'], // Modulo PRO
     exercises: [
         { id: 'e5', title: 'Domanda per Chiarire un\'Aspettativa', scenario: 'Il tuo capo ti dice: "Voglio che questo report sia perfetto e che abbia un forte impatto".', task: 'Fai una domanda per trasformare questa richiesta vaga in un\'istruzione concreta e misurabile.', difficulty: DifficultyLevel.BASE, competence: 'riformulazione' },
         { id: 'e6', title: 'Domanda per Sbloccare un "Sì"', scenario: 'Un potenziale cliente dice: "La vostra proposta è interessante, ma il prezzo è troppo alto".', task: 'Poni una domanda che sposti il focus dal prezzo al valore, per riaprire la negoziazione.', difficulty: DifficultyLevel.INTERMEDIO, competence: 'riformulazione' },
         { id: 'e9', title: 'Domanda per Gestire una Lamentela', scenario: 'Un membro del team si lamenta dicendo: "Le riunioni sono una perdita di tempo, non ne posso più".', task: 'Fai una domanda che lo responsabilizzi e lo inviti a proporre una soluzione.', difficulty: DifficultyLevel.AVANZATO, competence: 'ascolto' },
-    ],
-  },
-  {
-    id: 'm4',
-    title: 'Ascolto Attivo Strategico',
-    description: 'Vai oltre il "sentire". Impara ad ascoltare per capire veramente, creare sintonia e cogliere le opportunità nascoste.',
-    icon: CheckCircleIcon,
-    headerImage: assets.ascoltoStrategicoHeaderVideo,
-    isPro: false,
-    exercises: [
-        { id: 'e10', title: 'Riformulazione Empatica', scenario: 'Un amico ti confida: "Mi sento sopraffatto, ho troppe cose da fare e non riesco a stare dietro a nulla. Credo di non essere all\'altezza."', task: 'Rispondi con una riformulazione che validi la sua emozione e gli faccia capire che lo stai ascoltando veramente.', difficulty: DifficultyLevel.BASE, competence: 'ascolto' },
-        { id: 'e11', title: 'Ascoltare per Identificare il "Non Detto"', scenario: 'Durante una trattativa, il fornitore dice: "Possiamo discutere uno sconto, ma la nostra priorità è una partnership a lungo termine".', task: 'Formula una risposta che dimostri di aver colto il suo bisogno nascosto (la stabilità) oltre alla richiesta esplicita (lo sconto).', difficulty: DifficultyLevel.INTERMEDIO, competence: 'ascolto' },
-        { id: 'e12', title: 'Usare il Silenzio Strategicamente', scenario: 'Hai appena presentato una proposta complessa. L\'interlocutore rimane in silenzio, pensieroso.', task: 'Descrivi come gestiresti questo silenzio e quale breve frase (o domanda) useresti per riprendere il dialogo senza mettere pressione.', difficulty: DifficultyLevel.AVANZATO, competence: 'ascolto' },
     ],
   },
   {
@@ -155,6 +159,7 @@ export const MODULES: Module[] = [
     icon: VoiceIcon,
     headerImage: assets.voceStrategicaHeaderVideo,
     isPro: true,
+    prerequisites: ['m3'], // Modulo PRO avanzato
     exercises: [
         { id: 'v1', title: 'Comunicare Calma e Controllo', scenario: 'Devi annunciare al team un problema tecnico imprevisto che causerà un ritardo. L\'ansia è palpabile.', task: 'Registra un messaggio audio (massimo 30 secondi) per comunicare la situazione, usando un tono pacato e un ritmo controllato per trasmettere sicurezza.', difficulty: DifficultyLevel.BASE, exerciseType: ExerciseType.VERBAL, competence: 'riformulazione' },
         { id: 'v2', title: 'Creare Entusiasmo e Motivazione', scenario: 'È l\'inizio di un nuovo progetto e devi presentare gli obiettivi al team.', task: 'Registra un breve discorso (massimo 45 secondi) usando un tono energico, variazioni di ritmo e pause strategiche per creare coinvolgimento.', difficulty: DifficultyLevel.INTERMEDIO, exerciseType: ExerciseType.VERBAL, competence: 'riformulazione' },
@@ -169,6 +174,7 @@ export const MODULES: Module[] = [
     headerImage: assets.allenamentoPersonalizzatoVideo,
     isPro: true,
     isCustom: true,
+    prerequisites: [], // Sempre accessibile (se PRO)
     exercises: [], // Gli esercizi sono generati dinamicamente
   },
   {
@@ -179,6 +185,7 @@ export const MODULES: Module[] = [
     headerImage: assets.chatTrainerHeaderVideo,
     isPro: true,
     isCustom: true, // Questo modulo ha una schermata speciale
+    prerequisites: [], // Sempre accessibile (se PRO)
     exercises: [],
   },
 ];

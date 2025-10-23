@@ -7,14 +7,15 @@ import type {
   PersonalizationData,
   CommunicatorProfile,
   Entitlements,
-  DetailedRubricScore
+  DetailedRubricScore,
+  AnalysisHistoryItem,
+  Exercise
 } from '../types';
 import { hasProAccess } from './monetizationService';
 import { VOICE_RUBRIC_CRITERIA } from '../constants';
 import { FALLBACK_API_KEY } from '../config';
 
 const getAi = () => {
-    // FIX: Cast FALLBACK_API_KEY to string to avoid a TypeScript error when comparing two distinct literal types. This preserves the intended logic of checking against a placeholder key.
     const key = process.env.API_KEY || (FALLBACK_API_KEY && (FALLBACK_API_KEY as string) !== 'INCOLLA-QUI-LA-TUA-CHIAVE-API-GEMINI' ? FALLBACK_API_KEY : undefined);
     
     if (!key) {
@@ -26,7 +27,6 @@ const getAi = () => {
 
 const safeJsonParse = <T>(text: string): T => {
     try {
-        // The response may be wrapped in markdown JSON block, so we clean it.
         const cleanText = text.replace(/^```json/, '').replace(/```$/, '').trim();
         return JSON.parse(cleanText) as T;
     } catch (e) {
@@ -36,17 +36,33 @@ const safeJsonParse = <T>(text: string): T => {
 };
 
 export async function analyzeResponse(
+    exercise: Exercise,
     userResponse: string,
-    scenario: string,
-    task: string,
     entitlements: Entitlements | null,
-    isVerbal: boolean,
-    customObjective: string | undefined,
+    analysisHistory: { [key: string]: AnalysisHistoryItem }
 ): Promise<AnalysisResult> {
     const ai = getAi();
     const isPro = hasProAccess(entitlements);
 
+    // Prepare history for PRO feedback
+    let formattedHistory = '';
+    if (isPro && analysisHistory) {
+        const pastAttempts = Object.values(analysisHistory)
+            .filter(item => item.type === 'written')
+            .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+            .slice(0, 3); // Take last 3 relevant attempts
+
+        if (pastAttempts.length > 0) {
+            formattedHistory = 'CRONOLOGIA RECENTE DELL\'UTENTE (per feedback contestuale):\n';
+            pastAttempts.forEach((attempt, index) => {
+                const result = attempt.result as AnalysisResult;
+                formattedHistory += `${index + 1}. Risposta: "${attempt.userResponse}" - Punteggio: ${result.score} - Feedback Principale: ${result.areasForImprovement[0]?.suggestion}\n`;
+            });
+        }
+    }
+
     const proFeaturesSchema = isPro ? {
+        evolutionary_feedback: { type: Type.STRING, description: "Un breve (1-2 frasi) feedback contestuale che commenta i progressi dell'utente rispetto ai tentativi passati, se presenti nella cronologia. Sii incoraggiante." },
         detailedRubric: {
             type: Type.ARRAY,
             description: "Valutazione dettagliata PRO con 5 criteri specifici: Chiarezza (Clarity), Tono (Tone), Orientamento alla Soluzione (Solution-focus), Assertività (Assertiveness), Struttura (Structure).",
@@ -99,18 +115,20 @@ export async function analyzeResponse(
     
     const prompt = `Sei un coach esperto in Comunicazione Efficace Strategica (CES). Analizza la risposta dell'utente a uno scenario di training. Sii incoraggiante ma diretto.
     
-    SCENARIO: ${scenario}
-    COMPITO: ${task}
-    ${customObjective ? `OBIETTIVO PERSONALIZZATO DELL'UTENTE: ${customObjective}` : ''}
+    SCENARIO: ${exercise.scenario}
+    COMPITO: ${exercise.task}
+    ${exercise.customObjective ? `OBIETTIVO PERSONALIZZATO DELL'UTENTE: ${exercise.customObjective}` : ''}
     RISPOSTA DELL'UTENTE: "${userResponse}"
     
+    ${formattedHistory}
+
     ISTRUZIONI:
-    1.  Valuta la risposta dell'utente in base ai principi della CES, considerando chiarezza, empatia, assertività, e orientamento alla soluzione.
+    1.  Valuta la risposta dell'utente in base ai principi della CES.
     2.  Assegna un punteggio da 0 a 100.
     3.  Identifica 2-3 punti di forza chiari e 2-3 aree di miglioramento prioritarie.
     4.  Per ogni area di miglioramento, fornisci un esempio pratico.
     5.  Scrivi due versioni di una risposta ideale (una breve e una più dettagliata). Evidenzia le parole chiave o frasi strategiche con **asterischi**.
-    ${isPro ? "6. COMPILA LA SEZIONE PRO: Fornisci una valutazione dettagliata secondo la rubrica (punteggi 1-10). Se il compito è fare una domanda, valuta anche Utilità e Chiarezza." : ""}
+    ${isPro ? "6. COMPILA LA SEZIONE PRO: Se presente una cronologia, fornisci un 'evolutionary_feedback' commentando i progressi. Compila la 'detailedRubric' (punteggi 1-10). Se il compito è fare una domanda, valuta anche Utilità e Chiarezza." : ""}
     7.  Fornisci l'output ESCLUSIVAMENTE in formato JSON secondo lo schema specificato. Non includere testo al di fuori del JSON.`;
 
     const response = await getAi().models.generateContent({

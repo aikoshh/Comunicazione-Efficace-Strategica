@@ -8,16 +8,20 @@ interface ToastProps {
   onDismiss: (id: string) => void;
 }
 
+// FIX: Added 'badge' property to satisfy the Record<ToastType, ...> type.
 const ICONS: Record<ToastMessage['type'], React.FC<any>> = {
   success: CheckCircleIcon,
   error: WarningIcon,
   info: InfoIcon,
+  badge: CheckCircleIcon,
 };
 
+// FIX: Added 'badge' property to satisfy the Record<ToastType, ...> type.
 const COLORS_MAP: Record<ToastMessage['type'], string> = {
     success: COLORS.success,
     error: COLORS.error,
     info: COLORS.primary,
+    badge: COLORS.warning,
 };
 
 export const Toast: React.FC<ToastProps> = ({ toast, onDismiss }) => {
@@ -37,6 +41,31 @@ export const Toast: React.FC<ToastProps> = ({ toast, onDismiss }) => {
     setIsExiting(true);
     setTimeout(() => onDismiss(toast.id), 300);
   };
+
+  // FIX: Added custom rendering for 'badge' type toasts to display badge info.
+  if (toast.type === 'badge' && toast.badge) {
+    const BadgeIcon = toast.badge.icon;
+    const color = COLORS_MAP[toast.type];
+    const toastStyle: React.CSSProperties = {
+      ...styles.toast,
+      backgroundColor: COLORS.card,
+      borderLeft: `5px solid ${color}`,
+      animation: isExiting ? 'toast-exit 0.3s ease-out forwards' : 'toast-enter 0.3s ease-out forwards',
+    };
+
+    return (
+      <div style={toastStyle}>
+        <BadgeIcon style={{...styles.icon, color}} />
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          <p style={{...styles.message, fontWeight: 'bold', margin: 0 }}>{toast.badge.title}</p>
+          <p style={styles.message}>{toast.message}</p>
+        </div>
+        <button onClick={handleDismiss} style={styles.closeButton}>
+          <CloseIcon width={18} height={18}/>
+        </button>
+      </div>
+    );
+  }
 
   const Icon = ICONS[toast.type];
   const color = COLORS_MAP[toast.type];

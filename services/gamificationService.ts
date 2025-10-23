@@ -1,5 +1,6 @@
 // services/gamificationService.ts
-import { UserProgress, Achievement, VoiceAnalysisResult, CompetenceScores } from '../types';
+// FIX: Added Achievement to imports.
+import { UserProgress, Achievement, VoiceAnalysisResult, CompetenceScores, CommunicatorProfile } from '../types';
 import { HomeIcon, TargetIcon, CheckCircleIcon } from '../components/Icons';
 import { MODULES } from '../constants';
 
@@ -160,6 +161,12 @@ const getInitialProgress = (): UserProgress => ({
     gestione_conflitto: 0,
   } as CompetenceScores,
   analysisHistory: {},
+  // FIX: Added missing gamification properties to initial progress object.
+  xp: 0,
+  level: 1,
+  streak: 0,
+  lastCompletionDate: null,
+  unlockedBadges: [],
 });
 
 const processCompletion = (
@@ -202,7 +209,26 @@ const processCompletion = (
     };
 };
 
+// FIX: Added missing processCheckupCompletion function.
+const processCheckupCompletion = (progress: UserProgress) => {
+    const oldProgress = JSON.parse(JSON.stringify(progress));
+    const oldUnlockedAchievements = new Set(getUnlockedAchievements(oldProgress).map(a => a.id));
+
+    // A checkup is complete when the profile is about to be set.
+    // So we can create a temporary progress object to check if new achievements are unlocked.
+    const tempProgress = { ...oldProgress, checkupProfile: { profileTitle: 'temp', profileDescription: '', strengths: [], areasToImprove: [] }};
+
+    const newUnlockedAchievements = getUnlockedAchievements(tempProgress as UserProgress);
+    const newBadges = newUnlockedAchievements.filter(ach => !oldUnlockedAchievements.has(ach.id));
+
+    return {
+        updatedProgress: oldProgress, // Return the original progress, it will be updated with the real profile in App.tsx
+        newBadges,
+    };
+};
+
 export const gamificationService = {
     getInitialProgress,
     processCompletion,
+    processCheckupCompletion,
 };

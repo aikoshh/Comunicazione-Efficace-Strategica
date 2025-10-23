@@ -8,9 +8,10 @@ const ToastContext = createContext<ToastContextType | undefined>(undefined);
 export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
-  const addToast = useCallback((message: string, type: ToastType = 'info') => {
+  // FIX: Added 'badge' parameter to support badge unlock notifications.
+  const addToast = useCallback((message: string, type: ToastType = 'info', badge?: ToastMessage['badge']) => {
     const id = Date.now().toString();
-    setToasts(prevToasts => [...prevToasts, { id, message, type }]);
+    setToasts(prevToasts => [...prevToasts, { id, message, type, badge }]);
   }, []);
 
   const removeToast = useCallback((id: string) => {
