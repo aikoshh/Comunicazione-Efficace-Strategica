@@ -1,158 +1,145 @@
-// FIX: Added collection, getDocs, onSnapshot, writeBatch, deleteDoc for new admin functionalities.
-import { doc, getDoc, setDoc, collection, getDocs, onSnapshot, writeBatch, deleteDoc } from "firebase/firestore";
-import { db } from './firebaseService';
-// FIX: Added UserProfile for type safety in new methods.
-import type { UserProgress, StorableEntitlements, UserProfile } from '../types';
+// services/databaseService.ts
+import { doc, getDoc, setDoc, collection, getDocs, onSnapshot, writeBatch, deleteDoc, updateDoc, Timestamp, addDoc, serverTimestamp, query, orderBy } from "firebase/firestore";
+import { db } from "./firebaseService";
+import type { UserProfile, UserProgress, StorableEntitlements } from "../types";
 
-const PROGRESS_COLLECTION = 'userProgress';
-const ENTITLEMENTS_COLLECTION = 'entitlements';
-// FIX: Added constant for the users collection name.
 const USERS_COLLECTION = 'users';
-
+const PROGRESS_COLLECTION = 'userProgress';
+const ENTITLEMENTS_COLLECTION = 'userEntitlements';
 
 class DatabaseService {
-
-    public async getUserProgress(uid: string): Promise<UserProgress | null> {
-        if (!uid) return null;
-        try {
-            const docRef = doc(db, PROGRESS_COLLECTION, uid);
-            const docSnap = await getDoc(docRef);
-            return docSnap.exists() ? (docSnap.data() as UserProgress) : null;
-        } catch (error) {
-            console.error("Error getting user progress:", error);
-            return null;
-        }
+  async getUserProgress(uid: string): Promise<UserProgress | null> {
+    const docRef = doc(db, PROGRESS_COLLECTION, uid);
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      return docSnap.data() as UserProgress;
     }
+    return null;
+  }
 
-    public async saveUserProgress(uid: string, progress: UserProgress): Promise<void> {
-        if (!uid) return;
-        try {
-            const docRef = doc(db, PROGRESS_COLLECTION, uid);
-            await setDoc(docRef, progress, { merge: true });
-        } catch (error) {
-            console.error("Error saving user progress:", error);
-        }
+  async saveUserProgress(uid: string, progress: UserProgress): Promise<void> {
+    const docRef = doc(db, PROGRESS_COLLECTION, uid);
+    // Use setDoc with merge to create or update the document
+    await setDoc(docRef, progress, { merge: true });
+  }
+  
+  async getUserEntitlements(uid: string): Promise<StorableEntitlements | null> {
+    const docRef = doc(db, ENTITLEMENTS_COLLECTION, uid);
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      return docSnap.data() as StorableEntitlements;
     }
+    return null;
+  }
+  
+  async saveUserEntitlements(uid: string, entitlements: StorableEntitlements): Promise<void> {
+    const docRef = doc(db, ENTITLEMENTS_COLLECTION, uid);
+    await setDoc(docRef, entitlements, { merge: true });
+  }
 
-    public async getUserEntitlements(uid: string): Promise<StorableEntitlements | null> {
-        if (!uid) return null;
-        try {
-            const docRef = doc(db, ENTITLEMENTS_COLLECTION, uid);
-            const docSnap = await getDoc(docRef);
-            return docSnap.exists() ? (docSnap.data() as StorableEntitlements) : null;
-        } catch (error) {
-            console.error("Error getting user entitlements:", error);
-            return null;
-        }
+  // --- Admin Functions ---
+
+  subscribeToUsers(callback: (users: UserProfile[]) => void): () => void {
+    const usersCollection = collection(db, USERS_COLLECTION);
+    const q = query(usersCollection, orderBy("createdAt", "desc"));
+    
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const users: UserProfile[] = [];
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        // Convert Firestore Timestamps to ISO strings for consistency in the app
+        const createdAt = (data.createdAt as Timestamp)?.toDate().toISOString() || new Date().toISOString();
+        const expiryDate = (data.expiryDate as Timestamp)?.toDate().toISOString() || null;
+        users.push({
+          uid: doc.id,
+          ...data,
+          createdAt,
+          expiryDate,
+        } as UserProfile);
+      });
+      callback(users);
+    }, (error) => {
+        console.error("Error subscribing to users:", error);
+        callback([]); // Send empty array on error
+    });
+    return unsubscribe;
+  }
+
+  async updateUserProfile(uid: string, data: Partial<UserProfile>): Promise<void> {
+    const userDocRef = doc(db, USERS_COLLECTION, uid);
+    const dataToUpdate: any = { ...data };
+    // Convert date string back to Firestore Timestamp before updating
+    if (data.expiryDate) {
+        dataToUpdate.expiryDate = Timestamp.fromDate(new Date(data.expiryDate));
     }
+    await updateDoc(userDocRef, dataToUpdate);
+  }
 
-    public async saveUserEntitlements(uid: string, entitlements: StorableEntitlements): Promise<void> {
-        if (!uid) return;
-        try {
-            const docRef = doc(db, ENTITLEMENTS_COLLECTION, uid);
-            await setDoc(docRef, entitlements, { merge: true });
-        } catch (error) {
-            console.error("Error saving user entitlements:", error);
-        }
-    }
+  async deleteUserProfile(uid: string): Promise<void> {
+    // This only deletes Firestore data. The Firebase Auth user must be deleted separately (e.g., via console or backend).
+    const batch = writeBatch(db);
+    batch.delete(doc(db, USERS_COLLECTION, uid));
+    batch.delete(doc(db, PROGRESS_COLLECTION, uid));
+    batch.delete(doc(db, ENTITLEMENTS_COLLECTION, uid));
+    await batch.commit();
+  }
 
-    // FIX: Implemented getAllUserProfiles to fetch all user documents from Firestore for the admin panel.
-    public async getAllUserProfiles(): Promise<UserProfile[]> {
-        try {
-            const usersCollection = collection(db, USERS_COLLECTION);
-            const snapshot = await getDocs(usersCollection);
-            return snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as UserProfile));
-        } catch (error) {
-            console.error("Error getting all user profiles:", error);
-            return [];
-        }
-    }
+  async addUserProfile(profileData: Omit<UserProfile, 'uid' | 'createdAt'>): Promise<string> {
+    const usersCollection = collection(db, USERS_COLLECTION);
+    const docRef = await addDoc(usersCollection, {
+        ...profileData,
+        // Ensure expiry date is a Timestamp
+        expiryDate: profileData.expiryDate ? Timestamp.fromDate(new Date(profileData.expiryDate)) : null,
+        createdAt: serverTimestamp()
+    });
+    return docRef.id;
+  }
 
-    // FIX: Implemented updateUserProfile to update a user's data in Firestore.
-    public async updateUserProfile(uid: string, data: Partial<UserProfile>): Promise<void> {
-        if (!uid) return;
-        try {
-            const docRef = doc(db, USERS_COLLECTION, uid);
-            await setDoc(docRef, data, { merge: true });
-        } catch (error) {
-            console.error("Error updating user profile:", error);
-        }
-    }
-
-    // FIX: Implemented deleteUserProfile to remove a user's document from Firestore.
-    public async deleteUserProfile(uid: string): Promise<void> {
-        if (!uid) return;
-        try {
-            const docRef = doc(db, USERS_COLLECTION, uid);
-            await deleteDoc(docRef);
-        } catch (error) {
-            console.error("Error deleting user profile:", error);
-        }
-    }
-
-    // FIX: Implemented a generic subscribe method for realtime updates, used by the admin panel.
-    public subscribe(collectionName: string, callback: (docs: any[]) => void): () => void {
-        const coll = collection(db, collectionName);
-        const unsubscribe = onSnapshot(coll, (snapshot) => {
-            const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            callback(docs);
+  async exportDatabase(): Promise<string> {
+    const collectionsToExport = [USERS_COLLECTION, PROGRESS_COLLECTION, ENTITLEMENTS_COLLECTION];
+    const dbData: Record<string, any[]> = {};
+    
+    for (const collectionName of collectionsToExport) {
+        const querySnapshot = await getDocs(collection(db, collectionName));
+        dbData[collectionName] = querySnapshot.docs.map(d => {
+            const data = d.data();
+            // Convert any Timestamps to ISO strings for clean JSON
+            Object.keys(data).forEach(key => {
+                if (data[key] instanceof Timestamp) {
+                    data[key] = data[key].toDate().toISOString();
+                }
+            });
+            return { id: d.id, ...data };
         });
-        return unsubscribe;
     }
+    return JSON.stringify(dbData, null, 2);
+  }
+  
+  async importDatabase(jsonString: string): Promise<void> {
+      const dbData = JSON.parse(jsonString);
+      const batch = writeBatch(db);
+      
+      for (const collectionName in dbData) {
+          if (Object.prototype.hasOwnProperty.call(dbData, collectionName)) {
+              const collectionData = dbData[collectionName];
+              for (const docData of collectionData) {
+                  const { id, ...data } = docData;
+                  if (!id) continue; // Skip entries without an ID
 
-    // FIX: Implemented exportDatabase to serialize all relevant collections to JSON.
-    public async exportDatabase(): Promise<string> {
-        const users = await this.getAllUserProfiles();
-        const progressSnap = await getDocs(collection(db, PROGRESS_COLLECTION));
-        const entitlementsSnap = await getDocs(collection(db, ENTITLEMENTS_COLLECTION));
+                  // Convert date strings back to Timestamps
+                  Object.keys(data).forEach(key => {
+                      if (typeof data[key] === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(data[key])) {
+                          data[key] = Timestamp.fromDate(new Date(data[key]));
+                      }
+                  });
 
-        const data = {
-            users,
-            userProgress: progressSnap.docs.map(d => ({ id: d.id, ...d.data() })),
-            entitlements: entitlementsSnap.docs.map(d => ({ id: d.id, ...d.data() })),
-        };
-        return JSON.stringify(data, null, 2);
-    }
-
-    // FIX: Implemented importDatabase to restore collections from a JSON backup.
-    public async importDatabase(json: string): Promise<{ users: number, progress: number, entitlements: number }> {
-        const data = JSON.parse(json);
-        const batch = writeBatch(db);
-
-        // Import users
-        if (data.users && Array.isArray(data.users)) {
-            data.users.forEach((user: UserProfile) => {
-                const { uid, ...userData } = user;
-                const docRef = doc(db, USERS_COLLECTION, uid);
-                batch.set(docRef, userData);
-            });
-        }
-        
-        // Import userProgress
-        if (data.userProgress && Array.isArray(data.userProgress)) {
-            data.userProgress.forEach((progress: any) => {
-                const { id, ...progressData } = progress;
-                const docRef = doc(db, PROGRESS_COLLECTION, id);
-                batch.set(docRef, progressData);
-            });
-        }
-
-        // Import entitlements
-        if (data.entitlements && Array.isArray(data.entitlements)) {
-             data.entitlements.forEach((ent: any) => {
-                const { id, ...entData } = ent;
-                const docRef = doc(db, ENTITLEMENTS_COLLECTION, id);
-                batch.set(docRef, entData);
-            });
-        }
-        
-        await batch.commit();
-        return {
-            users: data.users?.length || 0,
-            progress: data.userProgress?.length || 0,
-            entitlements: data.entitlements?.length || 0
-        };
-    }
+                  const docRef = doc(db, collectionName, id);
+                  batch.set(docRef, data);
+              }
+          }
+      }
+      await batch.commit();
+  }
 }
 
 export const databaseService = new DatabaseService();

@@ -11,14 +11,14 @@ import type {
 } from '../types';
 import { hasProAccess } from './monetizationService';
 import { VOICE_RUBRIC_CRITERIA } from '../constants';
-import { FALLBACK_API_KEY } from '../config'; // Import the fallback key
+import { FALLBACK_API_KEY } from '../config';
 
 const getAi = () => {
-    // Prioritize the secure environment variable, but use the fallback if it's not set.
-    const key = process.env.API_KEY || FALLBACK_API_KEY;
+    // FIX: Cast FALLBACK_API_KEY to string to avoid a TypeScript error when comparing two distinct literal types. This preserves the intended logic of checking against a placeholder key.
+    const key = process.env.API_KEY || (FALLBACK_API_KEY && (FALLBACK_API_KEY as string) !== 'INCOLLA-QUI-LA-TUA-CHIAVE-API-GEMINI' ? FALLBACK_API_KEY : undefined);
     
-    if (!key || key === 'INCOLLA-QUI-LA-TUA-CHIAVE-API-GEMINI') {
-        throw new Error('La chiave API non è configurata. Inseriscila nel file `config.ts` o come variabile d\'ambiente per continuare.');
+    if (!key) {
+        throw new Error('La chiave API di Gemini non è configurata. Inseriscila nel file `config.ts` o imposta la variabile d\'ambiente API_KEY.');
     }
     return new GoogleGenAI({ apiKey: key });
 };

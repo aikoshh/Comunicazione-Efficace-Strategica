@@ -1,487 +1,214 @@
-import React, { useState } from 'react';
-import type { UserProfile, Breadcrumb } from '../types';
+import React, { useState, useEffect, useRef } from 'react';
+import type { UserProfile, Entitlements } from '../types';
 import { COLORS } from '../constants';
 import { Logo } from './Logo';
-import { ChevronRightIcon, SpeakerIcon, SpeakerOffIcon, SettingsIcon, CloseIcon, CrownIcon } from './Icons';
-import { mainLogoUrl } from '../assets';
-
+import { SettingsIcon, CrownIcon, LogOutIcon, SpeakerIcon, SpeakerOffIcon, AdminIcon } from './Icons';
+import { hasProAccess } from '../services/monetizationService';
+import { soundService } from '../services/soundService';
 
 interface HeaderProps {
-  currentUser: UserProfile | null;
-  breadcrumbs: Breadcrumb[];
-  onLogout: () => void;
-  onGoToPaywall: () => void;
-  isPro: boolean;
-  isSoundEnabled: boolean;
-  onToggleSound: () => void;
+    currentUser: UserProfile | null;
+    entitlements: Entitlements | null;
+    onLogout: () => void;
+    onNavigateToAdmin: () => void;
+    onNavigateToPaywall: () => void;
 }
 
 const hoverStyle = `
-  .header-link:hover {
-    color: ${COLORS.secondary};
-  }
-  .settings-button:hover, .sound-button:hover, .settings-close-button:hover {
+  .header-button:hover, .menu-item:hover {
     background-color: ${COLORS.cardDark};
   }
-  .settings-panel-button:hover {
-    background-color: ${COLORS.cardDark};
-  }
-  .logout-button:hover {
-    background-color: #F8AD66;
-    filter: brightness(0.98);
-  }
-  .pro-panel-button:hover {
-    filter: brightness(1.1);
-  }
-  .admin-button:hover {
-    background-color: ${COLORS.cardDark};
+  .pro-badge:hover {
+    transform: scale(1.05);
   }
 `;
 
-const scrollbarStyle = `
-  .breadcrumbs-container::-webkit-scrollbar {
-    display: none; /* For Chrome, Safari, and Opera */
-  }
-  .breadcrumbs-container {
-    -ms-overflow-style: none;  /* For Internet Explorer and Edge */
-    scrollbar-width: none;  /* For Firefox */
-  }
-`;
+export const Header: React.FC<HeaderProps> = ({ currentUser, entitlements, onLogout, onNavigateToAdmin, onNavigateToPaywall }) => {
+    const isPro = hasProAccess(entitlements);
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [isSoundEnabled, setIsSoundEnabled] = useState(soundService.isEnabled);
+    const menuRef = useRef<HTMLDivElement>(null);
 
-export const Header: React.FC<HeaderProps> = ({ currentUser, breadcrumbs, onLogout, onGoToPaywall, isPro, isSoundEnabled, onToggleSound }) => {
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  
-  const getInitials = (user: UserProfile) => {
-    if (!user.firstName || !user.lastName) return '??';
-    return `${user.firstName[0]}${user.lastName[0]}`.toUpperCase();
-  };
+    const toggleMenu = () => {
+        setIsMenuOpen(prev => !prev);
+    };
 
-  const handleToggleSettings = () => {
-      setIsSettingsOpen(!isSettingsOpen);
-  }
+    const handleToggleSound = () => {
+        soundService.toggleSound();
+        setIsSoundEnabled(soundService.isEnabled);
+    };
 
-  const handleGoToPaywallClick = () => {
-    onGoToPaywall();
-    setIsSettingsOpen(false);
-  };
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+                setIsMenuOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, []);
 
-  const handleToggleSoundClick = () => {
-    onToggleSound();
-    // Keep settings open when toggling sound
-  };
+    const handleAdminClick = () => {
+        onNavigateToAdmin();
+        setIsMenuOpen(false);
+    };
+    
+    const handleLogoutClick = () => {
+        onLogout();
+        setIsMenuOpen(false);
+    };
 
-  const handleLogoutClick = () => {
-    onLogout();
-    setIsSettingsOpen(false);
-  };
-
-  return (
-    <>
-      <style>{hoverStyle}{scrollbarStyle}</style>
-      <header style={styles.header}>
-        <nav style={styles.nav}>
-          <div style={styles.navContent}>
-              <div style={styles.breadcrumbs} className="breadcrumbs-container">
-                {breadcrumbs.map((crumb, index) => (
-                  <React.Fragment key={index}>
-                    <span
-                      style={{
-                        ...styles.crumb,
-                        ...(crumb.onClick ? styles.crumbLink : {}),
-                      }}
-                      className={crumb.onClick ? 'header-link' : ''}
-                      onClick={crumb.onClick}
-                    >
-                      {index === 0 && <Logo style={styles.logoIcon}/>}
-                      {crumb.label}
-                    </span>
-                    {index < breadcrumbs.length - 1 && (
-                      <ChevronRightIcon style={styles.separator} />
-                    )}
-                  </React.Fragment>
-                ))}
-              </div>
-
-              <div style={styles.userSection}>
-                <button 
-                    onClick={handleToggleSettings} 
-                    style={styles.settingsButton}
-                    className="settings-button"
-                    aria-label="Apri impostazioni"
-                >
-                    <SettingsIcon />
-                </button>
-              </div>
-          </div>
-        </nav>
-      </header>
-      
-      {isSettingsOpen && (
-          <>
-            <div style={styles.settingsOverlay} onClick={handleToggleSettings} />
-            <div style={styles.settingsPanel}>
-                <div style={styles.settingsHeader}>
-                    <h3 style={styles.settingsTitle}>Impostazioni e Profilo</h3>
-                    <button onClick={handleToggleSettings} style={styles.settingsCloseButton} className="settings-close-button" aria-label="Chiudi impostazioni">
-                        <CloseIcon />
-                    </button>
-                </div>
-                <div style={styles.settingsContent}>
-                    {currentUser && (
-                        <div style={styles.settingsUserDisplay}>
-                            <div style={styles.avatar}>
-                                {getInitials(currentUser)}
-                            </div>
-                            <div style={styles.userInfoText}>
-                                <span style={styles.userName}>{currentUser.firstName} {currentUser.lastName}</span>
-                                <span style={styles.userEmail}>{currentUser.email}</span>
-                            </div>
+    return (
+        <header style={styles.header}>
+            <style>{hoverStyle}</style>
+            <div style={styles.logoContainer}>
+                <Logo style={styles.logo} />
+                <span style={styles.appName}>CES Coach</span>
+            </div>
+            {currentUser && (
+                <div style={styles.userInfo}>
+                    {isPro && (
+                        <div style={styles.proBadge} className="pro-badge" onClick={onNavigateToPaywall}>
+                            <CrownIcon width={18} height={18} />
+                            <span>PRO</span>
                         </div>
                     )}
-
-                    {currentUser && currentUser.expiryDate && (() => {
-                        const expiry = new Date(currentUser.expiryDate);
-                        const now = new Date();
-                        const created = new Date(currentUser.createdAt);
-                        
-                        const totalDuration = expiry.getTime() - created.getTime();
-                        const elapsed = Math.max(0, now.getTime() - created.getTime());
-                        const progressPercentage = totalDuration > 0 ? Math.min(100, (elapsed / totalDuration) * 100) : 100;
-
-                        const diffTime = expiry.getTime() - now.getTime();
-                        const daysRemaining = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
-
-                        let barColor = COLORS.success;
-                        if (daysRemaining <= 3) {
-                            barColor = COLORS.error;
-                        } else if (daysRemaining <= 7) {
-                            barColor = COLORS.warning;
-                        }
-
-                        return (
-                            <div style={styles.subscriptionStatus}>
-                                <div style={styles.statusHeader}>
-                                    <span style={styles.statusTitle}>Stato Abbonamento</span>
-                                    <span style={styles.statusDays}>{daysRemaining > 0 ? `${daysRemaining} giorni rimasti` : 'Scaduto'}</span>
-                                </div>
-                                <div style={styles.progressBar}>
-                                    <div style={{ ...styles.progressBarFill, width: `${progressPercentage}%`, backgroundColor: barColor }} />
-                                </div>
+                    <span style={styles.userName}>Ciao, {currentUser.firstName}</span>
+                    <div style={styles.settingsContainer} ref={menuRef}>
+                        <button style={styles.settingsButton} className="header-button" onClick={toggleMenu} title="Impostazioni">
+                            <SettingsIcon />
+                        </button>
+                        {isMenuOpen && (
+                            <div style={styles.dropdownMenu} className="dropdown-menu">
+                                {currentUser.isAdmin && (
+                                    <button style={styles.menuItem} className="menu-item" onClick={handleAdminClick}>
+                                        <AdminIcon style={styles.menuIcon} />
+                                        <span>Pannello Admin</span>
+                                    </button>
+                                )}
+                                <button style={styles.menuItem} className="menu-item" onClick={handleToggleSound}>
+                                    {isSoundEnabled ? <SpeakerIcon style={styles.menuIcon} /> : <SpeakerOffIcon style={styles.menuIcon} />}
+                                    <span>{isSoundEnabled ? 'Togli Volume' : 'Metti Volume'}</span>
+                                </button>
+                                <div style={styles.menuDivider}></div>
+                                <button style={{...styles.menuItem, color: COLORS.error}} className="menu-item" onClick={handleLogoutClick}>
+                                    <LogOutIcon style={styles.menuIcon} />
+                                    <span>Logout</span>
+                                </button>
                             </div>
-                        );
-                    })()}
-
-                    {!isPro && (
-                        <button onClick={handleGoToPaywallClick} style={{...styles.settingsPanelButton, ...styles.proPanelButton}} className="pro-panel-button">
-                            <CrownIcon width={20} height={20} /> Sblocca PRO
-                        </button>
-                    )}
-                    <div style={styles.settingsOption}>
-                        <span>Audio applicazione</span>
-                        <button 
-                            onClick={handleToggleSoundClick} 
-                            style={styles.soundButton}
-                            className="sound-button"
-                            aria-label={isSoundEnabled ? "Disattiva suoni" : "Attiva suoni"}
-                        >
-                            {isSoundEnabled ? <SpeakerIcon /> : <SpeakerOffIcon />}
-                        </button>
-                    </div>
-
-                    {currentUser && (
-                         <button onClick={handleLogoutClick} style={{...styles.settingsPanelButton, ...styles.logoutButton}} className="logout-button">
-                            Logout
-                         </button>
-                    )}
-                    
-                    <div style={styles.settingsLogoContainer}>
-                        <img src={mainLogoUrl} alt="CES Coach Logo" style={styles.settingsLogo}/>
+                        )}
                     </div>
                 </div>
-            </div>
-          </>
-      )}
-    </>
-  );
+            )}
+        </header>
+    );
 };
 
 const styles: { [key: string]: React.CSSProperties } = {
-  header: {
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    backdropFilter: 'blur(10px)',
-    borderBottom: `1px solid ${COLORS.divider}`,
-    zIndex: 100,
-    height: '64px',
-    padding: '0 24px',
-  },
-  nav: {
-    height: '100%',
-    maxWidth: '1200px',
-    margin: '0 auto',
-    display: 'flex',
-    alignItems: 'center',
-  },
-  navContent: {
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      width: '100%',
-  },
-  breadcrumbs: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    whiteSpace: 'nowrap',
-    overflowX: 'auto',
-    minWidth: 0,
-  },
-  crumb: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '6px',
-    fontSize: '14px',
-    color: COLORS.textSecondary,
-    fontWeight: 500,
-  },
-  crumbLink: {
-    cursor: 'pointer',
-    transition: 'color 0.2s ease',
-  },
-  logoIcon: {
-      width: '28px',
-      height: '28px',
-  },
-  separator: {
-    width: '20px',
-    height: '20px',
-    color: COLORS.divider,
-    flexShrink: 0,
-  },
-  userSection: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '16px',
-    flexShrink: 0,
-  },
-  proButton: {
-    backgroundColor: COLORS.secondary,
-    color: 'white',
-    border: 'none',
-    borderRadius: '8px',
-    padding: '8px 16px',
-    fontSize: '14px',
-    fontWeight: 'bold',
-    cursor: 'pointer',
-    transition: 'all 0.2s ease',
-    boxShadow: '0 2px 5px rgba(88, 166, 166, 0.2)',
-    whiteSpace: 'nowrap'
-  },
-  avatar: {
-    width: '40px',
-    height: '40px',
-    borderRadius: '50%',
-    backgroundColor: COLORS.secondary,
-    color: 'white',
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    fontWeight: 'bold',
-    fontSize: '16px',
-    flexShrink: 0,
-  },
-  userName: {
-    fontSize: '16px',
-    fontWeight: 600,
-    color: COLORS.textPrimary,
-  },
-  settingsButton: {
-    background: 'none',
-    border: 'none',
-    cursor: 'pointer',
-    padding: '8px',
-    borderRadius: '50%',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    color: COLORS.textPrimary,
-    transition: 'background-color 0.2s ease',
-  },
-  settingsOverlay: {
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    zIndex: 101,
-    animation: 'fadeIn 0.3s ease-out'
-  },
-  settingsPanel: {
-    position: 'fixed',
-    top: 0,
-    right: 0,
-    width: '320px',
-    maxWidth: '90vw',
-    height: '100%',
-    backgroundColor: COLORS.card,
-    boxShadow: '-5px 0 25px rgba(0,0,0,0.15)',
-    zIndex: 102,
-    display: 'flex',
-    flexDirection: 'column',
-    animation: 'slideIn 0.3s cubic-bezier(0.25, 1, 0.5, 1)',
-  },
-  settingsHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: '20px 24px',
-    borderBottom: `1px solid ${COLORS.divider}`,
-    flexShrink: 0,
-  },
-  settingsTitle: {
-      margin: 0,
-      fontSize: '18px',
-      fontWeight: 'bold',
-      color: COLORS.textPrimary,
-  },
-  settingsCloseButton: {
-      background: 'none',
-      border: 'none',
-      cursor: 'pointer',
-      padding: '8px',
-      borderRadius: '50%',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      color: COLORS.textSecondary,
-      transition: 'background-color 0.2s ease',
-  },
-  settingsContent: {
-      padding: '24px',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '16px',
-      flex: 1,
-      overflowY: 'auto',
-  },
-  settingsUserDisplay: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '16px',
-    paddingBottom: '16px',
-    marginBottom: '8px',
-    borderBottom: `1px solid ${COLORS.divider}`,
-  },
-  userInfoText: {
-    display: 'flex',
-    flexDirection: 'column',
-  },
-  userEmail: {
-    fontSize: '14px',
-    color: COLORS.textSecondary,
-  },
-  subscriptionStatus: {
-    paddingBottom: '16px',
-    marginBottom: '8px',
-    borderBottom: `1px solid ${COLORS.divider}`,
-  },
-  statusHeader: {
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: '8px',
-  },
-  statusTitle: {
-      fontSize: '14px',
-      fontWeight: 500,
-      color: COLORS.textSecondary,
-  },
-  statusDays: {
-      fontSize: '14px',
-      fontWeight: 'bold',
-      color: COLORS.textPrimary,
-  },
-  progressBar: {
-      height: '6px',
-      backgroundColor: COLORS.divider,
-      borderRadius: '3px',
-      overflow: 'hidden',
-  },
-  progressBarFill: {
-      height: '100%',
-      borderRadius: '3px',
-      transition: 'width 0.5s ease-in-out',
-  },
-  settingsOption: {
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      fontSize: '16px',
-      color: COLORS.textPrimary,
-      padding: '8px 0',
-  },
-  soundButton: {
-    background: 'none',
-    border: `1px solid ${COLORS.divider}`,
-    cursor: 'pointer',
-    padding: '8px',
-    borderRadius: '50%',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    color: COLORS.textSecondary,
-    transition: 'background-color 0.2s ease',
-  },
-  settingsPanelButton: {
-    display: 'block',
-    width: '100%',
-    padding: '12px 20px',
-    fontSize: '16px',
-    border: `1px solid ${COLORS.divider}`,
-    background: 'none',
-    textAlign: 'left',
-    cursor: 'pointer',
-    borderRadius: '8px',
-    transition: 'background-color 0.2s ease',
-  },
-  adminButton: {
-    backgroundColor: COLORS.cardDark,
-    color: COLORS.primary,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    border: `1px solid ${COLORS.primary}`,
-  },
-  proPanelButton: {
-    backgroundColor: COLORS.secondary,
-    color: 'white',
-    fontWeight: 'bold',
-    textAlign: 'center',
-    transition: 'filter 0.2s ease',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '8px'
-  },
-  logoutButton: {
-    backgroundColor: '#FABD7F',
-    color: 'white',
-    fontWeight: 'bold',
-    textAlign: 'center',
-    border: 'none',
-  },
-  settingsLogoContainer: {
-    marginTop: 'auto',
-    paddingTop: '24px',
-    textAlign: 'center',
-  },
-  settingsLogo: {
-    width: '80%',
-    maxWidth: '200px',
-    height: 'auto',
-    opacity: 0.8,
-  }
+    header: {
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: '12px 24px',
+        backgroundColor: COLORS.card,
+        borderBottom: `1px solid ${COLORS.divider}`,
+        position: 'sticky',
+        top: 0,
+        zIndex: 100,
+        boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+    },
+    logoContainer: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '12px',
+    },
+    logo: {
+        height: '40px',
+        width: '40px',
+    },
+    appName: {
+        fontSize: '20px',
+        fontWeight: 'bold',
+        color: COLORS.primary,
+    },
+    userInfo: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '16px',
+    },
+    proBadge: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '6px',
+        backgroundColor: '#FFD700',
+        color: '#4A3E00',
+        padding: '6px 12px',
+        borderRadius: '16px',
+        fontWeight: 'bold',
+        fontSize: '14px',
+        cursor: 'pointer',
+        transition: 'transform 0.2s ease',
+    },
+    userName: {
+        fontSize: '16px',
+        color: COLORS.textSecondary,
+        fontWeight: 500,
+    },
+    settingsContainer: {
+        position: 'relative',
+        display: 'flex',
+    },
+    settingsButton: {
+        background: 'none',
+        border: 'none',
+        cursor: 'pointer',
+        padding: '8px',
+        borderRadius: '50%',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: COLORS.textSecondary,
+        transition: 'background-color 0.2s ease',
+    },
+    dropdownMenu: {
+        position: 'absolute',
+        top: 'calc(100% + 8px)',
+        right: 0,
+        backgroundColor: COLORS.card,
+        borderRadius: '8px',
+        boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+        width: '240px',
+        zIndex: 110,
+        border: `1px solid ${COLORS.divider}`,
+        overflow: 'hidden',
+        animation: 'fadeIn 0.2s ease-out',
+        padding: '8px',
+    },
+    menuItem: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '12px',
+        width: '100%',
+        padding: '12px 16px',
+        background: 'none',
+        border: 'none',
+        textAlign: 'left',
+        cursor: 'pointer',
+        fontSize: '15px',
+        color: COLORS.textPrimary,
+        borderRadius: '6px',
+        transition: 'background-color 0.2s ease',
+    },
+    menuIcon: {
+        width: '20px',
+        height: '20px',
+        color: COLORS.textSecondary,
+    },
+    menuDivider: {
+        height: '1px',
+        backgroundColor: COLORS.divider,
+        margin: '8px 0',
+    }
 };

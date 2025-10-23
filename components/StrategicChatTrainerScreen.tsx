@@ -54,8 +54,8 @@ const ResponseDisplay: React.FC<{ markdownText: string }> = ({ markdownText }) =
     return <div style={styles.responseContainer}>{sections.map(parseSection)}</div>;
 };
 
-
-const StrategicChatTrainerScreen: React.FC<StrategicChatTrainerScreenProps> = ({ module, onBack, onApiKeyError }) => {
+// FIX: Changed to a named export to match the import style in App.tsx.
+export const StrategicChatTrainerScreen: React.FC<StrategicChatTrainerScreenProps> = ({ module, onBack, onApiKeyError }) => {
     const [receivedMessage, setReceivedMessage] = useState('');
     const [objective, setObjective] = useState('');
     const [context, setContext] = useState('');
@@ -233,5 +233,3 @@ const styles: { [key: string]: React.CSSProperties } = {
       marginBottom: '10px', marginLeft: '20px'
   }
 };
-
-export default StrategicChatTrainerScreen;

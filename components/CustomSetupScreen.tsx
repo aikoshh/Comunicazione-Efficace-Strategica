@@ -15,7 +15,7 @@ interface CustomSetupScreenProps {
 }
 
 
-const CustomSetupScreen: React.FC<CustomSetupScreenProps> = ({ module, onStart, onBack, onApiKeyError }) => {
+export const CustomSetupScreen: React.FC<CustomSetupScreenProps> = ({ module, onStart, onBack, onApiKeyError }) => {
     const [personalizationData, setPersonalizationData] = useState<PersonalizationData>({
         professione: '',
         livelloCarriera: '',
@@ -269,5 +269,3 @@ const styles: { [key: string]: React.CSSProperties } = {
       boxShadow: 'none' 
   },
 };
-
-export default CustomSetupScreen;
