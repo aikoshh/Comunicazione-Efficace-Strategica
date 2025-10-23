@@ -92,7 +92,10 @@ export const PaywallScreen: React.FC<PaywallScreenProps> = ({ entitlements, onPu
                                 <div style={styles.featureContent}>
                                     <div style={styles.featureHeader}>
                                         <FeatureIcon style={styles.featureIcon} />
-                                        <h3 style={styles.featureTitle}>{feature.title}</h3>
+                                        <h3 style={styles.featureTitle}>
+                                            {feature.title}
+                                            <CrownIcon style={{ width: 24, height: 24, marginLeft: 8 }} />
+                                        </h3>
                                     </div>
                                     <p style={styles.featureDescription}>{feature.description}</p>
                                 </div>
@@ -104,7 +107,10 @@ export const PaywallScreen: React.FC<PaywallScreenProps> = ({ entitlements, onPu
                 <section style={styles.purchaseSection}>
                     <div style={styles.purchaseBox}>
                         <MediaDisplay src={vantaggioRisultatiProVideo} alt="Riepilogo Vantaggi PRO" style={styles.purchaseBoxImage} />
-                        <h3 style={styles.productName}>{product.name} - Riepilogo Vantaggi</h3>
+                        <h3 style={styles.productName}>
+                            Riepilogo Vantaggi
+                             <CrownIcon style={{ width: 28, height: 28, marginLeft: 10 }} />
+                        </h3>
                          <ul style={styles.benefitsList}>
                             {product.benefits.map((benefit, i) => (
                                 <li key={i} style={styles.benefitItem}>
@@ -202,6 +208,8 @@ const styles: { [key: string]: React.CSSProperties } = {
         fontWeight: 'bold',
         color: COLORS.textPrimary,
         margin: 0,
+        display: 'flex',
+        alignItems: 'center',
     },
     featureDescription: {
         fontSize: '15px',
@@ -227,7 +235,15 @@ const styles: { [key: string]: React.CSSProperties } = {
         objectFit: 'cover',
         height: 'auto',
     },
-    productName: { fontSize: '22px', fontWeight: 'bold', color: COLORS.textPrimary, margin: '0 0 24px 0' },
+    productName: { 
+        fontSize: '22px', 
+        fontWeight: 'bold', 
+        color: COLORS.textPrimary, 
+        margin: '0 0 24px 0',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
     benefitsList: {
         margin: '0 0 24px 0',
         padding: 0,

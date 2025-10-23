@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { preloadResources } from '../services/preloadingService';
-import { ALL_RESOURCES_TO_PRELOAD } from '../assets';
+import { ALL_RESOURCES_TO_PRELOAD, mainLogoUrl } from '../assets';
 import { COLORS } from '../constants';
-import { Logo } from './Logo';
 
 interface PreloadingScreenProps {
     onComplete: () => void;
@@ -24,7 +23,7 @@ export const PreloadingScreen: React.FC<PreloadingScreenProps> = ({ onComplete }
 
     return (
         <div style={styles.container}>
-            <Logo style={styles.logo} />
+            <img src={mainLogoUrl} alt="CES Coach Logo" style={styles.logo} />
             <h1 style={styles.title}>Il tuo allenamento sta per iniziare, manca poco !</h1>
             <p style={styles.subtitle}>Ottimizzazione dell'esperienza in corso.</p>
             <div style={styles.progressBarContainer}>
@@ -47,20 +46,21 @@ const styles: { [key: string]: React.CSSProperties } = {
         padding: '20px',
     },
     logo: {
-        width: '160px',
-        height: '160px',
+        width: '100%',
+        maxWidth: '320px',
+        height: 'auto',
         marginBottom: '24px',
     },
     title: {
-        fontSize: '24px',
+        fontSize: '1.5rem',
         fontWeight: 'bold',
         color: COLORS.textPrimary,
-        margin: '0 0 8px 0',
+        margin: '0 0 0.5rem 0',
     },
     subtitle: {
-        fontSize: '16px',
+        fontSize: '1rem',
         color: COLORS.textSecondary,
-        margin: '0 0 32px 0',
+        margin: '0 0 2rem 0',
     },
     progressBarContainer: {
         width: '100%',
@@ -78,8 +78,8 @@ const styles: { [key: string]: React.CSSProperties } = {
         transition: 'width 0.3s ease-out',
     },
     progressText: {
-        marginTop: '16px',
-        fontSize: '18px',
+        marginTop: '1rem',
+        fontSize: '1.125rem',
         fontWeight: 'bold',
         color: COLORS.primary,
     },

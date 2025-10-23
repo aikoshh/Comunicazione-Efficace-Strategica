@@ -1,9 +1,7 @@
-// FIX: Replaced invalid file content with a functional React component.
-// This resolves multiple parsing errors and a critical "not a module" error in App.tsx.
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Module } from '../types';
 import { COLORS } from '../constants';
-import { SendIcon } from './Icons';
+import { SendIcon, WrittenIcon, LightbulbIcon, DocumentTextIcon } from './Icons';
 import { soundService } from '../services/soundService';
 import { generateStrategicChatResponse } from '../services/geminiService';
 import { FullScreenLoader } from './Loader';
@@ -16,24 +14,31 @@ interface StrategicChatTrainerScreenProps {
 }
 
 const ResponseDisplay: React.FC<{ markdownText: string }> = ({ markdownText }) => {
-    // The Gemini prompt specifies a very particular format, which we parse here.
     const sections = markdownText.split(/-\sTitolo:\s/g).filter(s => s.trim());
     
+    const titleIconMap: { [key: string]: React.FC<any> } = {
+        'risposta breve': WrittenIcon,
+        'risposta elaborata': WrittenIcon, // Changed to match "Risposta Breve"
+        'spiegazione della strategia': LightbulbIcon,
+    };
+
     const parseSection = (sectionText: string) => {
         const lines = sectionText.split('\n');
         const title = lines[0].replace(/"/g, '').trim();
         const content = lines.slice(1).join('\n');
 
+        const normalizedTitle = title.toLowerCase();
+        const iconKey = Object.keys(titleIconMap).find(key => normalizedTitle.includes(key));
+        const IconComponent = iconKey ? titleIconMap[iconKey] : null;
+
         const renderContent = (text: string) => {
             return text.split('\n').map((line, i) => {
-                // Handle bullet points from "Spiegazione della Strategia"
                 if (line.trim().startsWith('* ')) {
                     const boldedLine = line.trim().substring(2).split(/(\*\*.*?\*\*)/g).map((part, j) => 
                         part.startsWith('**') ? <strong key={j} style={{color: COLORS.primary}}>{part.slice(2, -2)}</strong> : part
                     );
                     return <li key={i} style={styles.listItem}>{boldedLine}</li>;
                 }
-                // Handle bold text in regular paragraphs
                 const boldedLine = line.split(/(\*\*.*?\*\*)/g).map((part, j) => 
                     part.startsWith('**') ? <strong key={j} style={{color: COLORS.primary}}>{part.slice(2, -2)}</strong> : part
                 );
@@ -45,7 +50,10 @@ const ResponseDisplay: React.FC<{ markdownText: string }> = ({ markdownText }) =
 
         return (
             <div key={title} style={styles.responseSection}>
-                <h3 style={styles.responseSectionTitle}>{title}</h3>
+                <div style={styles.responseSectionTitleContainer}>
+                    {IconComponent && <IconComponent style={styles.responseSectionIcon} />}
+                    <h3 style={styles.responseSectionTitle}>{title}</h3>
+                </div>
                 {isExplanation ? <ul>{renderContent(content)}</ul> : renderContent(content)}
             </div>
         );
@@ -64,6 +72,8 @@ export const StrategicChatTrainerScreen: React.FC<StrategicChatTrainerScreenProp
     const [isLoading, setIsLoading] = useState(false);
     const [generatedResponse, setGeneratedResponse] = useState<string | null>(null);
     const { addToast } = useToast();
+    const responseAreaRef = useRef<HTMLDivElement>(null);
+
 
     const handleGenerate = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -74,6 +84,11 @@ export const StrategicChatTrainerScreen: React.FC<StrategicChatTrainerScreenProp
         }
         setIsLoading(true);
         setGeneratedResponse(null);
+        
+        setTimeout(() => {
+            responseAreaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 100);
+
         try {
             const response = await generateStrategicChatResponse(receivedMessage, objective, context, tone);
             setGeneratedResponse(response);
@@ -156,11 +171,13 @@ export const StrategicChatTrainerScreen: React.FC<StrategicChatTrainerScreenProp
                 </button>
             </form>
 
-            {isLoading && <FullScreenLoader estimatedTime={10} />}
+            <div ref={responseAreaRef}>
+                {isLoading && <FullScreenLoader estimatedTime={10} />}
 
-            {generatedResponse && !isLoading && (
-                 <ResponseDisplay markdownText={generatedResponse} />
-            )}
+                {generatedResponse && !isLoading && (
+                     <ResponseDisplay markdownText={generatedResponse} />
+                )}
+            </div>
         </div>
     );
 };
@@ -220,9 +237,25 @@ const styles: { [key: string]: React.CSSProperties } = {
       border: `1px solid ${COLORS.divider}`, animation: 'fadeInUp 0.5s ease-out both'
   },
   responseSection: { marginBottom: '24px' },
+  responseSectionTitleContainer: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    paddingBottom: '8px',
+    borderBottom: `2px solid ${COLORS.secondary}`,
+    marginBottom: '12px',
+  },
+  responseSectionIcon: {
+      width: '24px',
+      height: '24px',
+      color: COLORS.primary,
+      flexShrink: 0,
+  },
   responseSectionTitle: {
-      fontSize: '18px', fontWeight: 'bold', color: COLORS.primary,
-      paddingBottom: '8px', borderBottom: `2px solid ${COLORS.secondary}`, marginBottom: '12px'
+      fontSize: '18px',
+      fontWeight: 'bold',
+      color: COLORS.primary,
+      margin: 0,
   },
   responseText: {
       fontSize: '16px', color: COLORS.textSecondary, lineHeight: 1.7,

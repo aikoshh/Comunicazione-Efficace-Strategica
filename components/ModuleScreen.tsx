@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Module, Exercise, DifficultyLevel, ExerciseType, Entitlements } from '../types';
+import { Module, Exercise, DifficultyLevel, ExerciseType, Entitlements, UserProgress } from '../types';
 import { COLORS, EXERCISE_TYPE_ICONS } from '../constants';
 import { HomeIcon, CheckCircleIcon, QuestionIcon, TargetIcon } from './Icons';
 import { soundService } from '../services/soundService';
@@ -16,6 +16,7 @@ interface ModuleScreenProps {
   onBack: () => void;
   completedExerciseIds: string[];
   entitlements: Entitlements | null;
+  analysisHistory: UserProgress['analysisHistory'];
 }
 
 const difficultyColors: { [key in DifficultyLevel]: string } = {
@@ -57,17 +58,17 @@ const shadeColor = (color: string, percent: number): string => {
     return `#${(0x1000000 + newR * 0x10000 + newG * 0x100 + newB).toString(16).slice(1)}`;
 };
 
-export const ModuleScreen: React.FC<ModuleScreenProps> = ({ module, moduleColor, onSelectExercise, onReviewExercise, onBack, completedExerciseIds, entitlements }) => {
+export const ModuleScreen: React.FC<ModuleScreenProps> = ({ module, moduleColor, onSelectExercise, onReviewExercise, onBack, completedExerciseIds, entitlements, analysisHistory }) => {
   const [isLibraryModalOpen, setLibraryModalOpen] = useState(false);
   const [isChecklistModalOpen, setChecklistModalOpen] = useState(false);
   const [previewingExercise, setPreviewingExercise] = useState<{exercise: Exercise, color: string} | null>(null);
   
   const handleCardClick = (exercise: Exercise, color: string) => {
-    const isCompleted = completedExerciseIds.includes(exercise.id);
-    if (isCompleted) {
+    const hasHistory = analysisHistory && analysisHistory[exercise.id];
+    if (hasHistory) { // Check for actual analysis history
         soundService.playClick();
         onReviewExercise(exercise.id);
-    } else {
+    } else { // Treat as a new exercise (even if skipped)
         soundService.playClick();
         setPreviewingExercise({ exercise, color });
     }

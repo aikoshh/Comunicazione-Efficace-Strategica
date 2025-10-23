@@ -7,6 +7,7 @@ import { TargetIcon } from './Icons';
 
 interface ProgressAnalyticsProps {
   userProgress: UserProgress;
+  onNavigateToReport: () => void;
 }
 
 const COMPETENCE_LABELS: Record<CompetenceKey, string> = {
@@ -57,7 +58,7 @@ const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, per
     );
 };
 
-export const ProgressAnalytics: React.FC<ProgressAnalyticsProps> = ({ userProgress }) => {
+export const ProgressAnalytics: React.FC<ProgressAnalyticsProps> = ({ userProgress, onNavigateToReport }) => {
     const competenceScores = userProgress.competenceScores || { ascolto: 0, riformulazione: 0, assertivita: 0, gestione_conflitto: 0 };
     
     const { ascolto, riformulazione, assertivita, gestione_conflitto } = competenceScores;
@@ -94,7 +95,7 @@ export const ProgressAnalytics: React.FC<ProgressAnalyticsProps> = ({ userProgre
     };
 
     return (
-        <section style={styles.container}>
+        <section style={styles.container} onClick={onNavigateToReport} >
             <h2 style={styles.sectionTitle}>Statistiche di Progresso</h2>
             <div style={styles.grid}>
                 <div style={styles.card}>
@@ -146,7 +147,8 @@ export const ProgressAnalytics: React.FC<ProgressAnalyticsProps> = ({ userProgre
 const styles: { [key: string]: React.CSSProperties } = {
     container: {
         marginBottom: '48px',
-        animation: 'fadeInUp 0.5s 0.2s ease-out both'
+        animation: 'fadeInUp 0.5s 0.2s ease-out both',
+        cursor: 'pointer',
     },
     sectionTitle: {
         fontSize: '24px',

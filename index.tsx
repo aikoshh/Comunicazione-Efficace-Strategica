@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import App from './App.tsx';
+// FIX: Removed .tsx extension from the import path to resolve module loading issue.
+import App from './App';
 import { ToastProvider } from './hooks/useToast';
 
 const rootElement = document.getElementById('root');

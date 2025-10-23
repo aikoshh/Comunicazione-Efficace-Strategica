@@ -1,26 +1,19 @@
+// types.ts
 import React from 'react';
 
-// === Core Enums ===
-export enum DifficultyLevel {
-  BASE = 'Base',
-  INTERMEDIO = 'Intermedio',
-  AVANZATO = 'Avanzato',
+// === Core Data Structures ===
+
+export interface Module {
+  id: string;
+  title: string;
+  description: string;
+  icon: React.FC<any>;
+  headerImage: string;
+  exercises: Exercise[];
+  isCustom?: boolean;
+  isPro?: boolean;
 }
 
-export enum ExerciseType {
-  WRITTEN = 'written',
-  VERBAL = 'verbal',
-}
-
-// === Component-related Types ===
-export type IconComponent = React.FC<React.SVGProps<SVGSVGElement>>;
-
-export interface Breadcrumb {
-  label: string;
-  onClick?: () => void;
-}
-
-// === Main Data Structures ===
 export interface Exercise {
   id: string;
   title: string;
@@ -30,54 +23,58 @@ export interface Exercise {
   exerciseType?: ExerciseType;
   headerImage?: string;
   customObjective?: string;
+  competence: CompetenceKey | null;
 }
 
-export interface Module {
-  id: string;
-  title: string;
-  description: string;
-  icon: IconComponent;
-  cardImage?: string;
-  headerImage?: string;
-  exercises: Exercise[];
-  isCustom?: boolean;
-  specialModuleType?: 'chat_trainer';
-  category: 'Fondamentali' | 'Pacchetti Settoriali' | 'Pacchetti Speciali';
-  prerequisites?: string[];
+export enum DifficultyLevel {
+  BASE = 'Base',
+  INTERMEDIO = 'Intermedio',
+  AVANZATO = 'Avanzato',
 }
 
-// === Analysis & Results ===
-export interface AreaForImprovement {
-    suggestion: string;
-    example: string;
+export enum ExerciseType {
+  WRITTEN = 'Scritto',
+  VERBAL = 'Vocale',
 }
+
+export type CompetenceKey = 'ascolto' | 'riformulazione' | 'assertivita' | 'gestione_conflitto';
+
+// === Analysis Results ===
 
 export interface DetailedRubricScore {
-  criterion: string;
-  score: number;
-  justification: string;
+    criterion: string;
+    score: number;
+    justification: string;
 }
 
 export interface AnalysisResult {
-  score: number;
-  strengths: string[];
-  areasForImprovement: AreaForImprovement[];
-  suggestedResponse: {
-    short: string;
-    long: string;
-  };
-  detailedRubric?: DetailedRubricScore[];
-  utilityScore?: number;
-  clarityScore?: number;
+    score: number;
+    strengths: string[];
+    areasForImprovement: {
+        suggestion: string;
+        example: string;
+    }[];
+    suggestedResponse: {
+        short: string;
+        long: string;
+    };
+    // PRO Features
+    detailedRubric?: DetailedRubricScore[];
+    utilityScore?: number;
+    clarityScore?: number;
 }
 
-export interface VoiceRubricScore {
-    criterion_id: string;
-    score: number; // 1-10
+export interface VoiceRubricCriterion {
+    id: string;
+    label: string;
+    description: string;
 }
 
 export interface VoiceAnalysisResult {
-    scores: VoiceRubricScore[];
+    scores: {
+        criterion_id: string;
+        score: number;
+    }[];
     strengths: string[];
     improvements: string[];
     actions: string[];
@@ -89,39 +86,40 @@ export interface VoiceAnalysisResult {
     };
 }
 
-export interface AnalysisHistoryEntry {
-    exerciseId: string;
-    userResponse: string;
-    result: AnalysisResult | VoiceAnalysisResult;
-    type: 'written' | 'verbal';
-    timestamp: string;
-}
 
-// === User and Progress ===
+// === User & Progress ===
+
 export interface UserProfile {
-  uid: string; // Firebase Auth UID
-  email: string;
-  firstName: string;
-  lastName: string;
-  createdAt: string;
-  expiryDate: string | null;
-  isAdmin: boolean;
-  enabled: boolean;
+    uid: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    isAdmin: boolean;
+    enabled: boolean;
+    createdAt: string;
+    expiryDate: string | null;
 }
 
-export type CompetenceKey = 'ascolto' | 'riformulazione' | 'assertivita' | 'gestione_conflitto';
-
-export interface CompetenceScores extends Record<CompetenceKey, number> {}
+export interface CompetenceScores {
+    ascolto: number;
+    riformulazione: number;
+    assertivita: number;
+    gestione_conflitto: number;
+}
 
 export interface UserProgress {
-  scores: number[];
-  completedExerciseIds?: string[];
-  skippedExerciseIds?: string[];
-  completedModuleIds?: string[];
-  hasCompletedCheckup?: boolean;
-  checkupResults?: CommunicatorProfile;
-  analysisHistory?: AnalysisHistoryEntry[];
-  competenceScores?: CompetenceScores;
+    completedExerciseIds: string[];
+    scores: number[];
+    checkupProfile?: CommunicatorProfile;
+    competenceScores: CompetenceScores;
+    analysisHistory: {
+        [exerciseId: string]: {
+            result: AnalysisResult | VoiceAnalysisResult;
+            userResponse: string;
+            timestamp: string;
+            type: 'written' | 'verbal';
+        }
+    };
 }
 
 export interface CommunicatorProfile {
@@ -131,39 +129,16 @@ export interface CommunicatorProfile {
     areasToImprove: string[];
 }
 
-// === Monetization ===
-export interface Product {
-  id: string;
-  type: 'non-consumable' | 'subscription';
-  name: string;
-  price: string;
-  description: string;
-  benefits: string[];
-  category: string;
-}
-
-export interface Entitlements {
-    productIDs: Set<string>;
-    teamSeats: number;
-    teamActive: boolean;
-}
-
-// Storable version of Entitlements for JSON compatibility
-export interface StorableEntitlements extends Omit<Entitlements, 'productIDs'> {
-    productIDs: string[];
-}
-
-// === App State & Services ===
 export interface ProgressOverviewData {
-  header: {
-    welcome: string;
-    score: number;
-    level: string;
-  };
-  progress_bar: {
-    value: number;
-    label: string;
-  };
+    header: {
+      welcome: string;
+      score: number;
+      level: string;
+    };
+    progress_bar: {
+      value: number;
+      label: string;
+    };
 }
 
 export interface ScoreExplanation {
@@ -174,6 +149,9 @@ export interface ScoreExplanation {
   VoiceDelta: number;
 }
 
+
+// === Personalization & PRO Content ===
+
 export interface PersonalizationData {
     professione: string;
     livelloCarriera: string;
@@ -182,20 +160,6 @@ export interface PersonalizationData {
     sfidaPrincipale: string;
 }
 
-// === Toast Notifications ===
-export type ToastType = 'success' | 'error' | 'info';
-
-export interface ToastMessage {
-  id: string;
-  message: string;
-  type: ToastType;
-}
-
-export interface ToastContextType {
-  addToast: (message: string, type?: ToastType) => void;
-}
-
-// === PRO Content ===
 export interface StrategicQuestion {
     question: string;
     description: string;
@@ -210,4 +174,80 @@ export interface StrategicQuestionCategory {
 export interface ChecklistItem {
     id: string;
     text: string;
+}
+
+
+// === Monetization ===
+
+export interface Product {
+    id: string;
+    type: 'non-consumable' | 'subscription';
+    name: string;
+    price: string;
+    description: string;
+    benefits: string[];
+    category: string;
+}
+
+export interface Entitlements {
+    productIDs: Set<string>;
+    teamSeats: number;
+    teamActive: boolean;
+}
+
+// For storing in Firestore (Set cannot be stored)
+export interface StorableEntitlements extends Omit<Entitlements, 'productIDs'> {
+    productIDs: string[];
+}
+
+
+// === UI & App State ===
+
+export type ToastType = 'success' | 'error' | 'info';
+
+export interface ToastMessage {
+  id: string;
+  message: string;
+  type: ToastType;
+}
+
+export interface ToastContextType {
+  addToast: (message: string, type?: ToastType) => void;
+}
+
+export type AppScreen = 
+  | 'login'
+  | 'home'
+  | 'module'
+  | 'exercise'
+  | 'analysis_report'
+  | 'voice_analysis_report'
+  | 'custom_setup'
+  | 'strategic_checkup'
+  | 'communicator_profile'
+  | 'paywall'
+  | 'admin'
+  | 'chat_trainer'
+  | 'api_key_error'
+  | 'competence_report';
+
+export interface AppState {
+    currentScreen: AppScreen;
+    currentModuleId?: string;
+    currentExerciseId?: string;
+    analysisResult?: AnalysisResult;
+    voiceAnalysisResult?: VoiceAnalysisResult;
+    userResponse?: string;
+    isReviewMode?: boolean; // To view past results
+    checkupProfile?: CommunicatorProfile;
+    apiKeyError?: string;
+}
+
+// Gamification
+export interface Achievement {
+    id: string;
+    title: string;
+    description: string;
+    icon: React.FC<any>;
+    isUnlocked: (progress: UserProgress) => boolean;
 }

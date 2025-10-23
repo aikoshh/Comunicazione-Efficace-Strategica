@@ -171,7 +171,7 @@ export const AdminScreen: React.FC<{ onBack: () => void; }> = ({ onBack }) => {
     return (
         <div style={styles.container}>
             <header style={styles.header}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                     <button onClick={onBack} style={styles.backButton}><BackIcon /></button>
                     <h1 style={styles.title}>Pannello Amministratore</h1>
                 </div>
@@ -232,16 +232,16 @@ export const AdminScreen: React.FC<{ onBack: () => void; }> = ({ onBack }) => {
 };
 
 const styles: { [key: string]: React.CSSProperties } = {
-    container: { maxWidth: '1200px', margin: '0 auto', padding: '40px 20px', minHeight: 'calc(100vh - 64px)', display: 'flex', flexDirection: 'column', gap: '32px' },
-    header: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', paddingBottom: '16px', borderBottom: `1px solid ${COLORS.divider}` },
-    title: { fontSize: '24px', fontWeight: 'bold', color: COLORS.textPrimary, margin: 0 },
-    backButton: { background: 'none', border: 'none', cursor: 'pointer', color: COLORS.textSecondary, padding: '8px' },
+    container: { maxWidth: '1200px', margin: '0 auto', padding: '2.5rem 1.25rem', minHeight: 'calc(100vh - 64px)', display: 'flex', flexDirection: 'column', gap: '2rem' },
+    header: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', paddingBottom: '1rem', borderBottom: `1px solid ${COLORS.divider}` },
+    title: { fontSize: '1.5rem', fontWeight: 'bold', color: COLORS.textPrimary, margin: 0 },
+    backButton: { background: 'none', border: 'none', cursor: 'pointer', color: COLORS.textSecondary, padding: '0.5rem' },
     firebaseButton: {
         display: 'inline-flex',
         alignItems: 'center',
-        gap: '8px',
-        padding: '10px 20px',
-        fontSize: '15px',
+        gap: '0.5rem',
+        padding: '0.625rem 1.25rem',
+        fontSize: '0.9375rem',
         fontWeight: 'bold',
         border: 'none',
         backgroundColor: COLORS.warning,
@@ -250,24 +250,24 @@ const styles: { [key: string]: React.CSSProperties } = {
         cursor: 'pointer',
         textDecoration: 'none',
     },
-    section: { backgroundColor: COLORS.card, padding: '24px', borderRadius: '12px', border: `1px solid ${COLORS.divider}` },
-    sectionTitle: { fontSize: '20px', fontWeight: 'bold', color: COLORS.primary, margin: '0 0 16px 0' },
-    addUserForm: { display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center' },
-    input: { padding: '10px', fontSize: '15px', borderRadius: '6px', border: `1px solid ${COLORS.divider}`, flex: 1, minWidth: '180px' },
-    dateInput: { padding: '8px', fontSize: '14px', borderRadius: '6px', border: `1px solid ${COLORS.divider}` },
-    addButton: { padding: '10px 20px', fontSize: '15px', fontWeight: 'bold', border: 'none', backgroundColor: COLORS.secondary, color: 'white', borderRadius: '6px', cursor: 'pointer' },
-    note: { fontSize: '13px', color: COLORS.textSecondary, margin: '12px 0 0 0', fontStyle: 'italic' },
-    dbActions: { display: 'flex', gap: '16px' },
-    dbButton: { display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', fontSize: '15px', fontWeight: 'bold', border: 'none', borderRadius: '6px', cursor: 'pointer' },
+    section: { backgroundColor: COLORS.card, padding: '1.5rem', borderRadius: '12px', border: `1px solid ${COLORS.divider}` },
+    sectionTitle: { fontSize: '1.25rem', fontWeight: 'bold', color: COLORS.primary, margin: '0 0 1rem 0' },
+    addUserForm: { display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'center' },
+    input: { padding: '0.625rem', fontSize: '0.9375rem', borderRadius: '6px', border: `1px solid ${COLORS.divider}`, flex: 1, minWidth: '180px' },
+    dateInput: { padding: '0.5rem', fontSize: '0.875rem', borderRadius: '6px', border: `1px solid ${COLORS.divider}` },
+    addButton: { padding: '0.625rem 1.25rem', fontSize: '0.9375rem', fontWeight: 'bold', border: 'none', backgroundColor: COLORS.secondary, color: 'white', borderRadius: '6px', cursor: 'pointer' },
+    note: { fontSize: '0.8125rem', color: COLORS.textSecondary, margin: '0.75rem 0 0 0', fontStyle: 'italic' },
+    dbActions: { display: 'flex', gap: '1rem' },
+    dbButton: { display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.625rem 1.25rem', fontSize: '0.9375rem', fontWeight: 'bold', border: 'none', borderRadius: '6px', cursor: 'pointer' },
     importButton: { backgroundColor: COLORS.warning, color: 'white' },
     tableContainer: { overflowX: 'auto' },
     userTable: { width: '100%', borderCollapse: 'collapse', textAlign: 'left' },
     tableHeaderRow: { borderBottom: `2px solid ${COLORS.divider}` },
-    tableHeader: { padding: '12px', fontWeight: 'bold', color: COLORS.textSecondary },
+    tableHeader: { padding: '0.75rem', fontWeight: 'bold', color: COLORS.textSecondary },
     tableRow: { borderBottom: `1px solid ${COLORS.divider}` },
-    tableCell: { padding: '12px' },
-    actionsCell: { display: 'flex', gap: '8px', alignItems: 'center' },
-    actionButton: { padding: '6px 12px', fontSize: '13px', fontWeight: '500', border: 'none', borderRadius: '6px', cursor: 'pointer' },
+    tableCell: { padding: '0.75rem' },
+    actionsCell: { display: 'flex', gap: '0.5rem', alignItems: 'center' },
+    actionButton: { padding: '0.375rem 0.75rem', fontSize: '0.8125rem', fontWeight: '500', border: 'none', borderRadius: '6px', cursor: 'pointer' },
     editButton: { backgroundColor: COLORS.accentBeige, color: COLORS.textAccent },
     deleteButton: { backgroundColor: COLORS.error, color: 'white' },
     saveButton: { backgroundColor: COLORS.success, color: 'white' },
