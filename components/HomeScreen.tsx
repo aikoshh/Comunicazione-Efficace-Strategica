@@ -40,6 +40,15 @@ const hoverStyle = `
     opacity: 1;
     transform: translate(-50%, -50%) scale(1.1);
   }
+  .improve-button:hover {
+    background-color: #4a9191; /* Darker secondary */
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  }
+  .improve-button:active {
+    transform: translateY(0);
+    box-shadow: none;
+  }
 `;
 
 const ProgressionPath: React.FC<{
@@ -109,6 +118,18 @@ const ProgressionPath: React.FC<{
                                     <div style={{...styles.nodeProgressBarFill, width: `${progressPercentage}%`}}/>
                                 </div>
                                 <span style={styles.nodeProgressText}>{completedCount}/{totalCount}</span>
+                                {!isLocked && (
+                                    <button
+                                        style={styles.improveButton}
+                                        className="improve-button"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleClick();
+                                        }}
+                                    >
+                                        Migliora adesso!
+                                    </button>
+                                )}
                             </div>
                              {isModulePro && <div style={styles.proBadge}><CrownIcon /> PRO</div>}
                         </div>
@@ -406,5 +427,17 @@ const styles: { [key: string]: React.CSSProperties } = {
     width: '4px',
     height: '32px',
     backgroundColor: COLORS.accentBeige,
+  },
+  improveButton: {
+    marginTop: '12px',
+    padding: '8px 16px',
+    fontSize: '14px',
+    fontWeight: 'bold',
+    color: 'white',
+    backgroundColor: COLORS.secondary,
+    border: 'none',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
   },
 };

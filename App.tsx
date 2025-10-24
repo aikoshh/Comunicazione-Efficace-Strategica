@@ -1,3 +1,4 @@
+
 // App.tsx
 import React, { useState, useEffect, useCallback } from 'react';
 // FIX: Changed to a value import to bring in the DifficultyLevel enum and be consistent with other files.
@@ -26,6 +27,7 @@ import { VoiceAnalysisReportScreen } from './components/VoiceAnalysisReportScree
 import { CompetenceReportScreen } from './components/CompetenceReportScreen';
 import { AchievementsScreen } from './components/AchievementsScreen';
 import { StrategicChatTrainerScreen } from './components/StrategicChatTrainerScreen';
+import { Footer } from './components/Footer';
 
 const getInitialAppState = (): AppState => ({
     currentScreen: 'home',
@@ -331,11 +333,13 @@ const App: React.FC = () => {
     };
 
     return (
-        <>
+        <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
             <Header user={user} onLogout={handleLogout} onNavigateToHome={handleNavigateToHome} onNavigateToPaywall={handleNavigateToPaywall} onNavigateToAdmin={() => setAppState(prev => ({...prev, currentScreen: 'admin'}))} entitlements={entitlements} currentModule={currentModule} onNavigateToModule={() => setAppState(prev => ({...prev, currentScreen: 'module'}))} />
-            <main>{renderContent()}</main>
-        </>
+            <main style={{ flex: 1 }}>{renderContent()}</main>
+            <Footer />
+        </div>
     );
 };
 
 export default App;
+      
