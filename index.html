@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CES Coach: Comunicatore Strategico</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+      html {
+        box-sizing: border-box;
+        font-size: 16px; /* Default font size */
+      }
+      *, *:before, *:after {
+        box-sizing: inherit;
+      }
+      body {
+        margin: 0;
+        font-family: 'Poppins', sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        background-color: #F5F2EF;
+        overflow-x: hidden; /* Prevents horizontal scrolling */
+      }
+
+      /* Global Animations */
+      @keyframes fadeInUp {
+        from {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @keyframes popIn {
+        from {
+          opacity: 0;
+          transform: scale(0.8);
+        }
+        to {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+      
+      @keyframes pulse {
+        0% {
+          transform: scale(1);
+          box-shadow: 0 0 0 0 rgba(14, 58, 93, 0.7);
+        }
+        70% {
+          transform: scale(1.05);
+          box-shadow: 0 0 0 15px rgba(14, 58, 93, 0);
+        }
+        100% {
+          transform: scale(1);
+          box-shadow: 0 0 0 0 rgba(14, 58, 93, 0);
+        }
+      }
+
+      @keyframes toast-enter {
+        from {
+          opacity: 0;
+          transform: translateX(100%);
+        }
+        to {
+          opacity: 1;
+          transform: translateX(0);
+        }
+      }
+
+      @keyframes toast-exit {
+        from {
+          opacity: 1;
+          transform: translateX(0);
+        }
+        to {
+          opacity: 0;
+          transform: translateX(100%);
+        }
+      }
+
+      @keyframes slideIn {
+        from {
+          transform: translateX(100%);
+        }
+        to {
+          transform: translateX(0);
+        }
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+      
+      @keyframes bounce {
+        0%, 20%, 50%, 80%, 100% {
+          transform: translateY(0);
+        }
+        40% {
+          transform: translateY(-15px);
+        }
+        60% {
+          transform: translateY(-10px);
+        }
+      }
+
+      /* Responsive Styles */
+      @media (max-width: 768px) {
+        .homescreen-header {
+          flex-direction: column-reverse;
+          text-align: center;
+        }
+        .homescreen-header-text p {
+          margin: 0 auto;
+        }
+        .login-box-container {
+            padding: 20px;
+        }
+      }
+
+      /* High Contrast Mode */
+      body.high-contrast {
+        background-color: #000 !important;
+      }
+      body.high-contrast [style*="background-color: rgb(245, 242, 239)"], /* base */
+      body.high-contrast [style*="background-color: rgb(255, 255, 255)"],  /* card */
+      body.high-contrast [style*="background-color: rgb(240, 240, 240)"], /* cardDark */
+      body.high-contrast [style*="background-color: rgb(248, 247, 244)"] /* base-ish */
+      {
+        background-color: #000 !important;
+        border: 1px solid #fff !important;
+      }
+      body.high-contrast [style*="color: rgb(28, 28, 30)"],  /* textPrimary */
+      body.high-contrast [style*="color: rgb(102, 112, 133)"], /* textSecondary */
+      body.high-contrast [style*="color: rgb(51, 51, 51)"] /* textAccent */
+      {
+        color: #fff !important;
+      }
+      body.high-contrast [style*="color: rgb(28, 62, 94)"] /* primary */
+      {
+        color: #61dafb !important; /* A bright blue */
+      }
+       body.high-contrast [style*="color: rgb(88, 166, 166)"] /* secondary */
+      {
+        color: #98ff98 !important; /* A bright green */
+      }
+      body.high-contrast [style*="border-color: rgb(234, 236, 238)"] /* divider */
+      {
+        border-color: #fff !important;
+      }
+      body.high-contrast [style*="color: rgb(168, 81, 0)"] /* pro button text */
+      {
+        color: #000 !important;
+      }
+    </style>
+    <script type="importmap">
+{
+  "imports": {
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.22.0",
+    "recharts": "https://aistudiocdn.com/recharts@^2.12.7",
+    "react-dom": "https://aistudiocdn.com/react-dom@^19.2.0",
+    "react-markdown": "https://aistudiocdn.com/react-markdown@^10.1.0",
+    "firebase/app": "https://aistudiocdn.com/firebase@^12.4.0/app",
+    "firebase/auth": "https://aistudiocdn.com/firebase@^12.4.0/auth",
+    "firebase/firestore": "https://aistudiocdn.com/firebase@^12.4.0/firestore",
+    "firebase/": "https://aistudiocdn.com/firebase@^12.4.0/"
+  }
+}
+</script>
+  <link rel="stylesheet" href="/index.css">
+</head>
+  <body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>
