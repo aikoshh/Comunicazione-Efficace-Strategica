@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
 import { Module, Exercise, Entitlements, AnalysisHistoryItem } from '../types';
 import { COLORS } from '../constants';
-import { BackIcon, CheckCircleIcon, CrownIcon, LockIcon, PlayIcon } from './Icons';
-import { soundService } from '../services/soundService';
 import { hasProAccess } from '../services/monetizationService';
+import { BackIcon, CheckCircleIcon, LockIcon } from './Icons';
+import { soundService } from '../services/soundService';
 import { ExercisePreviewModal } from './ExercisePreviewModal';
 
 interface ModuleScreenProps {
   module: Module;
   moduleColor: string;
-  onSelectExercise: (exercise: Exercise, module: Module) => void;
+  onSelectExercise: (exercise: Exercise) => void;
   onReviewExercise: (exerciseId: string) => void;
   onBack: () => void;
   completedExerciseIds: string[];
@@ -27,149 +27,107 @@ export const ModuleScreen: React.FC<ModuleScreenProps> = ({
   entitlements,
   analysisHistory
 }) => {
-    const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
-    const isPro = hasProAccess(entitlements);
-    const isLocked = module.isPro && !isPro;
-    const isHeaderVideo = module.headerImage && module.headerImage.toLowerCase().endsWith('.mp4');
+  const [previewingExercise, setPreviewingExercise] = useState<Exercise | null>(null);
+  const isPro = hasProAccess(entitlements);
 
-    const handleStartExercise = (exercise: Exercise) => {
-        if (isLocked) {
-            // This case should ideally be handled by disabling the button, but as a fallback:
-            console.warn("Attempted to start an exercise in a locked module.");
-            return;
-        }
-        onSelectExercise(exercise, module);
-    };
+  const handleExerciseClick = (exercise: Exercise) => {
+    soundService.playClick();
+    if (module.isPro && !isPro) {
+      // This case should ideally be handled on the home screen, but as a safeguard:
+      return; 
+    }
+    setPreviewingExercise(exercise);
+  };
+  
+  const handleStartExercise = (exercise: Exercise) => {
+    onSelectExercise(exercise);
+    setPreviewingExercise(null);
+  };
 
-    const handlePreviewExercise = (exercise: Exercise) => {
-        soundService.playClick();
-        setSelectedExercise(exercise);
-    };
-    
-    const handleClosePreview = () => {
-        setSelectedExercise(null);
-    };
+  const isHeaderVideo = module.headerImage && module.headerImage.toLowerCase().endsWith('.mp4');
 
-    const hoverStyle = `
-      .exercise-item:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 20px rgba(0,0,0,0.08);
-      }
-      .back-button:hover {
-        background-color: ${COLORS.cardDark};
-      }
-    `;
-
-    return (
-        <div style={styles.container}>
-            <style>{hoverStyle}</style>
-            <div style={styles.header}>
-                 {isHeaderVideo ? (
-                    <video 
-                        src={module.headerImage} 
-                        style={styles.headerImage} 
-                        autoPlay 
-                        muted 
-                        loop 
-                        playsInline 
-                        title={`Video per ${module.title}`} 
-                    />
-                ) : (
-                    <img src={module.headerImage} alt={`Illustrazione per ${module.title}`} style={styles.headerImage} />
-                )}
-                <div style={styles.headerOverlay} />
-                <button onClick={() => { soundService.playClick(); onBack(); }} style={styles.backButton} className="back-button">
-                    <BackIcon /> Torna alla Home
-                </button>
-                <div style={styles.headerContent}>
-                    <div style={{...styles.iconContainer, backgroundColor: moduleColor}}>
-                        <module.icon width={32} height={32} color="white" />
-                    </div>
-                    <h1 style={styles.title}>{module.title}</h1>
-                    <p style={styles.description}>{module.description}</p>
-                </div>
+  return (
+    <div style={styles.container}>
+      <header style={styles.header}>
+        {isHeaderVideo ? (
+            <video src={module.headerImage} style={styles.headerImage} autoPlay muted loop playsInline />
+        ) : (
+            <img src={module.headerImage} alt={module.title} style={styles.headerImage} />
+        )}
+        <div style={styles.headerOverlay} />
+        <div style={styles.headerContent}>
+            <button onClick={onBack} style={styles.backButton}><BackIcon /> Torna alla Home</button>
+            <div style={styles.titleContainer}>
+                <module.icon style={styles.moduleIcon} />
+                <h1 style={styles.title}>{module.title}</h1>
             </div>
-
-            <div style={styles.exerciseList}>
-                {module.exercises.map((exercise) => {
-                    const isCompleted = completedExerciseIds.includes(exercise.id);
-                    const lastScore = isCompleted && analysisHistory[exercise.id] ? (analysisHistory[exercise.id].result as any).score : null;
-                    
-                    return (
-                        <div key={exercise.id} style={styles.exerciseItem} className="exercise-item" onClick={() => handlePreviewExercise(exercise)}>
-                            <div style={{ flex: 1 }}>
-                                <div style={styles.exerciseTitleContainer}>
-                                    <h2 style={styles.exerciseTitle}>{exercise.title}</h2>
-                                    {isCompleted && <CheckCircleIcon style={{ color: COLORS.success, flexShrink: 0 }} />}
-                                </div>
-                                <span style={{...styles.difficultyBadge, backgroundColor: `${moduleColor}30`, color: moduleColor}}>
-                                    {exercise.difficulty}
-                                </span>
-                            </div>
-                            <div style={styles.actions}>
-                                {isCompleted && lastScore !== null && <span style={styles.scoreText}>Punteggio: {lastScore}/100</span>}
-                                {isCompleted && <button style={styles.reviewButton} onClick={(e) => { e.stopPropagation(); onReviewExercise(exercise.id); }}>Rivedi</button>}
-                                <button style={{...styles.startButton, backgroundColor: moduleColor}} onClick={(e) => { e.stopPropagation(); handleStartExercise(exercise); }} disabled={isLocked}>
-                                    {isCompleted ? "Riprova" : "Inizia"}
-                                </button>
-                            </div>
-                        </div>
-                    );
-                })}
-            </div>
-
-            {isLocked && (
-                <div style={styles.lockedModuleBanner}>
-                    <CrownIcon />
-                    <div>
-                        <h3 style={styles.lockedTitle}>Questo è un modulo PRO</h3>
-                        <p style={styles.lockedDescription}>Sblocca tutti i moduli e le funzionalità avanzate per accelerare la tua crescita.</p>
-                    </div>
-                    {/* The paywall navigation should be handled by App.tsx, but this is a direct trigger */}
-                    <button style={styles.unlockButton} onClick={() => { /* onNavigateToPaywall() can be called here if passed down */ }}>Sblocca PRO</button>
-                </div>
-            )}
-            
-            {selectedExercise && (
-                <ExercisePreviewModal 
-                    exercise={selectedExercise}
-                    color={moduleColor}
-                    onClose={handleClosePreview}
-                    onStart={handleStartExercise}
-                />
-            )}
+            <p style={styles.description}>{module.description}</p>
         </div>
-    );
+      </header>
+      
+      <main style={styles.mainContent}>
+        <div style={styles.exerciseList}>
+          {module.exercises.map((exercise, index) => {
+            const isCompleted = completedExerciseIds.includes(exercise.id);
+            const canReview = !!analysisHistory[exercise.id];
+
+            return (
+              <div key={exercise.id} style={styles.exerciseItem} onClick={() => handleExerciseClick(exercise)}>
+                <div style={styles.exerciseNumber}>{index + 1}</div>
+                <div style={styles.exerciseDetails}>
+                    <h2 style={styles.exerciseTitle}>{exercise.title}</h2>
+                    <span style={{...styles.difficultyBadge, backgroundColor: COLORS.secondary}}>{exercise.difficulty}</span>
+                </div>
+                <div style={styles.exerciseActions}>
+                    {isCompleted && <CheckCircleIcon style={{color: COLORS.success}} title="Completato"/>}
+                    {canReview && <button onClick={(e) => { e.stopPropagation(); onReviewExercise(exercise.id); }} style={styles.reviewButton}>Rivedi</button>}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        {module.isPro && !isPro && (
+            <div style={styles.proLockOverlay}>
+                <LockIcon style={{width: 48, height: 48, color: 'white'}}/>
+                <h2 style={styles.proLockTitle}>Modulo PRO</h2>
+                <p style={styles.proLockText}>Sblocca questo modulo e tutte le funzionalità avanzate con CES Coach PRO.</p>
+            </div>
+        )}
+      </main>
+
+      {previewingExercise && (
+        <ExercisePreviewModal
+            exercise={previewingExercise}
+            color={moduleColor}
+            onClose={() => setPreviewingExercise(null)}
+            onStart={handleStartExercise}
+        />
+      )}
+    </div>
+  );
 };
 
 const styles: { [key: string]: React.CSSProperties } = {
-  container: { maxWidth: '900px', margin: '0 auto', padding: '40px 20px', minHeight: '100vh' },
-  header: { position: 'relative', borderRadius: '16px', overflow: 'hidden', marginBottom: '40px' },
-  headerImage: { width: '100%', height: '280px', objectFit: 'cover', display: 'block' },
-  headerOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'linear-gradient(to top, rgba(28,62,94,0.8) 20%, rgba(0,0,0,0.2) 100%)' },
-  backButton: { position: 'absolute', top: '20px', left: '20px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', zIndex: 2, transition: 'background-color 0.2s' },
-  headerContent: { position: 'absolute', bottom: '24px', left: '24px', right: '24px', color: 'white', zIndex: 1 },
-  iconContainer: { width: '56px', height: '56px', borderRadius: '12px', display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '16px' },
-  title: { fontSize: '32px', fontWeight: 'bold', margin: '0 0 8px 0', textShadow: '0 2px 4px rgba(0,0,0,0.5)' },
-  description: { fontSize: '18px', margin: 0, maxWidth: '700px', textShadow: '0 1px 3px rgba(0,0,0,0.5)' },
+  container: { backgroundColor: COLORS.base, minHeight: '100vh' },
+  header: { position: 'relative', height: '300px', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  headerImage: { position: 'absolute', width: '100%', height: '100%', objectFit: 'cover', zIndex: 1 },
+  headerOverlay: { position: 'absolute', width: '100%', height: '100%', backgroundColor: 'rgba(28, 62, 94, 0.7)', zIndex: 2 },
+  headerContent: { zIndex: 3, textAlign: 'center', padding: '20px' },
+  backButton: { background: 'none', border: 'none', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '16px', position: 'absolute', top: '20px', left: '20px' },
+  titleContainer: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', marginBottom: '16px' },
+  moduleIcon: { width: '40px', height: '40px' },
+  title: { fontSize: '32px', fontWeight: 'bold', margin: 0 },
+  description: { fontSize: '18px', maxWidth: '600px', margin: '0 auto', opacity: 0.9 },
+  mainContent: { maxWidth: '800px', margin: '-60px auto 40px', backgroundColor: COLORS.card, borderRadius: '12px', padding: '32px', boxShadow: '0 8px 30px rgba(0,0,0,0.12)', position: 'relative', zIndex: 4 },
   exerciseList: { display: 'flex', flexDirection: 'column', gap: '16px' },
-  exerciseItem: {
-    backgroundColor: COLORS.card, padding: '20px', borderRadius: '12px', border: `1px solid ${COLORS.divider}`,
-    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px',
-    cursor: 'pointer', transition: 'all 0.2s ease-out'
-  },
-  exerciseTitleContainer: { display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' },
-  exerciseTitle: { fontSize: '18px', fontWeight: 600, color: COLORS.textPrimary, margin: 0 },
-  difficultyBadge: { fontSize: '12px', padding: '4px 10px', borderRadius: '12px', fontWeight: 'bold' },
-  actions: { display: 'flex', alignItems: 'center', gap: '16px' },
-  scoreText: { fontSize: '14px', fontWeight: 500, color: COLORS.textSecondary },
-  reviewButton: { padding: '8px 16px', fontSize: '14px', border: `1px solid ${COLORS.secondary}`, backgroundColor: 'transparent', color: COLORS.secondary, borderRadius: '8px', cursor: 'pointer' },
-  startButton: { padding: '8px 16px', fontSize: '14px', border: 'none', color: 'white', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' },
-  lockedModuleBanner: {
-    marginTop: '40px', backgroundColor: COLORS.cardDark, padding: '24px', borderRadius: '12px',
-    display: 'flex', alignItems: 'center', gap: '20px', borderLeft: `5px solid ${COLORS.warning}`
-  },
-  lockedTitle: { fontSize: '18px', fontWeight: 'bold', color: COLORS.textPrimary, margin: '0 0 4px 0' },
-  lockedDescription: { fontSize: '15px', color: COLORS.textSecondary, margin: 0 },
-  unlockButton: { marginLeft: 'auto', padding: '10px 20px', fontSize: '16px', fontWeight: 'bold', border: 'none', backgroundColor: COLORS.warning, color: COLORS.textPrimary, borderRadius: '8px', cursor: 'pointer' }
+  exerciseItem: { display: 'flex', alignItems: 'center', gap: '16px', padding: '16px', backgroundColor: COLORS.cardDark, borderRadius: '8px', cursor: 'pointer', border: `1px solid ${COLORS.divider}` },
+  exerciseNumber: { width: '40px', height: '40px', borderRadius: '50%', backgroundColor: COLORS.primary, color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', flexShrink: 0 },
+  exerciseDetails: { flex: 1 },
+  exerciseTitle: { fontSize: '18px', fontWeight: 600, color: COLORS.textPrimary, margin: '0 0 8px 0' },
+  difficultyBadge: { padding: '4px 8px', borderRadius: '6px', color: 'white', fontSize: '12px', fontWeight: 500 },
+  exerciseActions: { display: 'flex', alignItems: 'center', gap: '12px' },
+  reviewButton: { background: COLORS.secondary, color: 'white', border: 'none', padding: '8px 12px', borderRadius: '6px', cursor: 'pointer' },
+  proLockOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(28, 62, 94, 0.9)', borderRadius: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'white', textAlign: 'center', padding: '20px' },
+  proLockTitle: { fontSize: '24px', fontWeight: 'bold', margin: '16px 0 8px 0' },
+  proLockText: { fontSize: '16px', lineHeight: 1.6, maxWidth: '400px', margin: 0 },
 };
