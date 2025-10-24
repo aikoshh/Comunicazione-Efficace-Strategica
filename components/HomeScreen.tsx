@@ -22,6 +22,47 @@ interface HomeScreenProps {
     onNavigateToCompetenceReport: () => void;
 }
 
+const MediaPreview: React.FC<{ src: string; alt: string; }> = ({ src, alt }) => {
+    const isVideo = src && src.toLowerCase().endsWith('.mp4');
+    const style = styles.moduleCardMedia;
+    if (isVideo) {
+        return (
+            <video 
+                src={src} 
+                style={style} 
+                autoPlay
+                muted 
+                loop
+                playsInline 
+                title={alt} 
+            />
+        );
+    }
+    return <img src={src} alt={alt} style={style} loading="lazy" />;
+};
+
+
+const MediaDisplay: React.FC<{ src: string; alt: string; style: React.CSSProperties, onClick?: () => void }> = ({ src, alt, style, onClick }) => {
+    const isVideo = src && src.toLowerCase().endsWith('.mp4');
+    if (isVideo) {
+        return (
+            <div style={{ position: 'relative', cursor: 'pointer' }} onClick={onClick}>
+                <video 
+                    src={src} 
+                    style={style} 
+                    muted 
+                    playsInline 
+                    title={alt} 
+                />
+                <div style={styles.playIconOverlay}>
+                    <PlayIcon color="white" width={48} height={48} />
+                </div>
+            </div>
+        );
+    }
+    return <img src={src} alt={alt} style={style} loading="lazy" onClick={onClick} />;
+};
+
 export const HomeScreen: React.FC<HomeScreenProps> = ({
     user,
     progress,
@@ -38,7 +79,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     const [videoModalSrc, setVideoModalSrc] = useState('');
 
     const openVideoModal = (src: string) => {
-        soundService.playClick();
         setVideoModalSrc(src);
         setIsVideoModalOpen(true);
     };
@@ -46,83 +86,130 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     const isPro = hasProAccess(entitlements);
     const hasCompletedCheckup = !!progress?.checkupProfile;
 
-    const allModules = MODULES;
-    const unlockedModules = allModules.filter(m => {
-        if (m.prerequisites.length === 0) return true;
-        return m.prerequisites.every(p => progress?.completedExerciseIds.includes(p));
-    });
-
-    const checkupModule = allModules.find(m => m.id === 'm6');
+    const handleChatTrainerClick = () => {
+        if (isPro) {
+            onStartChatTrainer();
+        } else {
+            soundService.playClick();
+            onNavigateToPaywall();
+        }
+    };
 
     return (
-        <div style={styles.container} className="home-screen-container">
-            <div style={{...styles.welcomeContainer, animation: 'fadeInUp 0.5s ease-out both'}}>
-                <ProgressOverview user={user} progress={progress} />
-            </div>
+        <div style={styles.container}>
+             <style>{`
+                @keyframes bounce {
+                  0%, 20%, 50%, 80%, 100% {
+                    transform: translateY(0);
+                  }
+                  40% {
+                    transform: translateY(-10px);
+                  }
+                  60% {
+                    transform: translateY(-5px);
+                  }
+                }
+                .intro-video-container:hover {
+                    transform: scale(1.05);
+                }
+                .intro-video-container:hover .intro-play-icon-overlay {
+                    opacity: 1;
+                }
+              `}</style>
+            <ProgressOverview user={user} progress={progress} />
 
-            <div style={styles.introSection}>
-                <div style={styles.introImageContainer} onClick={() => openVideoModal(assets.homeScreenHeaderVideo)}>
-                    <img src={assets.ivanoCincinnatoImage} alt="Dr. Ivano Cincinnato" style={styles.introImage} />
-                    <div style={styles.playOverlay}><PlayIcon color="white" width={32} height={32}/></div>
+            <section style={styles.introSection}>
+                <div style={styles.introVideoContainer} className="intro-video-container" onClick={() => openVideoModal(assets.homeScreenHeaderVideo)}>
+                    <img src={assets.ivanoCincinnatoImage} alt="Introduzione alla CES" style={styles.introImage} />
+                    <div style={styles.introPlayIconOverlay} className="intro-play-icon-overlay">
+                        <PlayIcon color="white" width={48} height={48} />
+                    </div>
                 </div>
                 <h2 style={styles.introTitle}>Inizia ora il tuo allenamento!</h2>
-                <ArrowDownIcon style={styles.arrowDown} />
-            </div>
+                <ArrowDownIcon style={styles.introArrow} />
+            </section>
 
-            <div style={styles.mainGrid}>
-                {/* Daily Challenge */}
-                <div style={{...styles.highlightCard, ...styles.dailyChallengeCard}} onClick={() => onStartDailyChallenge(dailyChallenge)}>
-                    <div style={styles.highlightContent}>
-                        <h3 style={styles.highlightTitle}><FlameIcon/> Sfida del Giorno</h3>
-                        <p style={styles.highlightDescription}>{dailyChallenge.title}</p>
+            <section style={styles.cardsGrid}>
+                {/* Daily Challenge Card */}
+                <div style={{...styles.card, ...styles.dailyChallengeCard}} onClick={() => onStartDailyChallenge(dailyChallenge)}>
+                    <MediaDisplay src={assets.dailyChallengeMedia} alt="Sfida del Giorno" style={styles.cardMedia} onClick={() => openVideoModal(assets.dailyChallengeMedia)} />
+                    <div style={styles.cardContent}>
+                        <h3 style={styles.cardTitle}><FlameIcon style={{color: COLORS.error}}/> Sfida del Giorno</h3>
+                        <p style={styles.cardDescription}>{dailyChallenge.title}</p>
                     </div>
-                    <img src={assets.dailyChallengeHeaderImage} style={styles.highlightImage} alt="Sfida del Giorno"/>
                 </div>
 
-                {/* Chat Trainer */}
-                <div style={{...styles.highlightCard, ...styles.chatTrainerCard}} onClick={() => isPro ? onStartChatTrainer() : onNavigateToPaywall()}>
-                    {!isPro && <div style={styles.proBadge}><CrownIcon/> PRO</div>}
-                    <div style={styles.highlightContent}>
-                        <h3 style={styles.highlightTitle}><SendIcon/> Chat Strategica (AI Trainer)</h3>
-                        <p style={styles.highlightDescription}>Genera risposte strategiche a email e messaggi.</p>
+                {/* Checkup Card */}
+                {!hasCompletedCheckup && (
+                    <div style={{...styles.card, ...styles.checkupCard}} onClick={onStartCheckup}>
+                        <MediaDisplay src={assets.checkupMedia} alt="Valuta il tuo livello" style={styles.cardMedia} onClick={() => openVideoModal(assets.checkupMedia)} />
+                        <div style={styles.cardContent}>
+                            <h3 style={styles.cardTitle}><TargetIcon/> Valuta il tuo Livello</h3>
+                            <p style={styles.cardDescription}>Inizia con un check-up per scoprire il tuo profilo di comunicatore.</p>
+                        </div>
                     </div>
-                     <img src={assets.chatTrainerCardImage} style={styles.highlightImage} alt="Chat Strategica"/>
+                )}
+
+                 {/* Chat Trainer Card */}
+                <div style={{...styles.card, ...styles.chatTrainerCard}} onClick={handleChatTrainerClick}>
+                     {!isPro && <div style={styles.proBadge}><CrownIcon/> PRO</div>}
+                    <MediaDisplay src={assets.chatTrainerCardImage} alt="Chat Strategica" style={styles.cardMedia} />
+                    <div style={styles.cardContent}>
+                        <h3 style={styles.cardTitle}><SendIcon/> Chat Strategica (AI Trainer)</h3>
+                        <p style={styles.cardDescription}>Usa l'AI per generare risposte strategiche a email e messaggi.</p>
+                    </div>
                 </div>
-            </div>
+            </section>
             
-             <section style={styles.modulesSection}>
-                <h2 style={styles.sectionTitle}>Il Tuo Percorso del Comunicatore</h2>
-                <div style={styles.pathContainer}>
-                    {allModules.filter(m => !m.isCustom && m.id !== 'm7').map((module, index) => {
-                        const isUnlocked = unlockedModules.some(unlocked => unlocked.id === module.id);
-                        const isModulePro = module.isPro && !isPro;
-                        const isLocked = !isUnlocked || isModulePro;
-                        const progressCount = module.exercises.length > 0 ? `${module.exercises.filter(e => progress?.completedExerciseIds.includes(e.id)).length} / ${module.exercises.length}` : '';
-                        
-                        return (
-                             <div key={module.id} style={{...styles.moduleCard, animation: `fadeInUp 0.5s ${index * 0.1}s ease-out both`}}>
-                                <div style={{...styles.moduleContent, ...(isLocked ? styles.moduleLocked : {})}} onClick={() => !isLocked ? onSelectModule(module) : (isModulePro ? onNavigateToPaywall() : {})}>
-                                    {isLocked && (
-                                        <div style={styles.lockIcon}>
-                                            {isModulePro ? <CrownIcon width={24} height={24}/> : <LockIcon width={24} height={24}/>}
-                                        </div>
-                                    )}
-                                    <div style={{...styles.moduleIcon, backgroundColor: isLocked ? COLORS.divider : `${COLORS.secondary}20`, color: isLocked ? COLORS.textSecondary : COLORS.secondary}}><module.icon/></div>
-                                    <div>
-                                        <div style={styles.moduleTitleContainer}>
-                                            <h3 style={styles.moduleTitle}>{module.title}</h3>
-                                            {progressCount && isUnlocked && <span style={styles.progressCount}>{progressCount}</span>}
-                                        </div>
-                                        <p style={styles.moduleDescription}>{module.description}</p>
+            {progress && progress.completedExerciseIds.length > 0 && (
+                <ProgressAnalytics userProgress={progress} onNavigateToReport={onNavigateToCompetenceReport} onSelectModule={onSelectModule} />
+            )}
+
+            <section style={styles.modulesSection}>
+                <h2 style={styles.sectionTitle}>Moduli di Allenamento <ArrowDownIcon/></h2>
+                <div style={styles.modulesGrid}>
+                    {MODULES.map(module => {
+                        if (module.id === 'm6') { // Special card for Custom Training
+                            const isLocked = module.isPro && !isPro;
+                            const handleCustomTrainingClick = () => {
+                                if (isLocked) {
+                                    soundService.playClick();
+                                    onNavigateToPaywall();
+                                } else {
+                                    onSelectModule(module);
+                                }
+                            };
+                            return (
+                                <div key={module.id} style={{...styles.moduleCard, ...styles.customTrainingCard}} onClick={handleCustomTrainingClick}>
+                                    {isLocked && <div style={{...styles.proBadge, zIndex: 4}}><CrownIcon/> PRO</div>}
+                                    <video src={assets.allenamentoPersonalizzatoVideo} style={styles.customTrainingVideoBg} autoPlay loop muted playsInline />
+                                    <div style={{...styles.customTrainingOverlay, ...(isLocked ? {backgroundColor: 'rgba(28, 62, 94, 0.8)'} : {})}} />
+                                    <div style={styles.customTrainingContent}>
+                                        <div style={styles.moduleCardIcon}><module.icon color="white"/></div>
+                                        <h3 style={{...styles.moduleCardTitle, color: 'white'}}>{module.title}</h3>
+                                        <p style={{...styles.moduleCardDescription, color: '#eee'}}>{module.description}</p>
                                     </div>
-                                    {isUnlocked && (
-                                        <div style={styles.moduleFooter}>
-                                             <div style={styles.progressBar}>
-                                                <div style={{width: `${(module.exercises.filter(e => progress?.completedExerciseIds.includes(e.id)).length / module.exercises.length) * 100}%`, height: '100%', backgroundColor: COLORS.secondary, borderRadius: '2px'}}/>
-                                            </div>
-                                            <button style={styles.improveButton}>Migliora adesso!</button>
-                                        </div>
-                                    )}
+                                </div>
+                            )
+                        }
+
+                        const isLocked = module.isPro && !isPro;
+                        const handleModuleClick = () => {
+                            if (isLocked) {
+                                soundService.playClick();
+                                onNavigateToPaywall();
+                            } else {
+                                onSelectModule(module);
+                            }
+                        };
+                        return (
+                            <div key={module.id} style={{...styles.moduleCard, ...(isLocked ? styles.moduleCardLocked : {})}} onClick={handleModuleClick}>
+                                {isLocked && <div style={styles.lockOverlay}><LockIcon color="white"/></div>}
+                                <div style={styles.moduleCardIcon}><module.icon/></div>
+                                <h3 style={styles.moduleCardTitle}>{module.title}</h3>
+                                <p style={styles.moduleCardDescription}>{module.description}</p>
+                                <div style={styles.moduleCardMediaContainer}>
+                                    <MediaPreview src={module.headerImage} alt={module.title} />
                                 </div>
                             </div>
                         )
@@ -130,29 +217,15 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 </div>
             </section>
             
-            {checkupModule && (
-                <div style={{...styles.highlightCard, ...styles.customModuleCard}} onClick={() => onSelectModule(checkupModule)}>
-                    <video src={checkupModule.headerImage} style={styles.customModuleVideo} autoPlay loop muted playsInline/>
-                    <div style={styles.highlightContent}>
-                        <h3 style={styles.highlightTitle}>{hasCompletedCheckup ? "Rifai il Check-up Strategico" : "Allenamento Personalizzato"}</h3>
-                        <p style={styles.highlightDescription}>{hasCompletedCheckup ? "Misura i tuoi progressi e aggiorna il tuo profilo." : "Crea un esercizio su misura per le tue sfide."}</p>
+            {hasCompletedCheckup && (
+                 <div style={{...styles.card, ...styles.checkupCard, marginTop: '48px', textAlign: 'center'}} onClick={onStartCheckup}>
+                    <div style={styles.cardContent}>
+                        <h3 style={styles.cardTitle}><TargetIcon/> Rifai il Check-up Strategico</h3>
+                        <p style={styles.cardDescription}>Misura i tuoi progressi e aggiorna il tuo profilo alla luce dei nuovi allenamenti.</p>
                     </div>
                 </div>
-            )}
-            
-            {progress && (
-                <ProgressAnalytics userProgress={progress} onNavigateToReport={onNavigateToCompetenceReport} onSelectModule={onSelectModule} />
             )}
 
-            {hasCompletedCheckup && (
-                <div style={{...styles.highlightCard, ...styles.checkupCard}} onClick={onStartCheckup}>
-                    <div style={styles.highlightContent}>
-                        <h3 style={styles.highlightTitle}><TargetIcon/> Rifai il Check-up Strategico</h3>
-                        <p style={styles.highlightDescription}>Misura i tuoi progressi e aggiorna il tuo profilo alla luce dei nuovi allenamenti.</p>
-                    </div>
-                </div>
-            )}
-            
             <VideoPlayerModal 
                 isOpen={isVideoModalOpen}
                 onClose={() => setIsVideoModalOpen(false)}
@@ -163,100 +236,236 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 };
 
 const styles: { [key: string]: React.CSSProperties } = {
-    container: { maxWidth: '1200px', margin: '0 auto', padding: '24px', },
-    welcomeContainer: { marginBottom: '32px' },
-    introSection: { textAlign: 'center', marginBottom: '48px', },
-    introImageContainer: {
-        position: 'relative', width: '130px', height: '130px', margin: '0 auto 16px',
-        cursor: 'pointer', borderRadius: '50%', boxShadow: '0 8px 25px rgba(0,0,0,0.1)',
+    container: {
+        maxWidth: '1200px',
+        margin: '0 auto',
+        padding: '24px',
     },
-    introImage: { width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' },
-    playOverlay: {
-        position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-        backgroundColor: 'rgba(0,0,0,0.3)', borderRadius: '50%',
-        display: 'flex', justifyContent: 'center', alignItems: 'center',
-        opacity: 0, transition: 'opacity 0.2s',
+    introSection: {
+        textAlign: 'center',
+        margin: '40px 0',
+        animation: 'fadeInUp 0.5s ease-out',
     },
-    introTitle: { fontSize: '20px', fontWeight: 'bold', color: COLORS.primary, margin: '0 0 8px 0' },
-    arrowDown: { color: COLORS.secondary, animation: 'bounce 2s infinite' },
-    mainGrid: {
-        display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-        gap: '24px', marginBottom: '48px',
+    introVideoContainer: {
+        position: 'relative',
+        width: '180px',
+        height: '180px',
+        margin: '0 auto 16px',
+        cursor: 'pointer',
+        borderRadius: '50%',
+        overflow: 'hidden',
+        boxShadow: '0 8px 25px rgba(0,0,0,0.15)',
+        transition: 'transform 0.3s ease',
     },
-    highlightCard: {
-        backgroundColor: COLORS.card, borderRadius: '16px', overflow: 'hidden',
-        boxShadow: '0 8px 25px rgba(0,0,0,0.08)', cursor: 'pointer',
+    introImage: {
+        width: '100%',
+        height: '100%',
+        objectFit: 'cover',
+        borderRadius: '50%',
+    },
+    introPlayIconOverlay: {
+        position: 'absolute',
+        top: 0, left: 0, right: 0, bottom: 0,
+        backgroundColor: 'rgba(28, 62, 94, 0.5)',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        opacity: 0,
+        transition: 'opacity 0.3s ease',
+    },
+    introTitle: {
+        fontSize: '24px',
+        fontWeight: 'bold',
+        color: COLORS.primary,
+        margin: '0 0 8px 0',
+    },
+    introArrow: {
+        color: COLORS.secondary,
+        width: '32px',
+        height: '32px',
+        animation: 'bounce 2s infinite',
+    },
+    cardsGrid: {
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+        gap: '24px',
+        marginBottom: '48px',
+    },
+    card: {
+        backgroundColor: COLORS.card,
+        borderRadius: '16px',
+        overflow: 'hidden',
+        boxShadow: '0 8px 25px rgba(0,0,0,0.08)',
+        cursor: 'pointer',
         transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-        display: 'flex', alignItems: 'center', gap: '20px', padding: '24px',
+        display: 'flex',
+        flexDirection: 'column',
         position: 'relative'
     },
     dailyChallengeCard: { border: `2px solid ${COLORS.error}` },
-    chatTrainerCard: { border: `2px solid ${COLORS.warning}` },
     checkupCard: { border: `2px solid ${COLORS.secondary}` },
-    highlightContent: { flex: 1 },
-    highlightTitle: {
-        fontSize: '18px', fontWeight: 'bold', color: COLORS.textPrimary,
-        margin: '0 0 8px 0', display: 'flex', alignItems: 'center', gap: '8px'
-    },
-    highlightDescription: { fontSize: '15px', color: COLORS.textSecondary, lineHeight: 1.6, margin: 0, },
-    highlightImage: { width: '80px', height: '80px', objectFit: 'cover', borderRadius: '12px' },
-    proBadge: {
-        position: 'absolute', top: '12px', right: '12px',
-        backgroundColor: 'rgba(255,193,7, 0.9)', color: COLORS.textPrimary,
-        padding: '4px 10px', borderRadius: '8px', fontSize: '12px',
-        fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px', zIndex: 2,
-    },
-    modulesSection: { marginTop: '48px' },
-    sectionTitle: {
-        fontSize: '24px', fontWeight: 'bold', color: COLORS.primary,
-        marginBottom: '24px', borderBottom: `3px solid ${COLORS.secondary}`,
-        paddingBottom: '8px',
-    },
-    pathContainer: {
-        display: 'flex', flexDirection: 'column', gap: '16px',
-    },
-    moduleCard: { position: 'relative' },
-    moduleContent: {
-        backgroundColor: COLORS.card, padding: '20px', borderRadius: '12px',
-        border: `1px solid ${COLORS.divider}`, display: 'flex', gap: '20px',
-        alignItems: 'center', cursor: 'pointer', transition: 'all 0.2s ease',
-    },
-    moduleLocked: { filter: 'grayscale(1)', opacity: 0.7, cursor: 'not-allowed' },
-    lockIcon: {
-        position: 'absolute', top: '20px', right: '20px', color: 'white',
-        backgroundColor: 'rgba(0,0,0,0.5)', padding: '8px', borderRadius: '50%'
-    },
-    moduleIcon: {
-        width: '48px', height: '48px', flexShrink: 0,
-        display: 'flex', justifyContent: 'center', alignItems: 'center',
-        borderRadius: '12px',
-    },
-    moduleTitleContainer: { display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '4px' },
-    moduleTitle: { fontSize: '18px', fontWeight: 'bold', color: COLORS.textPrimary, margin: 0 },
-    progressCount: {
-        fontSize: '14px', fontWeight: 'bold', color: COLORS.secondary,
-        background: `${COLORS.secondary}20`, padding: '2px 8px', borderRadius: '6px'
-    },
-    moduleDescription: { fontSize: '14px', color: COLORS.textSecondary, lineHeight: 1.5, margin: 0 },
-    moduleFooter: { marginTop: '12px', display: 'flex', alignItems: 'center', gap: '12px' },
-    progressBar: { height: '6px', flex: 1, backgroundColor: COLORS.divider, borderRadius: '3px' },
-    improveButton: {
-        padding: '8px 16px', fontSize: '14px', fontWeight: 'bold',
-        border: 'none', backgroundColor: COLORS.secondary, color: 'white',
-        borderRadius: '8px', cursor: 'pointer', whiteSpace: 'nowrap',
-    },
-    customModuleCard: {
-      flexDirection: 'column',
-      alignItems: 'stretch',
-      padding: 0,
-      height: '220px',
-      marginBottom: '24px',
-    },
-    customModuleVideo: {
-        position: 'absolute',
-        top: 0, left: 0, width: '100%', height: '100%',
+    chatTrainerCard: { border: `2px solid ${COLORS.warning}` },
+    cardMedia: {
+        width: '100%',
+        height: '180px',
         objectFit: 'cover',
-        borderRadius: '16px',
-        zIndex: 0,
+    },
+    cardContent: {
+        padding: '20px',
+        flex: 1
+    },
+    cardTitle: {
+        fontSize: '18px',
+        fontWeight: 'bold',
+        color: COLORS.textPrimary,
+        margin: '0 0 8px 0',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px'
+    },
+    cardDescription: {
+        fontSize: '15px',
+        color: COLORS.textSecondary,
+        lineHeight: 1.6,
+        margin: 0,
+    },
+    proBadge: {
+        position: 'absolute',
+        top: '12px',
+        right: '12px',
+        backgroundColor: 'rgba(255,193,7, 0.9)',
+        color: COLORS.textPrimary,
+        padding: '4px 10px',
+        borderRadius: '8px',
+        fontSize: '12px',
+        fontWeight: 'bold',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '4px',
+        zIndex: 2,
+    },
+    playIconOverlay: {
+        position: 'absolute',
+        top: 0, left: 0, right: 0, bottom: 0,
+        backgroundColor: 'rgba(0,0,0,0.3)',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    modulesSection: {
+        marginTop: '48px',
+    },
+    sectionTitle: {
+        fontSize: '24px',
+        fontWeight: 'bold',
+        color: COLORS.primary,
+        marginBottom: '24px',
+        borderBottom: `3px solid ${COLORS.secondary}`,
+        paddingBottom: '8px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px'
+    },
+    modulesGrid: {
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+        gap: '24px',
+    },
+    moduleCard: {
+        backgroundColor: COLORS.card,
+        padding: '24px',
+        borderRadius: '12px',
+        border: `1px solid ${COLORS.divider}`,
+        textAlign: 'center',
+        cursor: 'pointer',
+        transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+        position: 'relative',
+        display: 'flex',
+        flexDirection: 'column'
+    },
+    moduleCardLocked: {
+        backgroundColor: COLORS.cardDark,
+    },
+    lockOverlay: {
+        position: 'absolute',
+        top: 0, left: 0, right: 0, bottom: 0,
+        backgroundColor: 'rgba(28, 62, 94, 0.7)',
+        color: 'white',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderRadius: '12px',
+        zIndex: 2
+    },
+    moduleCardIcon: {
+        width: '48px',
+        height: '48px',
+        margin: '0 auto 16px',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderRadius: '50%',
+        backgroundColor: COLORS.secondary + '20',
+        color: COLORS.secondary,
+        flexShrink: 0
+    },
+    moduleCardTitle: {
+        fontSize: '18px',
+        fontWeight: 'bold',
+        color: COLORS.textPrimary,
+        margin: '0 0 8px 0',
+    },
+    moduleCardDescription: {
+        fontSize: '14px',
+        color: COLORS.textSecondary,
+        lineHeight: 1.5,
+        margin: 0,
+        flex: '1 1 auto'
+    },
+    moduleCardMediaContainer: {
+        marginTop: '16px',
+        borderRadius: '8px',
+        overflow: 'hidden',
+        height: '120px',
+        backgroundColor: COLORS.cardDark
+    },
+    moduleCardMedia: {
+        width: '100%',
+        height: '100%',
+        objectFit: 'cover',
+    },
+    customTrainingCard: {
+        position: 'relative',
+        overflow: 'hidden',
+        padding: '24px',
+        borderRadius: '12px',
+        cursor: 'pointer',
+        transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+        minHeight: '280px',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        alignItems: 'center',
+        textAlign: 'center',
+    },
+    customTrainingVideoBg: {
+        position: 'absolute',
+        top: '50%',
+        left: '50%',
+        width: '100%',
+        height: '100%',
+        objectFit: 'cover',
+        transform: 'translate(-50%, -50%)',
+        zIndex: 1,
+    },
+    customTrainingOverlay: {
+        position: 'absolute',
+        top: 0, left: 0, right: 0, bottom: 0,
+        backgroundColor: 'rgba(28, 62, 94, 0.6)',
+        zIndex: 2,
+    },
+    customTrainingContent: {
+        position: 'relative',
+        zIndex: 3,
     }
 };

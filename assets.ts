@@ -34,7 +34,7 @@ export const gestireConversazioniDifficiliHeaderVideo = 'https://www.centroclini
 export const dareFeedbackEfficaceHeaderVideo = 'https://www.centroclinicaformazionestrategica.it/CES-APP/images/dare-feedback-efficace.mp4';
 export const domandeStrategicheHeaderVideo = 'https://www.centroclinicaformazionestrategica.it/CES-APP/images/domande-strategiche.MP4';
 export const ascoltoStrategicoHeaderVideo = 'https://www.centroclinicaformazionestrategica.it/CES-APP/images/ascolto-strategico.MP4';
-export const allenamentoPersonalizzatoVideo = 'https://www.centroclinicaformazionestrategica.it/CES-APP/images/allenamento-personalizzato.MP4';
+export const allenamentoPersonalizzatoVideo = 'https://www.centroclinicaformazionestrategica.it/CES-APP/images/allenamento-personalizzato_2.MP4';
 export const voceStrategicaHeaderVideo = 'https://www.centroclinicaformazionestrategica.it/CES-APP/images/voce-strategica.MP4';
 export const chatTrainerHeaderVideo = 'https://www.centroclinicaformazionestrategica.it/CES-APP/images/chat-strategica.MP4';
 

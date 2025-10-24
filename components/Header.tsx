@@ -1,22 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { UserProfile, Entitlements, Module } from '../types';
+// FIX: Imported the missing UserProgress type.
+import { UserProfile, Entitlements, Module, UserProgress } from '../types';
 import { COLORS } from '../constants';
-import {
-  CrownIcon,
-  LogOutIcon,
-  AdminIcon,
-  HomeIcon,
-  SettingsIcon,
-  SpeakerIcon,
-  SpeakerOffIcon,
-  FontSizeIcon,
-  ContrastIcon,
-  NotificationIcon,
-  NotificationOffIcon
-} from './Icons';
 import { hasProAccess } from '../services/monetizationService';
+import { Logo } from './Logo';
+import { HomeIcon, CrownIcon, SettingsIcon, LogOutIcon, AdminIcon, SpeakerIcon, SpeakerOffIcon, FontSizeIcon, ContrastIcon, NotificationIcon, NotificationOffIcon } from './Icons';
 import { soundService } from '../services/soundService';
-import { mainLogoUrl } from '../assets';
+import { useToast } from '../hooks/useToast';
+import { gamificationService } from '../services/gamificationService';
 
 interface HeaderProps {
   user: UserProfile | null;
@@ -24,9 +15,11 @@ interface HeaderProps {
   onNavigateToHome: () => void;
   onNavigateToPaywall: () => void;
   onNavigateToAdmin: () => void;
+  onNavigateToAchievements: () => void;
   entitlements: Entitlements | null;
   currentModule?: Module;
-  onNavigateToModule?: () => void;
+  onNavigateToModule: () => void;
+  userProgress: UserProgress | undefined;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -35,191 +28,293 @@ export const Header: React.FC<HeaderProps> = ({
   onNavigateToHome,
   onNavigateToPaywall,
   onNavigateToAdmin,
+  onNavigateToAchievements,
   entitlements,
   currentModule,
   onNavigateToModule,
+  userProgress
 }) => {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isSoundEnabled, setIsSoundEnabled] = useState(soundService.isEnabled);
-  const [textSize, setTextSize] = useState('text-md');
-  const [isHighContrast, setIsHighContrast] = useState(false);
-  
-  const menuRef = useRef<HTMLDivElement>(null);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isSoundEnabled, setIsSoundEnabled] = useState(true);
+  const [highContrast, setHighContrast] = useState(false);
+  const [textSize, setTextSize] = useState('md');
+  const [pushNotificationsEnabled, setPushNotificationsEnabled] = useState(Notification.permission === 'granted');
+
+  const settingsRef = useRef<HTMLDivElement>(null);
+  const { addToast } = useToast();
+
   const isPro = hasProAccess(entitlements);
 
+  // Load settings from localStorage on component mount
+  useEffect(() => {
+    const savedSound = localStorage.getItem('soundEnabled');
+    const soundState = savedSound !== null ? JSON.parse(savedSound) : true;
+    setIsSoundEnabled(soundState);
+    soundService.toggleSound(soundState);
+
+    const savedContrast = localStorage.getItem('highContrast');
+    const contrastState = savedContrast !== null ? JSON.parse(savedContrast) : false;
+    setHighContrast(contrastState);
+    document.body.classList.toggle('high-contrast', contrastState);
+
+    const savedTextSize = localStorage.getItem('textSize') || 'md';
+    setTextSize(savedTextSize);
+    document.documentElement.className = `text-${savedTextSize}`;
+
+    if (Notification.permission === 'granted') {
+      setPushNotificationsEnabled(true);
+    }
+  }, []);
+
+  // Click outside handler for settings dropdown
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setIsMenuOpen(false);
+      if (settingsRef.current && !settingsRef.current.contains(event.target as Node)) {
+        setIsSettingsOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  useEffect(() => {
-    document.body.classList.remove('text-sm', 'text-md', 'text-lg');
-    document.body.classList.add(textSize);
-  }, [textSize]);
-
-  useEffect(() => {
-    if (isHighContrast) {
-      document.body.classList.add('high-contrast');
-    } else {
-      document.body.classList.remove('high-contrast');
-    }
-  }, [isHighContrast]);
+  if (!user) return null;
+  
+  // FIX: This calculation was causing a crash because `gamificationService.LEVELS` does not exist
+  // and the result `levelProgress` was not used in the component's JSX.
+  // const xpForNextLevel = userProgress ? (gamificationService.LEVELS[userProgress.level] || Infinity) : Infinity;
+  // const xpForCurrentLevel = userProgress ? (gamificationService.LEVELS[userProgress.level - 1] || 0) : 0;
+  // const levelProgress = userProgress ? Math.max(0, ((userProgress.xp - xpForCurrentLevel) / (xpForNextLevel - xpForCurrentLevel)) * 100) : 0;
 
   const handleToggleSound = () => {
-    soundService.toggleSound();
-    setIsSoundEnabled(soundService.isEnabled);
+    const newState = !isSoundEnabled;
+    setIsSoundEnabled(newState);
+    soundService.toggleSound(newState);
+    localStorage.setItem('soundEnabled', JSON.stringify(newState));
+    addToast(newState ? 'Audio attivato' : 'Audio disattivato', 'info');
   };
 
-  const handleNav = (action: () => void) => {
-    soundService.playClick();
-    action();
-    setIsMenuOpen(false);
+  const handleToggleHighContrast = () => {
+    const newState = !highContrast;
+    setHighContrast(newState);
+    document.body.classList.toggle('high-contrast', newState);
+    localStorage.setItem('highContrast', JSON.stringify(newState));
   };
+  
+  const handleChangeTextSize = (size: 'sm' | 'md' | 'lg') => {
+    setTextSize(size);
+    document.documentElement.className = `text-${size}`;
+    localStorage.setItem('textSize', size);
+  };
+
+  const handlePushNotificationToggle = async () => {
+    if (Notification.permission === 'granted') {
+        // We can't "un-grant" permission, so we just toggle our internal state
+        const newState = !pushNotificationsEnabled;
+        setPushNotificationsEnabled(newState);
+        addToast(newState ? 'Notifiche Push Abilitate' : 'Notifiche Push Disabilitate (dalle impostazioni app)', 'info');
+    } else if (Notification.permission === 'denied') {
+        addToast("Permesso negato. Abilita le notifiche dalle impostazioni del browser.", 'error');
+    } else {
+        const permission = await Notification.requestPermission();
+        if (permission === 'granted') {
+            setPushNotificationsEnabled(true);
+            addToast('Notifiche Push Abilitate!', 'success');
+        } else {
+            addToast("Permesso per le notifiche non concesso.", 'info');
+        }
+    }
+  };
+  
+  const handleSettingsClick = () => {
+    soundService.playClick();
+    setIsSettingsOpen(!isSettingsOpen);
+  }
 
   return (
     <header style={styles.header} className="main-header">
-      <div style={styles.left}>
-        <div style={styles.logoContainer} onClick={() => handleNav(onNavigateToHome)}>
-          <img src={mainLogoUrl} alt="CES Coach Logo" style={{ height: '40px', width: 'auto' }} />
-        </div>
-        <div style={styles.navContainer}>
-          <button onClick={() => handleNav(onNavigateToHome)} style={styles.navLink}>
-            <HomeIcon style={{ color: COLORS.secondary }} />
-          </button>
-           {isPro && (
-             <div style={styles.proBadgeHeader}>
-               <CrownIcon width={16} height={16} />
-               <span>PRO</span>
-             </div>
-           )}
-        </div>
-      </div>
-      
-       {currentModule && onNavigateToModule && (
-         <div style={styles.moduleBreadcrumb} onClick={() => handleNav(onNavigateToModule)}>
-            <currentModule.icon style={{ width: 20, height: 20 }}/>
-            <span>{currentModule.title}</span>
-         </div>
-       )}
-
-      <div style={styles.right} ref={menuRef}>
-        <button onClick={() => setIsMenuOpen(!isMenuOpen)} style={styles.iconButton} title="Impostazioni">
-          <SettingsIcon />
+       <style>{`
+        .header-breadcrumb:hover { background-color: ${COLORS.cardDark}; }
+        .header-icon-button:hover { background-color: ${COLORS.cardDark}; }
+        .header-pro-button:hover { transform: translateY(-2px); }
+        .header-dropdown-item:hover { background-color: ${COLORS.cardDark}; }
+      `}</style>
+      <div style={styles.leftSection} className="header-left">
+        <Logo style={styles.logo} onClick={onNavigateToHome}/>
+        <button style={styles.iconButton} className="header-icon-button" onClick={onNavigateToHome} title="Home">
+            <HomeIcon style={{color: COLORS.secondary}} />
         </button>
-        {isMenuOpen && (
-          <div style={styles.dropdownMenu}>
-            {user?.isAdmin && <button onClick={() => handleNav(onNavigateToAdmin)} style={styles.menuItem}><AdminIcon /> Pannello Admin</button>}
-            
-            {isPro ? (
-                 <div style={{...styles.menuItem, cursor: 'default', color: COLORS.textSecondary}}>
-                    <CrownIcon />
-                    <span>Versione PRO Attiva</span>
-                </div>
-            ) : (
-                <button onClick={() => handleNav(onNavigateToPaywall)} style={styles.menuItem}><CrownIcon /> Attiva PRO</button>
-            )}
-
-            <div style={styles.menuDivider} />
-
-            <button onClick={handleToggleSound} style={styles.menuItem}>
-              {isSoundEnabled ? <SpeakerIcon /> : <SpeakerOffIcon />}
-              {isSoundEnabled ? 'Disattiva Audio' : 'Attiva Audio'}
-            </button>
-            
-            <div style={styles.menuItem}>
-              <FontSizeIcon />
-              <div style={styles.textSizeGroup}>
-                  <button style={{...styles.textSizeButton, ...(textSize === 'text-sm' ? styles.textSizeButtonActive : {})}} onClick={() => setTextSize('text-sm')}>A</button>
-                  <button style={{...styles.textSizeButton, ...(textSize === 'text-md' ? styles.textSizeButtonActive : {})}} onClick={() => setTextSize('text-md')}>A</button>
-                  <button style={{...styles.textSizeButton, ...(textSize === 'text-lg' ? styles.textSizeButtonActive : {})}} onClick={() => setTextSize('text-lg')}>A</button>
-              </div>
+        {isPro && (
+            <div style={styles.proBadge}>
+                <CrownIcon width={18} height={18}/>
+                <span>PRO</span>
             </div>
+        )}
+      </div>
 
-            <button onClick={() => setIsHighContrast(!isHighContrast)} style={styles.menuItem}>
-              <ContrastIcon />
-              {isHighContrast ? 'Disattiva Contrasto' : 'Alto Contrasto'}
+       {currentModule && (
+        <div style={styles.moduleBreadcrumb} className="header-module-breadcrumb" onClick={onNavigateToModule}>
+            <span>{currentModule.title}</span>
+        </div>
+      )}
+
+      <div style={styles.rightSection} className="header-right">
+        <div style={styles.settingsContainer} ref={settingsRef}>
+            <button style={styles.iconButton} className="header-icon-button" onClick={handleSettingsClick} title="Impostazioni">
+                <SettingsIcon />
             </button>
 
-            <div style={styles.menuDivider} />
-            <button onClick={() => handleNav(onLogout)} style={styles.menuItem}><LogOutIcon /> Logout</button>
-          </div>
-        )}
+          {isSettingsOpen && (
+            <div style={styles.settingsDropdown}>
+              <div style={styles.dropdownHeader}>
+                  <div style={styles.avatar}>{user.firstName.charAt(0)}{user.lastName.charAt(0)}</div>
+                  <div>
+                    <p style={styles.dropdownUserName}>{user.firstName} {user.lastName}</p>
+                    <p style={styles.dropdownUserEmail}>{user.email}</p>
+                  </div>
+              </div>
+
+              {user.isAdmin && (
+                <button style={styles.dropdownItem} className="header-dropdown-item" onClick={onNavigateToAdmin}>
+                    <AdminIcon /><span>Pannello Admin</span>
+                </button>
+              )}
+
+              {isPro ? (
+                 <div style={{...styles.dropdownItem, cursor: 'default'}}>
+                    <CrownIcon /><span>Versione PRO Attiva</span>
+                </div>
+              ) : (
+                <button style={styles.dropdownItem} className="header-dropdown-item" onClick={onNavigateToPaywall}>
+                    <CrownIcon /><span>Attiva PRO</span>
+                </button>
+              )}
+
+              <div style={styles.dropdownSeparator}>Impostazioni</div>
+
+              <button style={styles.dropdownItem} className="header-dropdown-item" onClick={handleToggleSound}>
+                  {isSoundEnabled ? <SpeakerIcon /> : <SpeakerOffIcon />}
+                  <span>{isSoundEnabled ? 'Disattiva Audio' : 'Attiva Audio'}</span>
+              </button>
+
+               <button style={styles.dropdownItem} className="header-dropdown-item" onClick={handlePushNotificationToggle}>
+                  {pushNotificationsEnabled ? <NotificationIcon /> : <NotificationOffIcon />}
+                  <span>{pushNotificationsEnabled ? 'Notifiche On' : 'Notifiche Off'}</span>
+              </button>
+
+              <button style={styles.dropdownItem} className="header-dropdown-item" onClick={handleToggleHighContrast}>
+                  <ContrastIcon />
+                  <span>{highContrast ? 'Contrasto Normale' : 'Alto Contrasto'}</span>
+              </button>
+              
+              <div style={{...styles.dropdownItem, justifyContent: 'space-between'}}>
+                <div style={{display: 'flex', alignItems: 'center', gap: '12px'}}><FontSizeIcon /><span>Dim. Testo</span></div>
+                <div style={styles.textSizeGroup}>
+                    <button onClick={() => handleChangeTextSize('sm')} style={{...styles.textSizeButton, ...(textSize === 'sm' ? styles.textSizeButtonActive : {})}}>A</button>
+                    <button onClick={() => handleChangeTextSize('md')} style={{...styles.textSizeButton, ...(textSize === 'md' ? styles.textSizeButtonActive : {})}}>A</button>
+                    <button onClick={() => handleChangeTextSize('lg')} style={{...styles.textSizeButton, ...(textSize === 'lg' ? styles.textSizeButtonActive : {})}}>A</button>
+                </div>
+              </div>
+
+              <div style={styles.dropdownSeparator}></div>
+
+              <button style={{...styles.dropdownItem, color: COLORS.error}} className="header-dropdown-item" onClick={onLogout}>
+                <LogOutIcon />
+                <span>Logout</span>
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </header>
   );
 };
 
 const styles: { [key: string]: React.CSSProperties } = {
-  header: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: '12px 24px',
-    backgroundColor: COLORS.card,
-    borderBottom: `1px solid ${COLORS.divider}`,
-    height: '64px',
-    boxSizing: 'border-box',
-    position: 'sticky',
-    top: 0,
-    zIndex: 100,
-  },
-  left: { display: 'flex', alignItems: 'center', gap: '16px' },
-  logoContainer: { cursor: 'pointer', display: 'flex', alignItems: 'center' },
-  navContainer: { display: 'flex', alignItems: 'center', gap: '12px' },
-  navLink: {
-      background: 'none', border: 'none', cursor: 'pointer',
-      padding: '8px', borderRadius: '8px', display: 'flex',
-  },
-  proBadgeHeader: {
-    display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 8px',
-    fontSize: '12px', fontWeight: 'bold', backgroundColor: 'rgba(255, 193, 7, 0.2)',
-    color: '#A85100', borderRadius: '6px',
-  },
-  moduleBreadcrumb: {
-      display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer',
-      fontSize: '15px', fontWeight: 500, color: COLORS.textSecondary,
-      position: 'absolute', left: '50%', transform: 'translateX(-50%)',
-  },
-  right: { display: 'flex', alignItems: 'center', position: 'relative' },
-  iconButton: {
-      background: 'none', border: '1px solid transparent', color: COLORS.textSecondary,
-      padding: '8px', borderRadius: '8px', cursor: 'pointer',
-      display: 'flex', alignItems: 'center', justifyContent: 'center'
-  },
-  dropdownMenu: {
-      position: 'absolute',
-      top: '100%',
-      right: 0,
-      backgroundColor: COLORS.card,
+    header: {
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: '8px 24px',
+        backgroundColor: COLORS.card,
+        borderBottom: `1px solid ${COLORS.divider}`,
+        position: 'sticky',
+        top: 0,
+        zIndex: 100,
+        height: '64px',
+        boxSizing: 'border-box'
+    },
+    leftSection: { display: 'flex', alignItems: 'center', gap: '16px' },
+    logo: { height: '40px', cursor: 'pointer' },
+    proBadge: {
+        display: 'flex', alignItems: 'center', gap: '6px',
+        padding: '4px 10px', backgroundColor: '#FFFBEA',
+        border: '1px solid #F6E05E', borderRadius: '8px',
+        fontSize: '14px', fontWeight: 'bold', color: '#B45309'
+    },
+    moduleBreadcrumb: {
+      padding: '8px 16px',
       borderRadius: '8px',
-      boxShadow: '0 8px 30px rgba(0,0,0,0.1)',
+      backgroundColor: COLORS.card,
       border: `1px solid ${COLORS.divider}`,
-      width: '260px',
-      zIndex: 101,
-      padding: '8px',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '4px',
-  },
-  menuItem: {
-      display: 'flex', alignItems: 'center', gap: '12px',
-      padding: '10px 12px', borderRadius: '6px',
-      background: 'none', border: 'none', cursor: 'pointer',
-      textAlign: 'left', fontSize: '15px', color: COLORS.textPrimary,
-      width: '100%',
-  },
-  menuDivider: { height: '1px', backgroundColor: COLORS.divider, margin: '4px 8px' },
-  textSizeGroup: { display: 'flex', gap: '4px' },
-  textSizeButton: {
-      border: `1px solid ${COLORS.divider}`, borderRadius: '4px',
-      background: 'transparent', cursor: 'pointer',
-  },
-  textSizeButtonActive: {
-      background: COLORS.secondary, color: 'white', borderColor: COLORS.secondary,
-  }
+      fontSize: '14px',
+      fontWeight: 500,
+      color: COLORS.textPrimary,
+      cursor: 'pointer',
+      textAlign: 'center',
+      whiteSpace: 'nowrap',
+      overflow: 'hidden',
+      textOverflow: 'ellipsis',
+      maxWidth: '400px',
+      transition: 'background-color 0.2s',
+    },
+    rightSection: { display: 'flex', alignItems: 'center', gap: '16px' },
+    iconButton: {
+        background: 'transparent', border: 'none', color: COLORS.textSecondary,
+        cursor: 'pointer', padding: '8px', borderRadius: '50%',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        transition: 'background-color 0.2s',
+    },
+    settingsContainer: { position: 'relative' },
+    settingsDropdown: {
+        position: 'absolute', top: 'calc(100% + 8px)', right: 0,
+        backgroundColor: COLORS.card, borderRadius: '12px',
+        border: `1px solid ${COLORS.divider}`, boxShadow: '0 8px 30px rgba(0,0,0,0.1)',
+        width: '300px', overflow: 'hidden', zIndex: 101,
+        animation: 'fadeInUp 0.2s ease-out'
+    },
+    dropdownHeader: {
+        padding: '16px', borderBottom: `1px solid ${COLORS.divider}`,
+        display: 'flex', alignItems: 'center', gap: '12px'
+    },
+    avatar: {
+        width: '40px', height: '40px', borderRadius: '50%',
+        backgroundColor: COLORS.secondary, color: 'white',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontWeight: 'bold', fontSize: '16px', textTransform: 'uppercase',
+    },
+    dropdownUserName: { fontWeight: 'bold', margin: '0 0 4px 0', color: COLORS.textPrimary },
+    dropdownUserEmail: { fontSize: '13px', color: COLORS.textSecondary, margin: 0, wordBreak: 'break-all' },
+    dropdownItem: {
+        display: 'flex', alignItems: 'center', gap: '12px',
+        padding: '12px 16px', width: '100%', textAlign: 'left',
+        background: 'none', border: 'none', cursor: 'pointer',
+        fontSize: '15px', color: COLORS.textPrimary, transition: 'background-color 0.2s'
+    },
+    dropdownSeparator: {
+        height: '1px', backgroundColor: COLORS.divider, margin: '8px 0',
+        fontSize: '11px', color: COLORS.textSecondary, padding: '0 16px 4px',
+        fontWeight: 500, textTransform: 'uppercase'
+    },
+    textSizeGroup: {
+        display: 'flex',
+        border: `1px solid ${COLORS.divider}`,
+        borderRadius: '6px'
+    },
+    textSizeButton: {
+        background: 'none', border: 'none', padding: '6px 10px',
+        cursor: 'pointer', color: COLORS.textSecondary
+    },
+    textSizeButtonActive: {
+        backgroundColor: COLORS.secondary, color: 'white'
+    }
 };
