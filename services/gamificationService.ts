@@ -81,8 +81,8 @@ function calculateConsistency(progress: UserProgress): number {
     const history = progress.analysisHistory || {};
     if (Object.keys(history).length < 2) return 50; // Neutral score if not enough data
 
-    // FIX: Cast history items to AnalysisHistoryItem to access properties safely.
-    const timestamps = Object.values(history).map(h => new Date((h as AnalysisHistoryItem).timestamp).getTime());
+    // FIX: Removed unnecessary type cast.
+    const timestamps = Object.values(history).map(h => new Date(h.timestamp).getTime());
     timestamps.sort((a, b) => a - b);
 
     const dayInMs = 1000 * 60 * 60 * 24;
@@ -98,8 +98,8 @@ function calculateConsistency(progress: UserProgress): number {
 
 function calculateRecency(progress: UserProgress): number {
     const history = progress.analysisHistory || {};
-    // FIX: Cast history items to AnalysisHistoryItem to access properties safely.
-    const timestamps = Object.values(history).map(h => new Date((h as AnalysisHistoryItem).timestamp).getTime());
+    // FIX: Removed unnecessary type cast.
+    const timestamps = Object.values(history).map(h => new Date(h.timestamp).getTime());
     if (timestamps.length === 0) return 0;
 
     const lastTimestamp = Math.max(...timestamps);
@@ -113,9 +113,8 @@ function calculateVoiceDelta(progress: UserProgress): number {
     const history = progress.analysisHistory || {};
     const voiceScores: number[] = [];
 
-    Object.values(history).forEach(item => {
-        // FIX: Cast item to AnalysisHistoryItem to access properties safely.
-        const historyItem = item as AnalysisHistoryItem;
+    // FIX: Removed unnecessary type cast by using the item directly.
+    Object.values(history).forEach(historyItem => {
         if (historyItem.type === 'verbal' && historyItem.result) {
             const voiceResult = historyItem.result as VoiceAnalysisResult;
             const avgScore = voiceResult.scores.reduce((sum, s) => sum + s.score, 0) / voiceResult.scores.length;
@@ -163,7 +162,7 @@ const getInitialProgress = (): UserProgress => ({
     riformulazione: 0,
     assertivita: 0,
     gestione_conflitto: 0,
-  } as CompetenceScores,
+  },
   analysisHistory: {},
   // FIX: Added missing gamification properties to initial progress object.
   xp: 0,

@@ -1,5 +1,4 @@
 // types.ts
-import React from 'react';
 
 // === Enums and Basic Types ===
 
@@ -45,7 +44,7 @@ export interface Module {
   id: string;
   title: string;
   description: string;
-  icon: React.FC<any>;
+  icon: any; // Changed from React.FC<any>
   headerImage: string;
   isPro: boolean;
   prerequisites: string[];
@@ -189,7 +188,7 @@ export interface ToastMessage {
   type: ToastType;
   badge?: {
       title: string;
-      icon: React.FC<any>;
+      icon: any; // Changed from React.FC<any>
   }
 }
 
@@ -203,7 +202,7 @@ export interface Achievement {
   id: string;
   title: string;
   description: string;
-  icon: React.FC<any>;
+  icon: any; // Changed from React.FC<any>
   isUnlocked: (progress: UserProgress) => boolean;
 }
 

@@ -1,5 +1,23 @@
 // constants.ts
-import React from 'react';
+
+// Moved COLORS to the top before any imports to resolve circular dependency issues.
+export const COLORS = {
+  primary: '#1C3E5E', // Blu profondo
+  secondary: '#58A6A6', // Verde acqua
+  base: '#F8F7F4', // Sfondo beige chiaro
+  card: '#FFFFFF',
+  cardDark: '#F0F0F0', // Per sezioni interne
+  textPrimary: '#1C2025',
+  textSecondary: '#667085',
+  textAccent: '#333333',
+  divider: '#EAECEE',
+  success: '#28A745',
+  error: '#DC3545',
+  warning: '#FFC107',
+  accentBeige: '#D4C8B6',
+  primaryGradient: 'linear-gradient(135deg, #1C3E5E 0%, #3a7a7a 100%)',
+};
+
 import {
   DifficultyLevel,
   Exercise,
@@ -34,24 +52,8 @@ import {
 } from './components/Icons';
 import * as assets from './assets';
 
-export const COLORS = {
-  primary: '#1C3E5E', // Blu profondo
-  secondary: '#58A6A6', // Verde acqua
-  base: '#F8F7F4', // Sfondo beige chiaro
-  card: '#FFFFFF',
-  cardDark: '#F0F0F0', // Per sezioni interne
-  textPrimary: '#1C2025',
-  textSecondary: '#667085',
-  textAccent: '#333333',
-  divider: '#EAECEE',
-  success: '#28A745',
-  error: '#DC3545',
-  warning: '#FFC107',
-  accentBeige: '#D4C8B6',
-  primaryGradient: 'linear-gradient(135deg, #1C3E5E 0%, #3a7a7a 100%)',
-};
 
-export const EXERCISE_TYPE_ICONS: { [key in ExerciseType]: React.FC<any> } = {
+export const EXERCISE_TYPE_ICONS: { [key in ExerciseType]: any } = {
   [ExerciseType.WRITTEN]: WrittenIcon,
   [ExerciseType.VERBAL]: VoiceIcon,
 };

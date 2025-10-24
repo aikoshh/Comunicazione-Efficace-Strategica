@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import type { CommunicatorProfile, Exercise, AnalysisResult, Entitlements, AnalysisHistoryItem } from '../types';
+// components/StrategicCheckupScreen.tsx
+import React, { useState, useRef } from 'react';
+import { CommunicatorProfile, Entitlements } from '../types';
 import { COLORS, STRATEGIC_CHECKUP_EXERCISES } from '../constants';
-import { generateCommunicatorProfile, analyzeResponse } from '../services/geminiService';
+import { BackIcon, SendIcon } from './Icons';
+import { generateCommunicatorProfile } from '../services/geminiService';
 import { FullScreenLoader } from './Loader';
 import { useToast } from '../hooks/useToast';
-import { BackIcon, SendIcon } from './Icons';
+import { soundService } from '../services/soundService';
 
 interface StrategicCheckupScreenProps {
   onComplete: (profile: CommunicatorProfile) => void;
@@ -13,224 +15,144 @@ interface StrategicCheckupScreenProps {
   onApiKeyError: (error: string) => void;
 }
 
-const ExerciseStep: React.FC<{
-  exercise: Exercise;
-  step: number;
-  totalSteps: number;
-  onSubmit: (response: string) => void;
-}> = ({ exercise, step, totalSteps, onSubmit }) => {
-  const [response, setResponse] = useState('');
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSubmit(response);
-  };
-
-  return (
-    <div style={styles.stepContainer}>
-      <div style={styles.progressHeader}>
-        <div style={styles.progressBar}>
-          <div style={{ ...styles.progressBarFill, width: `${(step / totalSteps) * 100}%` }} />
-        </div>
-        <span style={styles.progressText}>Passo {step} di {totalSteps}</span>
-      </div>
-      <h2 style={styles.stepTitle}>{exercise.title}</h2>
-      <p style={styles.stepScenario}>{exercise.scenario}</p>
-      <p style={styles.stepTask}>{exercise.task}</p>
-      <form onSubmit={handleSubmit}>
-        <textarea
-          style={styles.textarea}
-          value={response}
-          onChange={(e) => setResponse(e.target.value)}
-          placeholder="Scrivi qui la tua risposta..."
-          rows={5}
-        />
-        <button type="submit" style={styles.submitButton} disabled={!response.trim()}>
-          Avanti <SendIcon />
-        </button>
-      </form>
-    </div>
-  );
-};
-
-export const StrategicCheckupScreen: React.FC<StrategicCheckupScreenProps> = ({ onComplete, onBack, entitlements, onApiKeyError }) => {
+export const StrategicCheckupScreen: React.FC<StrategicCheckupScreenProps> = ({ onComplete, onBack, onApiKeyError }) => {
   const [currentStep, setCurrentStep] = useState(0);
-  const [analysisHistory, setAnalysisHistory] = useState<AnalysisHistoryItem[]>([]);
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [responses, setResponses] = useState<string[]>([]);
+  const [currentResponse, setCurrentResponse] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const { addToast } = useToast();
+  const mainContentRef = useRef<HTMLDivElement>(null);
 
   const exercises = STRATEGIC_CHECKUP_EXERCISES;
+  const currentExercise = exercises[currentStep];
+  const isLastStep = currentStep === exercises.length - 1;
 
-  useEffect(() => {
-    const generateProfile = async () => {
-      if (currentStep === exercises.length) {
-        setIsProcessing(true);
-        try {
-          const resultsForProfile = analysisHistory.map((item, index) => ({
-            exerciseId: exercises[index].id,
-            analysis: item.result as AnalysisResult
-          }));
-          const profile = await generateCommunicatorProfile(resultsForProfile);
-          onComplete(profile);
-        } catch (error: any) {
-            console.error(error);
-            if (error.message.includes('API key')) {
-                onApiKeyError(error.message);
-            } else {
-                addToast(error.message || "Errore nella generazione del profilo.", 'error');
-            }
-          setIsProcessing(false);
-        }
-      }
-    };
-    generateProfile();
-  }, [currentStep, analysisHistory, exercises, onComplete, onApiKeyError, addToast]);
+  const handleNext = async () => {
+    if (!currentResponse.trim()) {
+      addToast('La risposta non può essere vuota.', 'error');
+      return;
+    }
+    soundService.playClick();
+    const newResponses = [...responses, currentResponse];
+    setResponses(newResponses);
+    setCurrentResponse('');
+    
+    if (mainContentRef.current) {
+      mainContentRef.current.scrollTop = 0;
+    }
 
-  const handleStepSubmit = async (userResponse: string) => {
-    setIsProcessing(true);
-    try {
-      const exercise = exercises[currentStep];
-      const result = await analyzeResponse(exercise, userResponse, entitlements, {});
-      setAnalysisHistory(prev => [...prev, { result, userResponse, timestamp: new Date().toISOString(), type: 'written' }]);
-      setCurrentStep(prev => prev + 1);
-    } catch (error: any) {
+    if (isLastStep) {
+      setIsLoading(true);
+      try {
+        const profile = await generateCommunicatorProfile(
+          newResponses.map((resp, index) => ({
+            exerciseTitle: exercises[index].title,
+            userResponse: resp,
+          }))
+        );
+        onComplete(profile);
+      } catch (error: any) {
         console.error(error);
         if (error.message.includes('API key')) {
-            onApiKeyError(error.message);
+          onApiKeyError(error.message);
         } else {
-            addToast(error.message || "Si è verificato un errore durante l'analisi.", 'error');
+          addToast(error.message || 'Si è verificato un errore sconosciuto.', 'error');
         }
-    } finally {
-      setIsProcessing(false);
+        setIsLoading(false);
+      }
+    } else {
+      setCurrentStep(currentStep + 1);
     }
   };
 
-  if (isProcessing) {
-    const message = currentStep === exercises.length
-      ? "Stiamo generando il tuo profilo personalizzato..."
-      : `Analisi della risposta ${currentStep + 1} di ${exercises.length}...`;
-    return <FullScreenLoader estimatedTime={20} />;
+  if (isLoading) {
+    return <FullScreenLoader estimatedTime={25} />;
   }
 
   return (
     <div style={styles.container}>
-      <header style={styles.header}>
-        <button onClick={onBack} style={styles.backButton}><BackIcon/> Torna alla Home</button>
-        <h1 style={styles.title}>Check-up Strategico Iniziale</h1>
-      </header>
-      {currentStep < exercises.length ? (
-        <ExerciseStep
-          exercise={exercises[currentStep]}
-          step={currentStep + 1}
-          totalSteps={exercises.length}
-          onSubmit={handleStepSubmit}
-        />
-      ) : (
-        <p>Elaborazione finale...</p>
-      )}
+      <div style={styles.content} ref={mainContentRef}>
+        <div style={styles.progressContainer}>
+            <div style={styles.progressBar}>
+                <div style={{...styles.progressBarFill, width: `${((currentStep + 1) / exercises.length) * 100}%`}}/>
+            </div>
+            <span style={styles.progressText}>Domanda {currentStep + 1} di {exercises.length}</span>
+        </div>
+        
+        <div style={styles.titleContainer}>
+          <h1 style={styles.title}>{currentExercise.title}</h1>
+        </div>
+
+        <div style={styles.section}>
+          <h2 style={styles.sectionTitle}>Scenario</h2>
+          <p style={styles.sectionText}>{currentExercise.scenario}</p>
+        </div>
+        <div style={styles.section}>
+          <h2 style={styles.sectionTitle}>Il tuo Compito</h2>
+          <p style={styles.sectionText}>{currentExercise.task}</p>
+        </div>
+
+        <div style={styles.responseArea}>
+          <textarea
+            style={styles.textarea}
+            value={currentResponse}
+            onChange={(e) => setCurrentResponse(e.target.value)}
+            placeholder="Scrivi qui la tua risposta..."
+            rows={6}
+          />
+        </div>
+      </div>
+      
+      <footer style={styles.footer}>
+          <button onClick={onBack} style={styles.secondaryButton}><BackIcon/> Indietro</button>
+          <button onClick={handleNext} style={styles.primaryButton} disabled={!currentResponse.trim()}>
+              {isLastStep ? 'Genera Profilo' : 'Prossima Domanda'} <SendIcon/>
+          </button>
+      </footer>
     </div>
   );
 };
 
 const styles: { [key: string]: React.CSSProperties } = {
-  container: {
-    maxWidth: '800px',
-    margin: '0 auto',
-    padding: '40px 20px',
+  container: { maxWidth: '800px', margin: '0 auto', padding: '40px 20px 100px' },
+  content: {
+    backgroundColor: COLORS.card, padding: '24px', borderRadius: '12px',
+    position: 'relative', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', border: `1px solid ${COLORS.divider}`
   },
-  header: {
-    textAlign: 'center',
-    marginBottom: '32px',
-    position: 'relative'
+  progressContainer: { marginBottom: '24px' },
+  progressBar: { height: '8px', backgroundColor: COLORS.divider, borderRadius: '4px', overflow: 'hidden' },
+  progressBarFill: { height: '100%', backgroundColor: COLORS.secondary, borderRadius: '4px', transition: 'width 0.3s ease' },
+  progressText: { fontSize: '14px', color: COLORS.textSecondary, textAlign: 'right', marginTop: '8px' },
+  titleContainer: {
+    backgroundColor: COLORS.card, padding: '20px', borderRadius: '12px', textAlign: 'center', marginBottom: '24px',
+    border: `1px solid ${COLORS.divider}`
   },
-  backButton: {
-    position: 'absolute',
-    top: '50%',
-    left: 0,
-    transform: 'translateY(-50%)',
-    background: 'none',
-    border: 'none',
-    cursor: 'pointer',
-    color: COLORS.textSecondary
+  title: { fontSize: '24px', fontWeight: 'bold', color: COLORS.primary, margin: 0 },
+  section: { marginBottom: '24px' },
+  sectionTitle: {
+    fontSize: '18px', fontWeight: 600, color: COLORS.textPrimary, paddingBottom: '8px',
+    borderBottom: `2px solid ${COLORS.secondary}`, marginBottom: '12px'
   },
-  title: {
-    fontSize: '28px',
-    fontWeight: 'bold',
-    color: COLORS.primary,
-  },
-  stepContainer: {
-    backgroundColor: COLORS.card,
-    padding: '32px',
-    borderRadius: '12px',
-    border: `1px solid ${COLORS.divider}`,
-    animation: 'fadeInUp 0.5s ease-out'
-  },
-  progressHeader: {
-    marginBottom: '24px',
-  },
-  progressBar: {
-    height: '8px',
-    backgroundColor: COLORS.divider,
-    borderRadius: '4px',
-    overflow: 'hidden'
-  },
-  progressBarFill: {
-    height: '100%',
-    backgroundColor: COLORS.secondary,
-    borderRadius: '4px',
-    transition: 'width 0.4s ease-in-out'
-  },
-  progressText: {
-    textAlign: 'right',
-    marginTop: '8px',
-    fontSize: '14px',
-    color: COLORS.textSecondary,
-    fontWeight: 500
-  },
-  stepTitle: {
-    fontSize: '22px',
-    fontWeight: 600,
-    color: COLORS.textPrimary,
-    marginBottom: '16px'
-  },
-  stepScenario: {
-    fontSize: '16px',
-    color: COLORS.textSecondary,
-    lineHeight: 1.6,
-    marginBottom: '12px',
-    fontStyle: 'italic',
-    paddingLeft: '16px',
-    borderLeft: `3px solid ${COLORS.accentBeige}`
-  },
-  stepTask: {
-    fontSize: '16px',
-    fontWeight: 'bold',
-    color: COLORS.textPrimary,
-    marginBottom: '24px'
-  },
+  sectionText: { fontSize: '16px', color: COLORS.textSecondary, lineHeight: 1.6 },
+  responseArea: { marginTop: '24px' },
   textarea: {
-    width: '100%',
-    padding: '12px 16px',
-    fontSize: '16px',
-    borderRadius: '8px',
-    border: `1px solid ${COLORS.divider}`,
-    resize: 'vertical',
-    fontFamily: 'inherit',
-    backgroundColor: 'white'
+    width: '100%', padding: '12px 16px', fontSize: '16px', borderRadius: '8px',
+    border: `1px solid ${COLORS.divider}`, resize: 'vertical', fontFamily: 'inherit', backgroundColor: 'white'
   },
-  submitButton: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    padding: '12px 24px',
-    fontSize: '16px',
-    fontWeight: 'bold',
-    border: 'none',
-    backgroundColor: COLORS.secondary,
-    color: 'white',
-    borderRadius: '8px',
-    cursor: 'pointer',
-    marginTop: '16px',
-    float: 'right'
+  footer: {
+    position: 'fixed', bottom: 0, left: 0, right: 0, backgroundColor: COLORS.card,
+    padding: '16px 24px', borderTop: `1px solid ${COLORS.divider}`, display: 'flex',
+    justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 -2px 10px rgba(0,0,0,0.05)',
+    zIndex: 50,
+  },
+  secondaryButton: {
+    display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 20px', fontSize: '16px',
+    border: `1px solid ${COLORS.secondary}`, backgroundColor: 'transparent', color: COLORS.secondary,
+    borderRadius: '8px', cursor: 'pointer', fontWeight: 500
+  },
+  primaryButton: {
+    display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 20px', fontSize: '16px',
+    fontWeight: 'bold', border: 'none', backgroundColor: COLORS.secondary, color: 'white',
+    borderRadius: '8px', cursor: 'pointer'
   }
 };
