@@ -1,6 +1,7 @@
+// App.tsx
 import React, { useState, useEffect, useCallback } from 'react';
 // FIX: Changed to a value import to bring in the DifficultyLevel enum and be consistent with other files.
-import { type UserProfile, type UserProgress, type Entitlements, type AppState, type AnalysisResult, type Module, type Exercise, type CommunicatorProfile, type Product, type Achievement, type VoiceAnalysisResult, type AnalysisHistoryItem, DifficultyLevel } from './types';
+import { type UserProfile, type UserProgress, type Entitlements, type AppState, type AnalysisResult, type Module, type Exercise, type CommunicatorProfile, type Product, type Achievement, type VoiceAnalysisResult, type AnalysisHistoryItem, DifficultyLevel, AppScreen } from './types';
 import { onAuthUserChanged, logout } from './services/authService';
 import { databaseService } from './services/databaseService';
 import { getUserEntitlements, purchaseProduct, restorePurchases } from './services/monetizationService';
@@ -29,6 +30,12 @@ import { StrategicChatTrainerScreen } from './components/StrategicChatTrainerScr
 const getInitialAppState = (): AppState => ({
     currentScreen: 'home',
 });
+
+const VALID_LOGGED_IN_SCREENS: AppScreen[] = [
+    'home', 'module', 'exercise', 'analysis_report', 'voice_analysis_report', 
+    'custom_setup', 'strategic_checkup', 'communicator_profile', 'paywall', 
+    'admin', 'chat_trainer', 'api_key_error', 'competence_report', 'achievements'
+];
 
 const App: React.FC = () => {
     const [user, setUser] = useState<UserProfile | null>(null);
@@ -72,10 +79,17 @@ const App: React.FC = () => {
             const savedState = localStorage.getItem(`ces_coach_app_state_${user.email}`);
             if (savedState) {
                 try {
-                    setAppState(JSON.parse(savedState));
+                    const parsedState = JSON.parse(savedState) as AppState;
+                    if (VALID_LOGGED_IN_SCREENS.includes(parsedState.currentScreen)) {
+                        setAppState(parsedState);
+                    } else {
+                        setAppState({ ...parsedState, currentScreen: 'home' });
+                    }
                 } catch (e) {
                     setAppState(getInitialAppState());
                 }
+            } else {
+                setAppState(getInitialAppState());
             }
         } else {
             // Clear state on logout
