@@ -13,7 +13,7 @@ const ICONS: Record<ToastMessage['type'], React.FC<any>> = {
   success: CheckCircleIcon,
   error: WarningIcon,
   info: InfoIcon,
-  badge: CheckCircleIcon,
+  badge: CheckCircleIcon, // Using CheckCircleIcon as a default for badge
 };
 
 // FIX: Added 'badge' property to satisfy the Record<ToastType, ...> type.

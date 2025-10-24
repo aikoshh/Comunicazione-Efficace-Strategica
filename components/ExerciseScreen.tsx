@@ -79,20 +79,9 @@ export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({
   if (isSubmitting) {
     return <FullScreenLoader estimatedTime={isVerbal ? 25 : 15} />;
   }
-  
-  const headerImage = exercise.headerImage || 'default_image_path.jpg'; // Fallback
-  const isHeaderVideo = headerImage.toLowerCase().endsWith('.mp4');
 
   return (
     <div style={styles.container}>
-      <header style={styles.header}>
-        {isHeaderVideo ? (
-            <video src={headerImage} style={styles.headerImage} autoPlay muted loop playsInline />
-        ) : (
-            <img src={headerImage} alt={exercise.title} style={styles.headerImage} />
-        )}
-      </header>
-      
       <div style={styles.content}>
           <div style={styles.titleContainer}>
             <h1 style={styles.title}>{exercise.title}</h1>
@@ -141,19 +130,15 @@ const styles: { [key: string]: React.CSSProperties } = {
   container: {
     maxWidth: '800px',
     margin: '0 auto',
-    padding: '0 0 100px 0',
-  },
-  header: { position: 'relative', height: '250px' },
-  headerImage: {
-    width: '100%', height: '100%', objectFit: 'cover',
+    padding: '40px 20px 100px',
   },
   content: {
-    backgroundColor: COLORS.base,
+    backgroundColor: COLORS.card,
     padding: '24px',
-    borderRadius: '12px 12px 0 0',
-    marginTop: '-20px',
+    borderRadius: '12px',
     position: 'relative',
-    boxShadow: '0 -4px 15px rgba(0,0,0,0.1)'
+    boxShadow: '0 4px 15px rgba(0,0,0,0.05)',
+    border: `1px solid ${COLORS.divider}`
   },
   titleContainer: {
     backgroundColor: COLORS.card, padding: '20px',

@@ -1,5 +1,3 @@
-import React from 'react';
-
 // assets.ts
 
 // Funzione helper per ottimizzare le immagini tramite un servizio CDN.
@@ -29,6 +27,7 @@ export const dailyChallengeHeaderImage = optimize('https://www.centroclinicaform
 export const checkupMedia = 'https://www.centroclinicaformazionestrategica.it/CES-APP/images/valuta-livello-iniziale.MP4';
 export const checkupHeaderImage = optimize('https://www.centroclinicaformazionestrategica.it/CES-APP/images/dialogo%20strategico.png');
 export const riformulazioneSinteticaHeaderImg = optimize('https://www.centroclinicaformazionestrategica.it/CES-APP/images/Riformulazione%20sintetica.png');
+export const customExerciseHeaderImage = optimize('https://www.centroclinicaformazionestrategica.it/CES-APP/images/allenamento-personalizzato.png');
 
 // === VIDEO INTESTAZIONI MODULI ===
 export const gestireConversazioniDifficiliHeaderVideo = 'https://www.centroclinicaformazionestrategica.it/CES-APP/images/gestire-conversazioni-difficili.MP4';
@@ -55,6 +54,7 @@ export const ALL_RESOURCES_TO_PRELOAD = [
   dailyChallengeHeaderImage,
   checkupHeaderImage,
   ivanoCincinnatoImage,
+  customExerciseHeaderImage,
   // Video
   cardImage2, cardImage3, cardImage4, cardImage5,
   homeScreenHeaderVideo,

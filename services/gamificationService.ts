@@ -1,6 +1,6 @@
 // services/gamificationService.ts
-// FIX: Added Achievement to imports.
-import { UserProgress, Achievement, VoiceAnalysisResult, CompetenceScores, CommunicatorProfile } from '../types';
+// FIX: Added Achievement and AnalysisHistoryItem to imports.
+import { UserProgress, Achievement, VoiceAnalysisResult, CompetenceScores, CommunicatorProfile, AnalysisHistoryItem } from '../types';
 import { HomeIcon, TargetIcon, CheckCircleIcon } from '../components/Icons';
 import { MODULES } from '../constants';
 
@@ -81,7 +81,8 @@ function calculateConsistency(progress: UserProgress): number {
     const history = progress.analysisHistory || {};
     if (Object.keys(history).length < 2) return 50; // Neutral score if not enough data
 
-    const timestamps = Object.values(history).map(h => new Date(h.timestamp).getTime());
+    // FIX: Cast history items to AnalysisHistoryItem to access properties safely.
+    const timestamps = Object.values(history).map(h => new Date((h as AnalysisHistoryItem).timestamp).getTime());
     timestamps.sort((a, b) => a - b);
 
     const dayInMs = 1000 * 60 * 60 * 24;
@@ -97,7 +98,8 @@ function calculateConsistency(progress: UserProgress): number {
 
 function calculateRecency(progress: UserProgress): number {
     const history = progress.analysisHistory || {};
-    const timestamps = Object.values(history).map(h => new Date(h.timestamp).getTime());
+    // FIX: Cast history items to AnalysisHistoryItem to access properties safely.
+    const timestamps = Object.values(history).map(h => new Date((h as AnalysisHistoryItem).timestamp).getTime());
     if (timestamps.length === 0) return 0;
 
     const lastTimestamp = Math.max(...timestamps);
@@ -112,8 +114,10 @@ function calculateVoiceDelta(progress: UserProgress): number {
     const voiceScores: number[] = [];
 
     Object.values(history).forEach(item => {
-        if (item.type === 'verbal' && item.result) {
-            const voiceResult = item.result as VoiceAnalysisResult;
+        // FIX: Cast item to AnalysisHistoryItem to access properties safely.
+        const historyItem = item as AnalysisHistoryItem;
+        if (historyItem.type === 'verbal' && historyItem.result) {
+            const voiceResult = historyItem.result as VoiceAnalysisResult;
             const avgScore = voiceResult.scores.reduce((sum, s) => sum + s.score, 0) / voiceResult.scores.length;
             voiceScores.push(avgScore * 10);
         }
@@ -216,7 +220,7 @@ const processCheckupCompletion = (progress: UserProgress) => {
 
     // A checkup is complete when the profile is about to be set.
     // So we can create a temporary progress object to check if new achievements are unlocked.
-    const tempProgress = { ...oldProgress, checkupProfile: { profileTitle: 'temp', profileDescription: '', strengths: [], areasToImprove: [] }};
+    const tempProgress = { ...oldProgress, checkupProfile: { profileTitle: 'temp', profileDescription: '', strengths: [], areasToImprove: [] } as CommunicatorProfile};
 
     const newUnlockedAchievements = getUnlockedAchievements(tempProgress as UserProgress);
     const newBadges = newUnlockedAchievements.filter(ach => !oldUnlockedAchievements.has(ach.id));

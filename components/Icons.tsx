@@ -16,6 +16,12 @@ const Icon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   />
 );
 
+export const FlameIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+  <Icon {...props}>
+    <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z" />
+  </Icon>
+);
+
 export const HomeIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   <Icon {...props} fill="currentColor" strokeWidth="0">
     <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
@@ -255,15 +261,16 @@ export const NotificationOffIcon: React.FC<React.SVGProps<SVGSVGElement>> = (pro
     </Icon>
 );
 
+// FIX: Added missing PlayIcon and ArrowDownIcon components.
 export const PlayIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
-  <Icon {...props}>
-    <polygon points="5 3 19 12 5 21 5 3" />
-  </Icon>
+    <Icon {...props}>
+        <polygon points="5 3 19 12 5 21 5 3" />
+    </Icon>
 );
 
 export const ArrowDownIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
-  <Icon {...props}>
-    <line x1="12" y1="5" x2="12" y2="19" />
-    <polyline points="19 12 12 19 5 12" />
-  </Icon>
+    <Icon {...props}>
+        <line x1="12" y1="5" x2="12" y2="19" />
+        <polyline points="19 12 12 19 5 12" />
+    </Icon>
 );

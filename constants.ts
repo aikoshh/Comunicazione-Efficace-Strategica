@@ -172,9 +172,9 @@ export const MODULES: Module[] = [
     description: 'Crea un esercizio su misura per te. L\'AI genererà uno scenario basato sulla tua professione e le tue sfide specifiche.',
     icon: TargetIcon,
     headerImage: assets.allenamentoPersonalizzatoVideo,
-    isPro: true,
+    isPro: false,
     isCustom: true,
-    prerequisites: [], // Sempre accessibile (se PRO)
+    prerequisites: [], // Sempre accessibile
     exercises: [], // Gli esercizi sono generati dinamicamente
   },
   {

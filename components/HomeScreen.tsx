@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import type { Module, UserProfile, UserProgress, Exercise, Entitlements } from '../types';
 import { COLORS, MODULES } from '../constants';
 import { ProgressOverview } from './ProgressOverview';
-import { dailyChallengeHeaderImage, checkupHeaderImage, chatTrainerCardImage, ivanoCincinnatoImage, homeScreenHeaderVideo } from '../assets';
+// FIX: Changed asset imports to a namespace import (`* as assets`) to resolve the 'Cannot find name 'assets'' error and improve consistency.
+import * as assets from '../assets';
 import { VideoPlayerModal } from './VideoPlayerModal';
 import { soundService } from '../services/soundService';
 import { hasProAccess } from '../services/monetizationService';
@@ -105,7 +106,12 @@ const ProgressionPath: React.FC<{
                                 <module.icon style={{...styles.nodeIcon, color: isLocked ? COLORS.textSecondary : COLORS.primary }}/>
                             </div>
                             <div style={styles.nodeContent}>
-                                <h3 style={styles.nodeTitle}>{module.title}</h3>
+                                <div style={styles.nodeTitleContainer}>
+                                    <h3 style={styles.nodeTitle}>{module.title}</h3>
+                                    {totalCount > 0 && (
+                                        <span style={styles.nodeProgressText}>{completedCount}/{totalCount}</span>
+                                    )}
+                                </div>
                                 {isLocked && (
                                   <div style={styles.lockReason}>
                                     <LockIcon style={{width: 16, height: 16}}/>
@@ -117,7 +123,6 @@ const ProgressionPath: React.FC<{
                                 <div style={styles.nodeProgressBar}>
                                     <div style={{...styles.nodeProgressBarFill, width: `${progressPercentage}%`}}/>
                                 </div>
-                                <span style={styles.nodeProgressText}>{completedCount}/{totalCount}</span>
                                 {!isLocked && (
                                     <button
                                         style={styles.improveButton}
@@ -145,6 +150,7 @@ const ProgressionPath: React.FC<{
 export const HomeScreen: React.FC<HomeScreenProps> = ({ user, progress, entitlements, onSelectModule, dailyChallenge, onStartDailyChallenge, onStartCheckup, onStartChatTrainer, onNavigateToPaywall, onNavigateToCompetenceReport }) => {
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const userHasPro = hasProAccess(entitlements);
+  const customTrainingModule = MODULES.find(m => m.id === 'm6');
 
   return (
     <div style={styles.container}>
@@ -157,10 +163,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ user, progress, entitlem
             className="video-intro-circle"
             onClick={() => {
                 soundService.playClick();
-                setVideoUrl(homeScreenHeaderVideo);
+                setVideoUrl(assets.homeScreenHeaderVideo);
             }}
         >
-          <img src={ivanoCincinnatoImage} alt="Presentazione CES Coach" style={styles.videoIntroImage} />
+          <img src={assets.ivanoCincinnatoImage} alt="Presentazione CES Coach" style={styles.videoIntroImage} />
           <div style={styles.playIconOverlay} className="play-icon-overlay">
             <PlayIcon color="white" width={48} height={48} style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))' }} />
           </div>
@@ -171,7 +177,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ user, progress, entitlem
 
       <div style={styles.grid}>
         <div 
-          style={{...styles.actionCard, backgroundImage: `url(${dailyChallengeHeaderImage})`, border: `3px solid ${COLORS.warning}`}} 
+          style={{...styles.actionCard, backgroundImage: `url(${assets.dailyChallengeHeaderImage})`}} 
           className="action-card"
           onClick={() => onStartDailyChallenge(dailyChallenge)}
         >
@@ -184,7 +190,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ user, progress, entitlem
         
         {!progress?.checkupProfile && (
             <div 
-                style={{...styles.actionCard, backgroundImage: `url(${checkupHeaderImage})`}} 
+                style={{...styles.actionCard, backgroundImage: `url(${assets.checkupHeaderImage})`}} 
                 className="action-card"
                 onClick={onStartCheckup}
             >
@@ -197,7 +203,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ user, progress, entitlem
         )}
 
          <div 
-            style={{...styles.actionCard, backgroundImage: `url(${chatTrainerCardImage})`}} 
+            style={{...styles.actionCard, backgroundImage: `url(${assets.chatTrainerCardImage})`}} 
             className="action-card"
             onClick={userHasPro ? onStartChatTrainer : onNavigateToPaywall}
           >
@@ -219,6 +225,32 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ user, progress, entitlem
         onSelectModule={onSelectModule}
         onNavigateToPaywall={onNavigateToPaywall}
       />
+
+      {customTrainingModule && (
+        <div 
+            style={styles.actionCard} 
+            className="action-card"
+            onClick={() => onSelectModule(customTrainingModule)}
+        >
+            <video
+                src={assets.cardImage4}
+                style={styles.cardVideo}
+                autoPlay
+                muted
+                loop
+                playsInline
+                title={customTrainingModule.title}
+            />
+            <div style={styles.actionCardOverlay} />
+            <div style={styles.actionCardContent}>
+                <h2 style={styles.actionCardTitle}>{customTrainingModule.title}</h2>
+                <p style={styles.actionCardDescription}>{customTrainingModule.description}</p>
+            </div>
+            {customTrainingModule.isPro && !userHasPro && (
+                 <div style={styles.proBadge}><CrownIcon /> PRO</div>
+            )}
+        </div>
+      )}
 
 
       {progress && <ProgressAnalytics userProgress={progress} onNavigateToReport={onNavigateToCompetenceReport} onSelectModule={onSelectModule} />}
@@ -325,11 +357,22 @@ const styles: { [key: string]: React.CSSProperties } = {
     display: 'flex',
     flexDirection: 'column',
     justifyContent: 'flex-end',
+    marginBottom: '24px'
+  },
+  cardVideo: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+    zIndex: 0,
   },
   actionCardOverlay: {
     position: 'absolute',
     inset: 0,
     background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 60%)',
+    zIndex: 1,
   },
   actionCardContent: {
     padding: '20px',
@@ -394,10 +437,17 @@ const styles: { [key: string]: React.CSSProperties } = {
   nodeContent: {
     flex: 1,
   },
+  nodeTitleContainer: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: '16px',
+    marginBottom: '8px',
+  },
   nodeTitle: {
     fontSize: '18px',
     fontWeight: 'bold',
-    margin: '0 0 8px 0',
+    margin: 0,
   },
   lockReason: {
       display: 'flex',
@@ -419,9 +469,9 @@ const styles: { [key: string]: React.CSSProperties } = {
     borderRadius: '4px',
   },
   nodeProgressText: {
-      fontSize: '12px',
-      color: COLORS.textSecondary,
-      fontWeight: 500
+      fontSize: '14px',
+      color: COLORS.secondary,
+      fontWeight: 'bold'
   },
   pathConnector: {
     width: '4px',
