@@ -18,7 +18,7 @@ const ResponseDisplay: React.FC<{ markdownText: string }> = ({ markdownText }) =
     
     const titleIconMap: { [key: string]: React.FC<any> } = {
         'risposta breve': WrittenIcon,
-        'risposta elaborata': WrittenIcon, // Changed to match "Risposta Breve"
+        'risposta elaborata': DocumentTextIcon,
         'spiegazione della strategia': LightbulbIcon,
     };
 
@@ -54,7 +54,7 @@ const ResponseDisplay: React.FC<{ markdownText: string }> = ({ markdownText }) =
                     {IconComponent && <IconComponent style={styles.responseSectionIcon} />}
                     <h3 style={styles.responseSectionTitle}>{title}</h3>
                 </div>
-                {isExplanation ? <ul>{renderContent(content)}</ul> : renderContent(content)}
+                {isExplanation ? <ul style={{paddingLeft: '20px'}}>{renderContent(content)}</ul> : renderContent(content)}
             </div>
         );
     };

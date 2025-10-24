@@ -1,70 +1,58 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { COLORS } from '../constants';
-import { BackIcon, DownloadIcon, UploadIcon } from './Icons';
+import { UserProfile } from '../types';
 import { userService } from '../services/userService';
-import type { UserProfile } from '../types';
+import { COLORS } from '../constants';
 import { useToast } from '../hooks/useToast';
 import { Spinner } from './Loader';
+import { DownloadIcon, UploadIcon, CloseIcon } from './Icons';
 
-// Component for a single user row in the table
-const UserRow: React.FC<{ user: UserProfile; onUpdate: (uid: string, data: Partial<UserProfile>) => void; onDelete: (uid: string, email: string) => void; }> = ({ user, onUpdate, onDelete }) => {
+interface AdminScreenProps {
+  onBack: () => void;
+}
+
+const UserRow: React.FC<{ user: UserProfile, onSave: (uid: string, data: Partial<UserProfile>) => void, onDelete: (uid:string) => void }> = ({ user, onSave, onDelete }) => {
     const [isEditing, setIsEditing] = useState(false);
-    const [editData, setEditData] = useState<Partial<UserProfile>>({});
-
-    const handleEdit = () => {
-        setEditData({
-            isAdmin: user.isAdmin,
-            enabled: user.enabled,
-            expiryDate: user.expiryDate ? user.expiryDate.split('T')[0] : '', // Format for date input
-        });
-        setIsEditing(true);
-    };
-
-    const handleCancel = () => {
-        setIsEditing(false);
-        setEditData({});
-    };
+    const [userData, setUserData] = useState(user);
 
     const handleSave = () => {
-        onUpdate(user.uid, editData);
+        onSave(user.uid, userData);
         setIsEditing(false);
     };
 
+    const expiryDateForInput = userData.expiryDate ? userData.expiryDate.split('T')[0] : '';
+    
     return (
         <tr style={styles.tableRow}>
-            <td style={styles.tableCell}>{user.firstName} {user.lastName}</td>
-            <td style={styles.tableCell}>{user.email}</td>
-            <td style={styles.tableCell}>
+            <td>{isEditing ? <input style={styles.tableInput} value={userData.firstName} onChange={e => setUserData({...userData, firstName: e.target.value})} /> : user.firstName}</td>
+            <td>{isEditing ? <input style={styles.tableInput} value={userData.lastName} onChange={e => setUserData({...userData, lastName: e.target.value})} /> : user.lastName}</td>
+            <td>{user.email}</td>
+            <td>{isEditing ? <input style={styles.tableInput} type="date" value={expiryDateForInput} onChange={e => setUserData({...userData, expiryDate: e.target.value ? new Date(e.target.value).toISOString() : null})} /> : (user.expiryDate ? new Date(user.expiryDate).toLocaleDateString() : 'N/A')}</td>
+            <td>
                 {isEditing ? (
-                    <input type="checkbox" checked={editData.enabled} onChange={e => setEditData({...editData, enabled: e.target.checked})} />
-                ) : (
-                    <span style={{ color: user.enabled ? COLORS.success : COLORS.error }}>{user.enabled ? 'Sì' : 'No'}</span>
-                )}
+                    <select style={styles.tableInput} value={String(userData.enabled)} onChange={e => setUserData({...userData, enabled: e.target.value === 'true'})}>
+                        <option value="true">Sì</option>
+                        <option value="false">No</option>
+                    </select>
+                ) : (user.enabled ? 'Sì' : 'No')}
             </td>
-            <td style={styles.tableCell}>
+            <td>
                 {isEditing ? (
-                    <input type="checkbox" checked={editData.isAdmin} onChange={e => setEditData({...editData, isAdmin: e.target.checked})} />
-                ) : (
-                    <span style={{ fontWeight: user.isAdmin ? 'bold' : 'normal' }}>{user.isAdmin ? 'Sì' : 'No'}</span>
-                )}
+                    <select style={styles.tableInput} value={String(userData.isAdmin)} onChange={e => setUserData({...userData, isAdmin: e.target.value === 'true'})}>
+                        <option value="true">Sì</option>
+                        <option value="false">No</option>
+                    </select>
+                ) : (user.isAdmin ? 'Sì' : 'No')}
             </td>
-            <td style={styles.tableCell}>
-                {isEditing ? (
-                    <input type="date" value={editData.expiryDate || ''} onChange={e => setEditData({...editData, expiryDate: e.target.value})} style={styles.dateInput} />
-                ) : (
-                    user.expiryDate ? new Date(user.expiryDate).toLocaleDateString('it-IT') : 'N/A'
-                )}
-            </td>
-            <td style={{...styles.tableCell, ...styles.actionsCell}}>
+            <td style={styles.actionsCell}>
                 {isEditing ? (
                     <>
-                        <button onClick={handleSave} style={{...styles.actionButton, ...styles.saveButton}}>Salva</button>
-                        <button onClick={handleCancel} style={{...styles.actionButton, ...styles.cancelButton}}>Annulla</button>
+                        <button style={styles.saveButton} onClick={handleSave}>Salva</button>
+                        <button style={styles.cancelButton} onClick={() => { setIsEditing(false); setUserData(user); }}>Annulla</button>
                     </>
                 ) : (
                     <>
-                        <button onClick={handleEdit} style={{...styles.actionButton, ...styles.editButton}}>Modifica</button>
-                        <button onClick={() => onDelete(user.uid, user.email)} style={{...styles.actionButton, ...styles.deleteButton}}>Elimina</button>
+                        <button style={styles.editButton} onClick={() => setIsEditing(true)}>Modifica</button>
+                        <button style={styles.deleteButton} onClick={() => onDelete(user.uid)}>Elimina</button>
                     </>
                 )}
             </td>
@@ -72,204 +60,146 @@ const UserRow: React.FC<{ user: UserProfile; onUpdate: (uid: string, data: Parti
     );
 };
 
-export const AdminScreen: React.FC<{ onBack: () => void; }> = ({ onBack }) => {
-    const [users, setUsers] = useState<UserProfile[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const [newUser, setNewUser] = useState({ email: '', firstName: '', lastName: '' });
-    const { addToast } = useToast();
-    const fileInputRef = useRef<HTMLInputElement>(null);
+export const AdminScreen: React.FC<AdminScreenProps> = ({ onBack }) => {
+  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const { addToast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-    useEffect(() => {
-        const unsubscribe = userService.subscribeToUsers(
-            (fetchedUsers) => {
-                setUsers(fetchedUsers);
-                setIsLoading(false);
-            },
-        );
-        return () => unsubscribe();
-    }, []);
+  useEffect(() => {
+    const unsubscribe = userService.subscribeToUsers((userList) => {
+      setUsers(userList);
+      setIsLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
 
-    const handleUpdateUser = async (uid: string, data: Partial<UserProfile>) => {
+  const handleSaveUser = async (uid: string, data: Partial<UserProfile>) => {
+    try {
+      await userService.updateUser(uid, data);
+      addToast('Utente aggiornato con successo.', 'success');
+    } catch (error: any) {
+      addToast(`Errore: ${error.message}`, 'error');
+    }
+  };
+
+  const handleDeleteUser = async (uid: string) => {
+    if (window.confirm("Sei sicuro di voler eliminare questo utente e tutti i suoi dati? L'azione è irreversibile.")) {
         try {
-            await userService.updateUser(uid, data);
-            addToast('Utente aggiornato con successo.', 'success');
-        } catch (e: any) {
-            addToast(`Errore: ${e.message}`, 'error');
+            await userService.deleteUser(uid);
+            addToast('Utente eliminato con successo.', 'success');
+        } catch (error: any) {
+            addToast(`Errore: ${error.message}`, 'error');
         }
-    };
-    
-    const handleDeleteUser = async (uid: string, email: string) => {
-        if (window.confirm(`Sei sicuro di voler eliminare l'utente ${email}? Questa azione è irreversibile e cancellerà anche i suoi progressi.`)) {
-            try {
-                await userService.deleteUser(uid);
-                addToast('Utente eliminato con successo.', 'success');
-            } catch (e: any) {
-                addToast(`Errore: ${e.message}`, 'error');
-            }
-        }
-    };
+    }
+  };
+  
+  const handleExportDB = async () => {
+      try {
+          const jsonString = await userService.exportDB();
+          const blob = new Blob([jsonString], {type: 'application/json'});
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `ces-coach-backup-${new Date().toISOString().split('T')[0]}.json`;
+          a.click();
+          URL.revokeObjectURL(url);
+          addToast('Database esportato.', 'success');
+      } catch (error: any) {
+          addToast(`Esportazione fallita: ${error.message}`, 'error');
+      }
+  }
 
-    const handleAddUser = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!newUser.email || !newUser.firstName || !newUser.lastName) {
-            addToast('Tutti i campi sono obbligatori.', 'error');
-            return;
-        }
-        try {
-            await userService.addUser(newUser);
-            addToast(`Profilo per ${newUser.email} creato. L'utente deve essere creato anche in Firebase Authentication per poter accedere.`, 'success');
-            setNewUser({ email: '', firstName: '', lastName: '' });
-        } catch (e: any) {
-            addToast(`Errore: ${e.message}`, 'error');
-        }
-    };
+  const handleImportDB = (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      if (!window.confirm("ATTENZIONE: Stai per sovrascrivere l'intero database. Sei assolutamente sicuro?")) return;
 
-    const handleExport = async () => {
-        try {
-            const jsonString = await userService.exportDB();
-            const blob = new Blob([jsonString], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `ces-coach-backup-${new Date().toISOString().split('T')[0]}.json`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            addToast('Database esportato con successo.', 'success');
-        } catch (e: any) {
-            addToast(`Errore durante l'esportazione: ${e.message}`, 'error');
-        }
-    };
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+          try {
+              const jsonString = e.target?.result as string;
+              await userService.importDB(jsonString);
+              addToast('Database importato con successo! La pagina verrà ricaricata.', 'success');
+              setTimeout(() => window.location.reload(), 2000);
+          } catch (error: any) {
+              addToast(`Importazione fallita: ${error.message}`, 'error');
+          }
+      };
+      reader.readAsText(file);
+  }
 
-    const handleImportClick = () => {
-        fileInputRef.current?.click();
-    };
-
-    const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-        if (!file) return;
-
-        if (!window.confirm("ATTENZIONE: L'importazione sovrascriverà tutti i dati esistenti con quelli del file. Sei sicuro di voler procedere?")) {
-            return;
-        }
-        
-        const reader = new FileReader();
-        reader.onload = async (e) => {
-            try {
-                const json = e.target?.result as string;
-                await userService.importDB(json);
-                addToast('Database importato con successo. La pagina si aggiornerà.', 'success');
-            } catch (err: any) {
-                addToast(`Errore durante l'importazione: ${err.message}`, 'error');
-            }
-        };
-        reader.readAsText(file);
-    };
-
-    return (
-        <div style={styles.container}>
-            <header style={styles.header}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                    <button onClick={onBack} style={styles.backButton}><BackIcon /></button>
-                    <h1 style={styles.title}>Pannello Amministratore</h1>
-                </div>
-                 <a 
-                    href="https://console.firebase.google.com/project/ces-coach/authentication/users" 
-                    target="_blank" 
-                    rel="noopener noreferrer" 
-                    style={styles.firebaseButton}
-                >
-                    Pannello FireBase
-                </a>
-            </header>
-
-            <div style={styles.section}>
-                <h2 style={styles.sectionTitle}>Aggiungi Utente</h2>
-                <form onSubmit={handleAddUser} style={styles.addUserForm}>
-                    <input type="text" placeholder="Nome" value={newUser.firstName} onChange={e => setNewUser({...newUser, firstName: e.target.value})} style={styles.input} />
-                    <input type="text" placeholder="Cognome" value={newUser.lastName} onChange={e => setNewUser({...newUser, lastName: e.target.value})} style={styles.input} />
-                    <input type="email" placeholder="Email" value={newUser.email} onChange={e => setNewUser({...newUser, email: e.target.value})} style={styles.input} />
-                    <button type="submit" style={styles.addButton}>Aggiungi Profilo</button>
-                </form>
-                 <p style={styles.note}>Nota: la creazione di un profilo qui non crea l'account di accesso. Per abilitare il login, crea l'utente con la stessa email nel pannello 'Authentication' di Firebase.</p>
+  return (
+    <div style={styles.container}>
+        <header style={styles.header}>
+            <h1 style={styles.title}>Pannello di Amministrazione</h1>
+            <div style={styles.headerActions}>
+                <button style={styles.actionButton} onClick={handleExportDB}><DownloadIcon/> Esporta DB</button>
+                <button style={styles.actionButton} onClick={() => fileInputRef.current?.click()}><UploadIcon/> Importa DB</button>
+                <input type="file" ref={fileInputRef} style={{display: 'none'}} accept=".json" onChange={handleImportDB} />
+                <button style={{...styles.actionButton, ...styles.closeButton}} onClick={onBack}><CloseIcon/> Chiudi</button>
             </div>
+        </header>
 
-            <div style={styles.section}>
-                 <h2 style={styles.sectionTitle}>Gestione Database</h2>
-                 <div style={styles.dbActions}>
-                    <button onClick={handleExport} style={styles.dbButton}><DownloadIcon/> Esporta Database</button>
-                    <button onClick={handleImportClick} style={{...styles.dbButton, ...styles.importButton}}><UploadIcon/> Importa Database</button>
-                    <input type="file" accept=".json" ref={fileInputRef} onChange={handleImport} style={{ display: 'none' }} />
-                 </div>
-            </div>
-
-            <div style={styles.section}>
-                <h2 style={styles.sectionTitle}>Utenti Registrati ({users.length})</h2>
-                {isLoading ? <Spinner size={48} /> : error ? <p style={{color: COLORS.error}}>{error}</p> : (
-                    <div style={styles.tableContainer}>
-                        <table style={styles.userTable}>
-                            <thead>
-                                <tr style={styles.tableHeaderRow}>
-                                    <th style={styles.tableHeader}>Nome</th>
-                                    <th style={styles.tableHeader}>Email</th>
-                                    <th style={styles.tableHeader}>Abilitato</th>
-                                    <th style={styles.tableHeader}>Admin</th>
-                                    <th style={styles.tableHeader}>Scadenza</th>
-                                    <th style={styles.tableHeader}>Azioni</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {users.map(user => <UserRow key={user.uid} user={user} onUpdate={handleUpdateUser} onDelete={handleDeleteUser} />)}
-                            </tbody>
-                        </table>
-                    </div>
-                )}
-            </div>
+      {isLoading ? (
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '50px' }}>
+          <Spinner size={48} color={COLORS.primary} />
         </div>
-    );
+      ) : (
+        <div style={styles.tableContainer}>
+            <table style={styles.table}>
+            <thead>
+                <tr style={styles.tableHeader}>
+                <th>Nome</th>
+                <th>Cognome</th>
+                <th>Email</th>
+                <th>Scadenza</th>
+                <th>Abilitato</th>
+                <th>Admin</th>
+                <th>Azioni</th>
+                </tr>
+            </thead>
+            <tbody>
+                {users.map(user => (
+                    <UserRow key={user.uid} user={user} onSave={handleSaveUser} onDelete={handleDeleteUser}/>
+                ))}
+            </tbody>
+            </table>
+        </div>
+      )}
+    </div>
+  );
 };
 
 const styles: { [key: string]: React.CSSProperties } = {
-    container: { maxWidth: '1200px', margin: '0 auto', padding: '2.5rem 1.25rem', minHeight: 'calc(100vh - 64px)', display: 'flex', flexDirection: 'column', gap: '2rem' },
-    header: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', paddingBottom: '1rem', borderBottom: `1px solid ${COLORS.divider}` },
-    title: { fontSize: '1.5rem', fontWeight: 'bold', color: COLORS.textPrimary, margin: 0 },
-    backButton: { background: 'none', border: 'none', cursor: 'pointer', color: COLORS.textSecondary, padding: '0.5rem' },
-    firebaseButton: {
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: '0.5rem',
-        padding: '0.625rem 1.25rem',
-        fontSize: '0.9375rem',
-        fontWeight: 'bold',
-        border: 'none',
-        backgroundColor: COLORS.warning,
-        color: 'white',
-        borderRadius: '6px',
-        cursor: 'pointer',
-        textDecoration: 'none',
-    },
-    section: { backgroundColor: COLORS.card, padding: '1.5rem', borderRadius: '12px', border: `1px solid ${COLORS.divider}` },
-    sectionTitle: { fontSize: '1.25rem', fontWeight: 'bold', color: COLORS.primary, margin: '0 0 1rem 0' },
-    addUserForm: { display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'center' },
-    input: { padding: '0.625rem', fontSize: '0.9375rem', borderRadius: '6px', border: `1px solid ${COLORS.divider}`, flex: 1, minWidth: '180px' },
-    dateInput: { padding: '0.5rem', fontSize: '0.875rem', borderRadius: '6px', border: `1px solid ${COLORS.divider}` },
-    addButton: { padding: '0.625rem 1.25rem', fontSize: '0.9375rem', fontWeight: 'bold', border: 'none', backgroundColor: COLORS.secondary, color: 'white', borderRadius: '6px', cursor: 'pointer' },
-    note: { fontSize: '0.8125rem', color: COLORS.textSecondary, margin: '0.75rem 0 0 0', fontStyle: 'italic' },
-    dbActions: { display: 'flex', gap: '1rem' },
-    dbButton: { display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.625rem 1.25rem', fontSize: '0.9375rem', fontWeight: 'bold', border: 'none', borderRadius: '6px', cursor: 'pointer' },
-    importButton: { backgroundColor: COLORS.warning, color: 'white' },
-    tableContainer: { overflowX: 'auto' },
-    userTable: { width: '100%', borderCollapse: 'collapse', textAlign: 'left' },
-    tableHeaderRow: { borderBottom: `2px solid ${COLORS.divider}` },
-    tableHeader: { padding: '0.75rem', fontWeight: 'bold', color: COLORS.textSecondary },
+    container: { maxWidth: '1200px', margin: '0 auto', padding: '40px 20px' },
+    header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' },
+    title: { fontSize: '28px', fontWeight: 'bold', color: COLORS.textPrimary, margin: 0 },
+    headerActions: { display: 'flex', gap: '12px' },
+    actionButton: { display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', fontSize: '15px', border: `1px solid ${COLORS.divider}`, backgroundColor: COLORS.card, borderRadius: '8px', cursor: 'pointer' },
+    closeButton: { borderColor: COLORS.error, color: COLORS.error },
+    tableContainer: { overflowX: 'auto', backgroundColor: COLORS.card, borderRadius: '12px', border: `1px solid ${COLORS.divider}` },
+    table: { width: '100%', borderCollapse: 'collapse' },
+    tableHeader: { backgroundColor: COLORS.cardDark, textAlign: 'left' },
     tableRow: { borderBottom: `1px solid ${COLORS.divider}` },
-    tableCell: { padding: '0.75rem' },
-    actionsCell: { display: 'flex', gap: '0.5rem', alignItems: 'center' },
-    actionButton: { padding: '0.375rem 0.75rem', fontSize: '0.8125rem', fontWeight: '500', border: 'none', borderRadius: '6px', cursor: 'pointer' },
-    editButton: { backgroundColor: COLORS.accentBeige, color: COLORS.textAccent },
-    deleteButton: { backgroundColor: COLORS.error, color: 'white' },
-    saveButton: { backgroundColor: COLORS.success, color: 'white' },
-    cancelButton: { backgroundColor: '#ccc', color: 'black' },
+    actionsCell: { display: 'flex', gap: '8px', alignItems: 'center' },
+    editButton: { padding: '6px 12px', background: COLORS.secondary, color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' },
+    deleteButton: { padding: '6px 12px', background: COLORS.error, color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' },
+    saveButton: { padding: '6px 12px', background: COLORS.success, color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' },
+    cancelButton: { padding: '6px 12px', background: 'transparent', color: COLORS.textSecondary, border: `1px solid ${COLORS.divider}`, borderRadius: '6px', cursor: 'pointer' },
+    tableInput: { width: '100%', padding: '4px', borderRadius: '4px', border: `1px solid ${COLORS.divider}` },
 };
+
+// Add this to your global CSS or a style tag if not already present, to style the table cells
+const globalTableStyles = `
+  th, td {
+    padding: 12px 16px;
+    font-size: 14px;
+    color: ${COLORS.textPrimary};
+  }
+`;
+(function() {
+    const style = document.createElement('style');
+    style.innerHTML = globalTableStyles;
+    document.head.appendChild(style);
+})();

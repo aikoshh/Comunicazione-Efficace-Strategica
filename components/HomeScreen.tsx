@@ -1,493 +1,282 @@
 import React, { useState } from 'react';
-import type { Module, UserProfile, UserProgress, Exercise, Entitlements } from '../types';
+import { UserProfile, UserProgress, Entitlements, Module, Exercise } from '../types';
 import { COLORS, MODULES } from '../constants';
-import { ProgressOverview } from './ProgressOverview';
-// FIX: Changed asset imports to a namespace import (`* as assets`) to resolve the 'Cannot find name 'assets'' error and improve consistency.
 import * as assets from '../assets';
-import { VideoPlayerModal } from './VideoPlayerModal';
+import { CrownIcon, FlameIcon, LockIcon, SendIcon, TargetIcon, ArrowDownIcon, PlayIcon } from './Icons';
+import { ProgressOverview } from './ProgressOverview';
 import { soundService } from '../services/soundService';
 import { hasProAccess } from '../services/monetizationService';
-// FIX: Added LockIcon to imports.
-import { CrownIcon, PlayIcon, ArrowDownIcon, LockIcon } from './Icons';
+import { VideoPlayerModal } from './VideoPlayerModal';
 import { ProgressAnalytics } from './ProgressAnalytics';
 
 interface HomeScreenProps {
-  user: UserProfile;
-  progress: UserProgress | undefined;
-  entitlements: Entitlements | null;
-  dailyChallenge: Exercise;
-  onSelectModule: (module: Module) => void;
-  onStartDailyChallenge: (exercise: Exercise) => void;
-  onStartCheckup: () => void;
-  onStartChatTrainer: () => void;
-  onNavigateToPaywall: () => void;
-  onNavigateToCompetenceReport: () => void;
+    user: UserProfile;
+    progress: UserProgress | undefined;
+    entitlements: Entitlements | null;
+    dailyChallenge: Exercise;
+    onSelectModule: (module: Module) => void;
+    onStartDailyChallenge: (exercise: Exercise) => void;
+    onStartCheckup: () => void;
+    onStartChatTrainer: () => void;
+    onNavigateToPaywall: () => void;
+    onNavigateToCompetenceReport: () => void;
 }
 
-const hoverStyle = `
-  .action-card:hover {
-    transform: translateY(-8px);
-    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.15);
-  }
-  .action-card:active {
-    transform: translateY(-4px) scale(0.99);
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
-  }
-  .video-intro-circle:hover {
-    transform: scale(1.05);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-  }
-  .video-intro-circle:hover .play-icon-overlay {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1.1);
-  }
-  .improve-button:hover {
-    background-color: #4a9191; /* Darker secondary */
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  }
-  .improve-button:active {
-    transform: translateY(0);
-    box-shadow: none;
-  }
-`;
+const MediaDisplay: React.FC<{ src: string; alt: string; style: React.CSSProperties, onClick?: () => void }> = ({ src, alt, style, onClick }) => {
+    const isVideo = src && src.toLowerCase().endsWith('.mp4');
+    if (isVideo) {
+        return (
+            <div style={{ position: 'relative', cursor: 'pointer' }} onClick={onClick}>
+                <video 
+                    src={src} 
+                    style={style} 
+                    muted 
+                    playsInline 
+                    title={alt} 
+                />
+                <div style={styles.playIconOverlay}>
+                    <PlayIcon color="white" width={48} height={48} />
+                </div>
+            </div>
+        );
+    }
+    return <img src={src} alt={alt} style={style} loading="lazy" onClick={onClick} />;
+};
 
-const ProgressionPath: React.FC<{
-  userProgress: UserProgress | undefined;
-  userHasPro: boolean;
-  onSelectModule: (module: Module) => void;
-  onNavigateToPaywall: () => void;
-}> = ({ userProgress, userHasPro, onSelectModule, onNavigateToPaywall }) => {
+export const HomeScreen: React.FC<HomeScreenProps> = ({
+    user,
+    progress,
+    entitlements,
+    dailyChallenge,
+    onSelectModule,
+    onStartDailyChallenge,
+    onStartCheckup,
+    onStartChatTrainer,
+    onNavigateToPaywall,
+    onNavigateToCompetenceReport,
+}) => {
+    const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
+    const [videoModalSrc, setVideoModalSrc] = useState('');
 
-    const isModuleCompleted = (module: Module) => {
-        if (module.exercises.length === 0) return false;
-        return module.exercises.every(ex => userProgress?.completedExerciseIds.includes(ex.id));
+    const openVideoModal = (src: string) => {
+        setVideoModalSrc(src);
+        setIsVideoModalOpen(true);
     };
 
-    const arePrerequisitesMet = (module: Module) => {
-        if (!module.prerequisites || module.prerequisites.length === 0) {
-            return true;
-        }
-        return module.prerequisites.every(prereqId => {
-            const prereqModule = MODULES.find(m => m.id === prereqId);
-            return prereqModule ? isModuleCompleted(prereqModule) : false;
-        });
-    };
-    
-    const nonCustomModules = MODULES.filter(m => !m.isCustom);
+    const isPro = hasProAccess(entitlements);
+    const hasCompletedCheckup = !!progress?.checkupProfile;
 
     return (
-        <div style={styles.pathContainer}>
-            {nonCustomModules.map((module, index) => {
-                const isPrereqMet = arePrerequisitesMet(module);
-                const isModulePro = module.isPro ?? false;
-                const isLockedBySubscription = isModulePro && !userHasPro;
-                const isLocked = !isPrereqMet || isLockedBySubscription;
+        <div style={styles.container}>
+            <ProgressOverview user={user} progress={progress} />
 
-                const completedCount = module.exercises.filter(e => userProgress?.completedExerciseIds.includes(e.id)).length;
-                const totalCount = module.exercises.length;
-                const progressPercentage = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
-                
-                const handleClick = () => {
-                    if (isLockedBySubscription) {
-                        onNavigateToPaywall();
-                    } else if (!isLocked) {
-                        onSelectModule(module);
-                    }
-                };
-                
-                return (
-                    <React.Fragment key={module.id}>
-                        <div 
-                            style={{ ...styles.pathNode, ...(isLocked ? styles.pathNodeLocked : {}) }}
-                            onClick={handleClick}
-                        >
-                            <div style={styles.nodeIconContainer}>
-                                <module.icon style={{...styles.nodeIcon, color: isLocked ? COLORS.textSecondary : COLORS.primary }}/>
-                            </div>
-                            <div style={styles.nodeContent}>
-                                <div style={styles.nodeTitleContainer}>
-                                    <h3 style={styles.nodeTitle}>{module.title}</h3>
-                                    {totalCount > 0 && (
-                                        <span style={styles.nodeProgressText}>{completedCount}/{totalCount}</span>
-                                    )}
-                                </div>
-                                {isLocked && (
-                                  <div style={styles.lockReason}>
-                                    <LockIcon style={{width: 16, height: 16}}/>
-                                    <span>
-                                      {isLockedBySubscription ? "Richiede PRO" : "Completa il modulo precedente"}
-                                    </span>
-                                  </div>
-                                )}
-                                <div style={styles.nodeProgressBar}>
-                                    <div style={{...styles.nodeProgressBarFill, width: `${progressPercentage}%`}}/>
-                                </div>
-                                {!isLocked && (
-                                    <button
-                                        style={styles.improveButton}
-                                        className="improve-button"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleClick();
-                                        }}
-                                    >
-                                        Migliora adesso!
-                                    </button>
-                                )}
-                            </div>
-                             {isModulePro && <div style={styles.proBadge}><CrownIcon /> PRO</div>}
+            <section style={styles.cardsGrid}>
+                {/* Daily Challenge Card */}
+                <div style={{...styles.card, ...styles.dailyChallengeCard}} onClick={() => onStartDailyChallenge(dailyChallenge)}>
+                    <MediaDisplay src={assets.dailyChallengeMedia} alt="Sfida del Giorno" style={styles.cardMedia} onClick={() => openVideoModal(assets.dailyChallengeMedia)} />
+                    <div style={styles.cardContent}>
+                        <h3 style={styles.cardTitle}><FlameIcon style={{color: COLORS.error}}/> Sfida del Giorno</h3>
+                        <p style={styles.cardDescription}>{dailyChallenge.title}</p>
+                    </div>
+                </div>
+
+                {/* Checkup Card */}
+                {!hasCompletedCheckup && (
+                    <div style={{...styles.card, ...styles.checkupCard}} onClick={onStartCheckup}>
+                        <MediaDisplay src={assets.checkupMedia} alt="Valuta il tuo livello" style={styles.cardMedia} onClick={() => openVideoModal(assets.checkupMedia)} />
+                        <div style={styles.cardContent}>
+                            <h3 style={styles.cardTitle}><TargetIcon/> Valuta il tuo Livello</h3>
+                            <p style={styles.cardDescription}>Inizia con un check-up per scoprire il tuo profilo di comunicatore.</p>
                         </div>
-                        {index < nonCustomModules.length - 1 && <div style={styles.pathConnector} />}
-                    </React.Fragment>
-                );
-            })}
+                    </div>
+                )}
+
+                 {/* Chat Trainer Card */}
+                <div style={{...styles.card, ...styles.chatTrainerCard}} onClick={onStartChatTrainer}>
+                     {!isPro && <div style={styles.proBadge}><CrownIcon/> PRO</div>}
+                    <MediaDisplay src={assets.chatTrainerCardImage} alt="Chat Strategica" style={styles.cardMedia} />
+                    <div style={styles.cardContent}>
+                        <h3 style={styles.cardTitle}><SendIcon/> Chat Strategica (AI Trainer)</h3>
+                        <p style={styles.cardDescription}>Usa l'AI per generare risposte strategiche a email e messaggi.</p>
+                    </div>
+                </div>
+            </section>
+            
+            {progress && progress.completedExerciseIds.length > 0 && (
+                <ProgressAnalytics userProgress={progress} onNavigateToReport={onNavigateToCompetenceReport} onSelectModule={onSelectModule} />
+            )}
+
+            <section style={styles.modulesSection}>
+                <h2 style={styles.sectionTitle}>Moduli di Allenamento <ArrowDownIcon/></h2>
+                <div style={styles.modulesGrid}>
+                    {MODULES.map(module => {
+                        const isLocked = module.isPro && !isPro;
+                        const handleModuleClick = () => {
+                            if (isLocked) {
+                                soundService.playClick();
+                                onNavigateToPaywall();
+                            } else {
+                                onSelectModule(module);
+                            }
+                        };
+                        return (
+                            <div key={module.id} style={{...styles.moduleCard, ...(isLocked ? styles.moduleCardLocked : {})}} onClick={handleModuleClick}>
+                                {isLocked && <div style={styles.lockOverlay}><LockIcon color="white"/></div>}
+                                <div style={styles.moduleCardIcon}><module.icon/></div>
+                                <h3 style={styles.moduleCardTitle}>{module.title}</h3>
+                                <p style={styles.moduleCardDescription}>{module.description}</p>
+                            </div>
+                        )
+                    })}
+                </div>
+            </section>
+            
+            <VideoPlayerModal 
+                isOpen={isVideoModalOpen}
+                onClose={() => setIsVideoModalOpen(false)}
+                videoSrc={videoModalSrc}
+            />
         </div>
     );
 };
 
-
-export const HomeScreen: React.FC<HomeScreenProps> = ({ user, progress, entitlements, onSelectModule, dailyChallenge, onStartDailyChallenge, onStartCheckup, onStartChatTrainer, onNavigateToPaywall, onNavigateToCompetenceReport }) => {
-  const [videoUrl, setVideoUrl] = useState<string | null>(null);
-  const userHasPro = hasProAccess(entitlements);
-  const customTrainingModule = MODULES.find(m => m.id === 'm6');
-
-  return (
-    <div style={styles.container}>
-      <style>{hoverStyle}</style>
-      <ProgressOverview user={user} progress={progress} />
-
-      <div style={styles.videoIntroContainer}>
-        <div 
-            style={styles.videoIntroCircle} 
-            className="video-intro-circle"
-            onClick={() => {
-                soundService.playClick();
-                setVideoUrl(assets.homeScreenHeaderVideo);
-            }}
-        >
-          <img src={assets.ivanoCincinnatoImage} alt="Presentazione CES Coach" style={styles.videoIntroImage} />
-          <div style={styles.playIconOverlay} className="play-icon-overlay">
-            <PlayIcon color="white" width={48} height={48} style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))' }} />
-          </div>
-        </div>
-        <h2 style={styles.videoIntroTitle}>Inizia ora il tuo allenamento!</h2>
-        <ArrowDownIcon style={styles.bouncingArrow} />
-      </div>
-
-      <div style={styles.grid}>
-        <div 
-          style={{...styles.actionCard, backgroundImage: `url(${assets.dailyChallengeHeaderImage})`}} 
-          className="action-card"
-          onClick={() => onStartDailyChallenge(dailyChallenge)}
-        >
-          <div style={styles.actionCardOverlay} />
-          <div style={styles.actionCardContent}>
-            <h2 style={styles.actionCardTitle}>Sfida del Giorno</h2>
-            <p style={styles.actionCardDescription}>{dailyChallenge.title}</p>
-          </div>
-        </div>
-        
-        {!progress?.checkupProfile && (
-            <div 
-                style={{...styles.actionCard, backgroundImage: `url(${assets.checkupHeaderImage})`}} 
-                className="action-card"
-                onClick={onStartCheckup}
-            >
-                <div style={styles.actionCardOverlay} />
-                <div style={styles.actionCardContent}>
-                    <h2 style={styles.actionCardTitle}>Check-up Iniziale</h2>
-                    <p style={styles.actionCardDescription}>Scopri il tuo profilo di comunicatore</p>
-                </div>
-            </div>
-        )}
-
-         <div 
-            style={{...styles.actionCard, backgroundImage: `url(${assets.chatTrainerCardImage})`}} 
-            className="action-card"
-            onClick={userHasPro ? onStartChatTrainer : onNavigateToPaywall}
-          >
-            <div style={styles.actionCardOverlay} />
-            <div style={styles.actionCardContent}>
-              <h2 style={styles.actionCardTitle}>Chat Strategica</h2>
-              <p style={styles.actionCardDescription}>Allenati a scrivere messaggi efficaci con l'AI Trainer.</p>
-            </div>
-            {!userHasPro && (
-                <div style={styles.proBadge}><CrownIcon /> PRO</div>
-            )}
-          </div>
-      </div>
-
-      <h2 style={styles.sectionTitle}>Il Tuo Percorso del Comunicatore</h2>
-      <ProgressionPath 
-        userProgress={progress}
-        userHasPro={userHasPro}
-        onSelectModule={onSelectModule}
-        onNavigateToPaywall={onNavigateToPaywall}
-      />
-
-      {customTrainingModule && (
-        <div 
-            style={styles.actionCard} 
-            className="action-card"
-            onClick={() => onSelectModule(customTrainingModule)}
-        >
-            <video
-                src={assets.cardImage4}
-                style={styles.cardVideo}
-                autoPlay
-                muted
-                loop
-                playsInline
-                title={customTrainingModule.title}
-            />
-            <div style={styles.actionCardOverlay} />
-            <div style={styles.actionCardContent}>
-                <h2 style={styles.actionCardTitle}>{customTrainingModule.title}</h2>
-                <p style={styles.actionCardDescription}>{customTrainingModule.description}</p>
-            </div>
-            {customTrainingModule.isPro && !userHasPro && (
-                 <div style={styles.proBadge}><CrownIcon /> PRO</div>
-            )}
-        </div>
-      )}
-
-
-      {progress && <ProgressAnalytics userProgress={progress} onNavigateToReport={onNavigateToCompetenceReport} onSelectModule={onSelectModule} />}
-
-      {videoUrl && <VideoPlayerModal isOpen={!!videoUrl} onClose={() => setVideoUrl(null)} videoSrc={videoUrl} />}
-    </div>
-  );
-};
-
 const styles: { [key: string]: React.CSSProperties } = {
-  container: {
-    maxWidth: '1200px',
-    margin: '0 auto',
-    padding: '40px 20px',
-  },
-  videoIntroContainer: {
-    textAlign: 'center',
-    margin: '40px 0',
-    animation: 'fadeInUp 0.5s ease-out both',
-  },
-  videoIntroCircle: {
-    position: 'relative',
-    width: '180px',
-    height: '180px',
-    borderRadius: '50%',
-    margin: '0 auto',
-    cursor: 'pointer',
-    boxShadow: '0 8px 25px rgba(0, 0, 0, 0.1)',
-    transition: 'transform 0.3s ease, box-shadow 0.3s ease',
-    overflow: 'hidden',
-  },
-  videoIntroImage: {
-    width: '100%',
-    height: '100%',
-    objectFit: 'cover',
-  },
-  playIconOverlay: {
-    position: 'absolute',
-    top: '50%',
-    left: '50%',
-    transform: 'translate(-50%, -50%)',
-    width: '80px',
-    height: '80px',
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
-    borderRadius: '50%',
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    opacity: 0.8,
-    transition: 'opacity 0.3s ease, transform 0.3s ease',
-  },
-  videoIntroTitle: {
-    fontSize: '22px',
-    fontWeight: 'bold',
-    color: COLORS.primary,
-    marginTop: '20px',
-    marginBottom: '8px',
-  },
-  bouncingArrow: {
-    color: COLORS.secondary,
-    width: '48px',
-    height: '48px',
-    marginTop: '16px',
-    animation: 'bounce 2s infinite',
-  },
-  grid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-    gap: '24px',
-    marginBottom: '40px',
-  },
-  sectionTitle: {
-    fontSize: '24px',
-    fontWeight: 'bold',
-    color: COLORS.primary,
-    marginBottom: '24px',
-    borderBottom: `3px solid ${COLORS.secondary}`,
-    paddingBottom: '8px',
-  },
-  proBadge: {
-    position: 'absolute',
-    top: '16px',
-    right: '16px',
-    backgroundColor: COLORS.warning,
-    color: 'black',
-    padding: '6px 12px',
-    borderRadius: '20px',
-    fontSize: '12px',
-    fontWeight: 'bold',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '4px',
-  },
-  actionCard: {
-    borderRadius: '16px',
-    boxShadow: '0 8px 20px rgba(0, 0, 0, 0.08)',
-    overflow: 'hidden',
-    cursor: 'pointer',
-    transition: 'transform 0.3s, box-shadow 0.3s',
-    position: 'relative',
-    height: '250px',
-    backgroundSize: 'cover',
-    backgroundPosition: 'center',
-    display: 'flex',
-    flexDirection: 'column',
-    justifyContent: 'flex-end',
-    marginBottom: '24px'
-  },
-  cardVideo: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    width: '100%',
-    height: '100%',
-    objectFit: 'cover',
-    zIndex: 0,
-  },
-  actionCardOverlay: {
-    position: 'absolute',
-    inset: 0,
-    background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 60%)',
-    zIndex: 1,
-  },
-  actionCardContent: {
-    padding: '20px',
-    position: 'relative',
-    zIndex: 1,
-    color: 'white',
-  },
-  actionCardTitle: {
-    fontSize: '22px',
-    fontWeight: 'bold',
-    margin: '0 0 8px 0',
-  },
-  actionCardDescription: {
-    fontSize: '15px',
-    lineHeight: 1.5,
-    margin: 0,
-    opacity: 0.9,
-  },
-  pathContainer: {
-    position: 'relative',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: '16px',
-    marginBottom: '40px',
-  },
-  pathNode: {
-    backgroundColor: COLORS.card,
-    borderRadius: '16px',
-    boxShadow: '0 8px 20px rgba(0, 0, 0, 0.08)',
-    display: 'flex',
-    alignItems: 'center',
-    width: '100%',
-    maxWidth: '600px',
-    padding: '16px',
-    cursor: 'pointer',
-    transition: 'transform 0.3s, box-shadow 0.3s',
-    border: `2px solid transparent`,
-    position: 'relative',
-  },
-  pathNodeLocked: {
-    cursor: 'not-allowed',
-    backgroundColor: COLORS.cardDark,
-    color: COLORS.textSecondary,
-    boxShadow: '0 4px 10px rgba(0, 0, 0, 0.05)',
-  },
-  nodeIconContainer: {
-    width: '60px',
-    height: '60px',
-    borderRadius: '50%',
-    backgroundColor: COLORS.divider,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-    marginRight: '16px',
-  },
-  nodeIcon: {
-    width: '32px',
-    height: '32px',
-  },
-  nodeContent: {
-    flex: 1,
-  },
-  nodeTitleContainer: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: '16px',
-    marginBottom: '8px',
-  },
-  nodeTitle: {
-    fontSize: '18px',
-    fontWeight: 'bold',
-    margin: 0,
-  },
-  lockReason: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '8px',
-      fontSize: '14px',
-      color: COLORS.textSecondary,
-      marginBottom: '8px',
-  },
-  nodeProgressBar: {
-    height: '8px',
-    backgroundColor: COLORS.divider,
-    borderRadius: '4px',
-    marginBottom: '4px',
-  },
-  nodeProgressBarFill: {
-    height: '100%',
-    backgroundColor: COLORS.secondary,
-    borderRadius: '4px',
-  },
-  nodeProgressText: {
-      fontSize: '14px',
-      color: COLORS.secondary,
-      fontWeight: 'bold'
-  },
-  pathConnector: {
-    width: '4px',
-    height: '32px',
-    backgroundColor: COLORS.accentBeige,
-  },
-  improveButton: {
-    marginTop: '12px',
-    padding: '8px 16px',
-    fontSize: '14px',
-    fontWeight: 'bold',
-    color: 'white',
-    backgroundColor: COLORS.secondary,
-    border: 'none',
-    borderRadius: '8px',
-    cursor: 'pointer',
-    transition: 'all 0.2s ease',
-  },
+    container: {
+        maxWidth: '1200px',
+        margin: '0 auto',
+        padding: '24px',
+    },
+    cardsGrid: {
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+        gap: '24px',
+        marginBottom: '48px',
+    },
+    card: {
+        backgroundColor: COLORS.card,
+        borderRadius: '16px',
+        overflow: 'hidden',
+        boxShadow: '0 8px 25px rgba(0,0,0,0.08)',
+        cursor: 'pointer',
+        transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+        display: 'flex',
+        flexDirection: 'column',
+        position: 'relative'
+    },
+    dailyChallengeCard: { border: `2px solid ${COLORS.error}` },
+    checkupCard: { border: `2px solid ${COLORS.secondary}` },
+    chatTrainerCard: { border: `2px solid ${COLORS.warning}` },
+    cardMedia: {
+        width: '100%',
+        height: '180px',
+        objectFit: 'cover',
+    },
+    cardContent: {
+        padding: '20px',
+        flex: 1
+    },
+    cardTitle: {
+        fontSize: '18px',
+        fontWeight: 'bold',
+        color: COLORS.textPrimary,
+        margin: '0 0 8px 0',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px'
+    },
+    cardDescription: {
+        fontSize: '15px',
+        color: COLORS.textSecondary,
+        lineHeight: 1.6,
+        margin: 0,
+    },
+    proBadge: {
+        position: 'absolute',
+        top: '12px',
+        right: '12px',
+        backgroundColor: 'rgba(255,193,7, 0.9)',
+        color: COLORS.textPrimary,
+        padding: '4px 10px',
+        borderRadius: '8px',
+        fontSize: '12px',
+        fontWeight: 'bold',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '4px',
+        zIndex: 2,
+    },
+    playIconOverlay: {
+        position: 'absolute',
+        top: 0, left: 0, right: 0, bottom: 0,
+        backgroundColor: 'rgba(0,0,0,0.3)',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    modulesSection: {
+        marginTop: '48px',
+    },
+    sectionTitle: {
+        fontSize: '24px',
+        fontWeight: 'bold',
+        color: COLORS.primary,
+        marginBottom: '24px',
+        borderBottom: `3px solid ${COLORS.secondary}`,
+        paddingBottom: '8px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px'
+    },
+    modulesGrid: {
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+        gap: '24px',
+    },
+    moduleCard: {
+        backgroundColor: COLORS.card,
+        padding: '24px',
+        borderRadius: '12px',
+        border: `1px solid ${COLORS.divider}`,
+        textAlign: 'center',
+        cursor: 'pointer',
+        transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+        position: 'relative'
+    },
+    moduleCardLocked: {
+        backgroundColor: COLORS.cardDark,
+    },
+    lockOverlay: {
+        position: 'absolute',
+        top: 0, left: 0, right: 0, bottom: 0,
+        backgroundColor: 'rgba(28, 62, 94, 0.7)',
+        color: 'white',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderRadius: '12px',
+        zIndex: 2
+    },
+    moduleCardIcon: {
+        width: '48px',
+        height: '48px',
+        margin: '0 auto 16px',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderRadius: '50%',
+        backgroundColor: COLORS.secondary + '20',
+        color: COLORS.secondary
+    },
+    moduleCardTitle: {
+        fontSize: '18px',
+        fontWeight: 'bold',
+        color: COLORS.textPrimary,
+        margin: '0 0 8px 0',
+    },
+    moduleCardDescription: {
+        fontSize: '14px',
+        color: COLORS.textSecondary,
+        lineHeight: 1.5,
+        margin: 0,
+    }
 };

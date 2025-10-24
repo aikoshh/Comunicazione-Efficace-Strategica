@@ -57,8 +57,8 @@ export const Toast: React.FC<ToastProps> = ({ toast, onDismiss }) => {
       <div style={toastStyle}>
         <BadgeIcon style={{...styles.icon, color}} />
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          <p style={{...styles.message, fontWeight: 'bold', margin: 0 }}>{toast.badge.title}</p>
-          <p style={styles.message}>{toast.message}</p>
+          <p style={{...styles.message, fontWeight: 'bold', margin: 0, color: COLORS_MAP.badge }}>{toast.badge.title}</p>
+          <p style={{...styles.message, margin: 0}}>{toast.message}</p>
         </div>
         <button onClick={handleDismiss} style={styles.closeButton}>
           <CloseIcon width={18} height={18}/>
