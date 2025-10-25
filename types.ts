@@ -1,64 +1,52 @@
 // types.ts
+import React from 'react';
 
-// === Enums and Basic Types ===
+export type ToastType = 'success' | 'error' | 'info' | 'badge';
 
-export enum DifficultyLevel {
-  BASE = 'Base',
-  INTERMEDIO = 'Intermedio',
-  AVANZATO = 'Avanzato',
+export interface ToastMessage {
+  id: string;
+  message: string;
+  type: ToastType;
+  badge?: {
+    title: string;
+    icon: React.FC<any>;
+  };
+}
+
+export interface ToastContextType {
+  addToast: (message: string, type?: ToastType, badge?: ToastMessage['badge']) => void;
 }
 
 export enum ExerciseType {
-  WRITTEN = 'Scritto',
-  VERBAL = 'Vocale',
+  WRITTEN = 'written',
+  VERBAL = 'verbal',
 }
 
 export type CompetenceKey = 'ascolto' | 'riformulazione' | 'assertivita' | 'gestione_conflitto';
 
-// === Core Data Structures ===
-
-export interface UserProfile {
-  uid: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  isAdmin: boolean;
-  enabled: boolean;
-  createdAt: string; // ISO string
-  expiryDate: string | null; // ISO string
-}
+export type CompetenceScores = Record<CompetenceKey, number>;
 
 export interface Exercise {
   id: string;
   title: string;
   scenario: string;
   task: string;
-  difficulty: DifficultyLevel;
+  difficulty: 'Facile' | 'Medio' | 'Difficile';
   competence: CompetenceKey;
   exerciseType?: ExerciseType;
-  headerImage?: string;
-  customObjective?: string;
 }
 
 export interface Module {
   id: string;
   title: string;
   description: string;
-  icon: any; // Changed from React.FC<any>
-  headerImage: string;
-  isPro: boolean;
-  prerequisites: string[];
+  icon: React.FC<React.SVGProps<SVGSVGElement>>;
   exercises: Exercise[];
+  isPro?: boolean;
   isCustom?: boolean;
+  headerImage?: string;
+  color: string;
 }
-
-export interface VoiceRubricCriterion {
-  id: string;
-  label: string;
-  description: string;
-}
-
-// === Analysis and Feedback ===
 
 export interface DetailedRubricScore {
   criterion: string;
@@ -77,7 +65,6 @@ export interface AnalysisResult {
     short: string;
     long: string;
   };
-  // PRO Features
   evolutionary_feedback?: string;
   detailedRubric?: DetailedRubricScore[];
   utilityScore?: number;
@@ -86,7 +73,7 @@ export interface AnalysisResult {
 
 export interface VoiceAnalysisResult {
   scores: {
-    criterion_id: string;
+    criterion_id: 'ritmo' | 'tono' | 'volume' | 'pause' | 'chiarezza';
     score: number;
   }[];
   strengths: string[];
@@ -100,6 +87,14 @@ export interface VoiceAnalysisResult {
   };
 }
 
+export interface AnalysisHistoryItem {
+  id: string;
+  timestamp: string;
+  type: 'written' | 'verbal';
+  userResponse: string;
+  result: AnalysisResult | VoiceAnalysisResult;
+}
+
 export interface CommunicatorProfile {
   profileTitle: string;
   profileDescription: string;
@@ -107,32 +102,18 @@ export interface CommunicatorProfile {
   areasToImprove: string[];
 }
 
-export interface AnalysisHistoryItem {
-  result: AnalysisResult | VoiceAnalysisResult;
-  userResponse: string;
-  timestamp: string; // ISO String
-  type: 'written' | 'verbal';
-}
-
-// === User Progress and Gamification ===
-
-export type CompetenceScores = Record<CompetenceKey, number>;
-
 export interface UserProgress {
   completedExerciseIds: string[];
   scores: number[];
   competenceScores: CompetenceScores;
   analysisHistory: { [exerciseId: string]: AnalysisHistoryItem };
   checkupProfile?: CommunicatorProfile;
-  // Gamification
   xp: number;
   level: number;
   streak: number;
-  lastCompletionDate: string | null; // ISO String
+  lastCompletionDate: string | null;
   unlockedBadges: string[];
 }
-
-// === Personalization & PRO Content ===
 
 export interface PersonalizationData {
   professione: string;
@@ -142,30 +123,15 @@ export interface PersonalizationData {
   sfidaPrincipale: string;
 }
 
-export interface StrategicQuestionCategory {
-  category: string;
-  description: string;
-  questions: {
-    question: string;
-    description: string;
-  }[];
-}
-
-export interface ChecklistItem {
-    id: string;
-    text: string;
-}
-
-// === Monetization ===
-
-export interface Product {
-  id: string;
-  type: 'non-consumable' | 'subscription';
-  name: string;
-  price: string;
-  description: string;
-  benefits: string[];
-  category: string;
+export interface UserProfile {
+  uid: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  isAdmin: boolean;
+  enabled: boolean;
+  createdAt: string;
+  expiryDate: string | null;
 }
 
 export interface Entitlements {
@@ -174,51 +140,60 @@ export interface Entitlements {
   teamActive: boolean;
 }
 
-export interface StorableEntitlements {
+export interface StorableEntitlements extends Omit<Entitlements, 'productIDs'> {
   productIDs: string[];
-  teamSeats: number;
-  teamActive: boolean;
 }
 
-// === UI & App State ===
-
-export interface ToastMessage {
+export interface Product {
   id: string;
-  message: string;
-  type: ToastType;
-  badge?: {
-      title: string;
-      icon: any; // Changed from React.FC<any>
-  }
-}
-
-export type ToastType = 'info' | 'success' | 'error' | 'badge';
-
-export interface ToastContextType {
-  addToast: (message: string, type?: ToastType, badge?: ToastMessage['badge']) => void;
+  type: 'consumable' | 'non-consumable' | 'subscription';
+  name: string;
+  price: string;
+  description: string;
+  benefits: string[];
+  category: string;
 }
 
 export interface Achievement {
   id: string;
   title: string;
   description: string;
-  icon: any; // Changed from React.FC<any>
+  icon: React.FC<any>;
   isUnlocked: (progress: UserProgress) => boolean;
 }
 
-// === Progression Analytics ===
-export interface ProgressOverviewData {
-    header: {
-        welcome: string;
-        score: number;
-        level: string;
-    };
-    progress_bar: {
-        value: number;
-        label: string;
-    };
+export interface StrategicQuestion {
+  question: string;
+  description: string;
 }
 
-export type ScoreExplanation = {
-    [key in 'Coverage' | 'Quality' | 'Consistency' | 'Recency' | 'VoiceDelta']: number;
-};
+export interface StrategicQuestionCategory {
+  category: string;
+  description: string;
+  questions: StrategicQuestion[];
+}
+
+export interface ChecklistItem {
+  id: string;
+  text: string;
+}
+
+export interface ProgressOverviewData {
+  header: {
+    welcome: string;
+    score: number;
+    level: string;
+  };
+  progress_bar: {
+    value: number;
+    label: string;
+  };
+}
+
+export interface ScoreExplanation {
+  Coverage: number;
+  Quality: number;
+  Consistency: number;
+  Recency: number;
+  VoiceDelta: number;
+}

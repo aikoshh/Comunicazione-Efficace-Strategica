@@ -296,13 +296,15 @@ export const generateStrategicChatResponse = async (
       
       Genera una risposta in formato Markdown, strutturata esattamente come segue:
       
-      - Titolo: "Risposta Breve"
+      # Proposta di Risposta
+      
+      ## Risposta Breve
       [Testo della risposta breve e concisa, adatta per chat veloci]
       
-      - Titolo: "Risposta Elaborata"
+      ## Risposta Elaborata
       [Testo della risposta più dettagliata ed empatica, adatta per email o conversazioni importanti]
       
-      - Titolo: "Spiegazione della Strategia"
+      ## Spiegazione della Strategia
       [Elenco puntato con 2-3 punti che spiegano PERCHÉ le risposte sono efficaci, collegandosi all'obiettivo dell'utente. Usa **asterischi** per evidenziare i concetti chiave.]
       
       La lingua deve essere l'italiano.

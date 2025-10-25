@@ -23,7 +23,7 @@ export const ApiKeyErrorScreen: React.FC<ApiKeyErrorScreenProps> = ({ error }) =
       </p>
       <p style={styles.errorMessage}>Dettaglio: {error}</p>
       <p style={styles.message}>
-        // FIX: Updated the error message to be more generic and helpful.
+        {/* FIX: Updated the error message to be more generic and helpful. */}
         Assicurati che la chiave API per i servizi di analisi sia configurata correttamente e sia valida.
       </p>
       <button onClick={handleGoToLogin} style={styles.reloadButton}>

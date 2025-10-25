@@ -98,25 +98,25 @@ export const AdminScreen: React.FC<{ onBack: () => void }> = ({ onBack }) => {
       ) : (
         <div style={styles.tableContainer}>
           <table style={styles.table}>
-            <thead>
+            <thead style={styles.tableHead}>
               <tr>
-                <th>Email</th>
-                <th>Nome</th>
-                <th>Abilitato</th>
-                <th>Admin</th>
-                <th>Scadenza</th>
-                <th>Azioni</th>
+                <th style={styles.tableHeader}>Email</th>
+                <th style={styles.tableHeader}>Nome</th>
+                <th style={styles.tableHeader}>Abilitato</th>
+                <th style={styles.tableHeader}>Admin</th>
+                <th style={styles.tableHeader}>Scadenza</th>
+                <th style={styles.tableHeader}>Azioni</th>
               </tr>
             </thead>
             <tbody>
               {users.map((user) => (
                 <tr key={user.uid}>
-                  <td>{user.email}</td>
-                  <td>{`${user.firstName} ${user.lastName}`}</td>
-                  <td><input type="checkbox" checked={user.enabled} onChange={(e) => setUsers(users.map(u => u.uid === user.uid ? {...u, enabled: e.target.checked} : u))} /></td>
-                  <td><input type="checkbox" checked={user.isAdmin} onChange={(e) => setUsers(users.map(u => u.uid === user.uid ? {...u, isAdmin: e.target.checked} : u))} /></td>
-                  <td><input type="date" value={user.expiryDate ? user.expiryDate.split('T')[0] : ''} onChange={(e) => setUsers(users.map(u => u.uid === user.uid ? {...u, expiryDate: e.target.value} : u))} /></td>
-                  <td>
+                  <td style={styles.tableCell}>{user.email}</td>
+                  <td style={styles.tableCell}>{`${user.firstName} ${user.lastName}`}</td>
+                  <td style={styles.tableCell}><input type="checkbox" checked={user.enabled} onChange={(e) => setUsers(users.map(u => u.uid === user.uid ? {...u, enabled: e.target.checked} : u))} /></td>
+                  <td style={styles.tableCell}><input type="checkbox" checked={user.isAdmin} onChange={(e) => setUsers(users.map(u => u.uid === user.uid ? {...u, isAdmin: e.target.checked} : u))} /></td>
+                  <td style={styles.tableCell}><input type="date" value={user.expiryDate ? user.expiryDate.split('T')[0] : ''} onChange={(e) => setUsers(users.map(u => u.uid === user.uid ? {...u, expiryDate: e.target.value} : u))} /></td>
+                  <td style={styles.tableCell}>
                     <button onClick={() => handleSave(user)} style={styles.saveButton}>Salva</button>
                     <button onClick={() => handleDelete(user.uid)} style={styles.deleteButton}>Elimina</button>
                   </td>
@@ -138,38 +138,23 @@ const styles: { [key: string]: React.CSSProperties } = {
   actions: { display: 'flex', gap: '12px' },
   actionButton: { padding: '10px 16px', fontSize: '15px', border: `1px solid ${COLORS.secondary}`, backgroundColor: 'transparent', color: COLORS.secondary, borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' },
   tableContainer: { overflowX: 'auto', backgroundColor: COLORS.card, borderRadius: '12px', padding: '16px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' },
-  table: { width: '100%', borderCollapse: 'collapse' },
-  saveButton: { padding: '6px 12px', backgroundColor: COLORS.success, color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', marginRight: '8px' },
-  deleteButton: { padding: '6px 12px', backgroundColor: COLORS.error, color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' },
-};
-
-// Add styles for table headers and cells to the styles object
-styles.table = {
-    ...styles.table,
-    fontSize: '14px',
-};
-
-const thTdStyle: React.CSSProperties = {
+  table: { width: '100%', borderCollapse: 'collapse', fontSize: '14px' },
+  tableHead: {
+    backgroundColor: COLORS.cardDark,
+  },
+  tableHeader: {
     padding: '12px 16px',
     textAlign: 'left',
     borderBottom: `1px solid ${COLORS.divider}`,
-};
-
-styles.table.thead = {
-    backgroundColor: COLORS.cardDark,
-};
-
-styles.table.th = {
-    ...thTdStyle,
     fontWeight: 600,
     color: COLORS.textPrimary,
-};
-
-styles.table.td = {
-    ...thTdStyle,
+  },
+  tableCell: {
+    padding: '12px 16px',
+    textAlign: 'left',
+    borderBottom: `1px solid ${COLORS.divider}`,
     color: COLORS.textSecondary,
-};
-
-styles.table.tbody = {
-    ...styles.table.tbody,
+  },
+  saveButton: { padding: '6px 12px', backgroundColor: COLORS.success, color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', marginRight: '8px' },
+  deleteButton: { padding: '6px 12px', backgroundColor: COLORS.error, color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' },
 };

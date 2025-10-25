@@ -43,7 +43,7 @@ export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({
 
   const handleAnalyze = async () => {
     soundService.playClick();
-    // FIX: This comparison appears to be unintentional because the types 'ExerciseType' and '"verbal"' have no overlap.
+    // FIX: This comparison was checking against a string literal 'verbal' instead of the enum member.
     const responseText = exerciseType === ExerciseType.VERBAL ? transcript : userResponse;
     if (!responseText.trim()) {
       addToast('La risposta non può essere vuota.', 'error');
@@ -53,7 +53,7 @@ export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({
     setIsAnalyzing(true);
     
     try {
-        // FIX: This comparison appears to be unintentional because the types 'ExerciseType' and '"verbal"' have no overlap.
+        // FIX: This comparison was checking against a string literal 'verbal' instead of the enum member.
         if (exerciseType === ExerciseType.VERBAL) {
             const result = await analyzeParaverbalResponse(responseText, exercise.scenario, exercise.task);
             onComplete(result, responseText, exercise.id, 'verbal');
@@ -83,7 +83,7 @@ export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({
   };
 
   if (isAnalyzing) {
-    // FIX: This comparison appears to be unintentional because the types 'ExerciseType' and '"verbal"' have no overlap.
+    // FIX: This comparison was checking against a string literal 'verbal' instead of the enum member.
     return <FullScreenLoader estimatedTime={exerciseType === ExerciseType.VERBAL ? 25 : 15} />;
   }
 
@@ -115,7 +115,7 @@ export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({
         )}
         
         <div style={styles.responseArea}>
-          {/* FIX: This comparison appears to be unintentional because the types 'ExerciseType' and '"written"' have no overlap. */}
+          {/* FIX: This comparison was checking against a string literal 'written' instead of the enum member. */}
           {exerciseType === ExerciseType.WRITTEN ? (
             <textarea
               style={styles.textarea}
@@ -139,7 +139,7 @@ export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({
         <button 
             onClick={handleAnalyze} 
             style={{...styles.analyzeButton, backgroundColor: moduleColor}}
-            // FIX: This comparison appears to be unintentional because the types 'ExerciseType' and '"verbal"' have no overlap.
+            // FIX: This comparison was checking against a string literal 'verbal' instead of the enum member.
             disabled={exerciseType === ExerciseType.VERBAL ? !transcript : !userResponse}
         >
             Analizza Risposta <SendIcon />

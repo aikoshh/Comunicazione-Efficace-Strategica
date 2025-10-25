@@ -81,8 +81,8 @@ function calculateConsistency(progress: UserProgress): number {
     const history = progress.analysisHistory || {};
     if (Object.keys(history).length < 2) return 50; // Neutral score if not enough data
 
-    // FIX: Removed unnecessary type cast.
-    const timestamps = Object.values(history).map(h => new Date(h.timestamp).getTime());
+    // FIX: Cast history items to the correct type to resolve property access errors.
+    const timestamps = (Object.values(history) as AnalysisHistoryItem[]).map(h => new Date(h.timestamp).getTime());
     timestamps.sort((a, b) => a - b);
 
     const dayInMs = 1000 * 60 * 60 * 24;
@@ -98,8 +98,8 @@ function calculateConsistency(progress: UserProgress): number {
 
 function calculateRecency(progress: UserProgress): number {
     const history = progress.analysisHistory || {};
-    // FIX: Removed unnecessary type cast.
-    const timestamps = Object.values(history).map(h => new Date(h.timestamp).getTime());
+    // FIX: Cast history items to the correct type to resolve property access errors.
+    const timestamps = (Object.values(history) as AnalysisHistoryItem[]).map(h => new Date(h.timestamp).getTime());
     if (timestamps.length === 0) return 0;
 
     const lastTimestamp = Math.max(...timestamps);
@@ -113,8 +113,8 @@ function calculateVoiceDelta(progress: UserProgress): number {
     const history = progress.analysisHistory || {};
     const voiceScores: number[] = [];
 
-    // FIX: Removed unnecessary type cast by using the item directly.
-    Object.values(history).forEach(historyItem => {
+    // FIX: Cast history items to the correct type to resolve property access errors.
+    (Object.values(history) as AnalysisHistoryItem[]).forEach(historyItem => {
         if (historyItem.type === 'verbal' && historyItem.result) {
             const voiceResult = historyItem.result as VoiceAnalysisResult;
             const avgScore = voiceResult.scores.reduce((sum, s) => sum + s.score, 0) / voiceResult.scores.length;

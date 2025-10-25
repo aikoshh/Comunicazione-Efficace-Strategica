@@ -79,7 +79,8 @@ export const ModuleScreen: React.FC<ModuleScreenProps> = ({
                     <span style={{...styles.difficultyBadge, backgroundColor: COLORS.secondary}}>{exercise.difficulty}</span>
                 </div>
                 <div style={styles.exerciseActions}>
-                    {isCompleted && <CheckCircleIcon style={{color: COLORS.success}} title="Completato"/>}
+                    {/* FIX: Removed the 'title' prop which was causing a type error. */}
+                    {isCompleted && <CheckCircleIcon style={{color: COLORS.success}}/>}
                     {canReview && <button onClick={(e) => { e.stopPropagation(); onReviewExercise(exercise.id); }} style={styles.reviewButton}>Rivedi</button>}
                 </div>
               </div>

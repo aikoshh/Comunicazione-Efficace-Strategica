@@ -1,3 +1,4 @@
+// services/competenceService.ts
 import type { CompetenceKey, CompetenceScores } from '../types';
 
 /**
@@ -56,7 +57,7 @@ const MAX_COMPETENCE_SCORE = 33;
  * @param newExerciseScore The score (0-100) achieved in the exercise.
  * @returns The new, updated competence scores object.
  */
-export const updateCompetenceScores = (
+const updateCompetenceScores = (
   currentScores: CompetenceScores | undefined,
   exerciseId: string,
   newExerciseScore: number
@@ -75,4 +76,8 @@ export const updateCompetenceScores = (
   }
 
   return scores;
+};
+
+export const competenceService = {
+    updateCompetenceScores,
 };

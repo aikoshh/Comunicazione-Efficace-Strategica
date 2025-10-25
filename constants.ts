@@ -1,193 +1,175 @@
 // constants.ts
+import { Module, ExerciseType, VoiceAnalysisResult, Exercise } from './types';
+import {
+  FlameIcon,
+  CheckCircleIcon,
+  QuestionIcon,
+  TargetIcon,
+  WrittenIcon,
+  VoiceIcon,
+  HomeIcon,
+  AdminIcon,
+} from './components/Icons';
+import {
+  cardImage1,
+  cardImage2,
+  cardImage3,
+  cardImage4,
+  cardImage5,
+  cardImage6,
+  chatTrainerCardImage,
+  dareFeedbackEfficaceHeaderVideo,
+  gestireConversazioniDifficiliHeaderVideo,
+  domandeStrategicheHeaderVideo,
+  ascoltoStrategicoHeaderVideo,
+  voceStrategicaHeaderVideo,
+  allenamentoPersonalizzatoVideo,
+  chatTrainerHeaderVideo
+} from './assets';
 
-// Moved COLORS to the top before any imports to resolve circular dependency issues.
 export const COLORS = {
-  primary: '#1C3E5E', // Blu profondo
-  secondary: '#58A6A6', // Verde acqua
-  base: '#F8F7F4', // Sfondo beige chiaro
+  primary: '#1C3E5E', // Deep Blue
+  secondary: '#58A6A6', // Teal
+  base: '#F8F7F4', // Off-white/light beige background
   card: '#FFFFFF',
-  cardDark: '#F0F0F0', // Per sezioni interne
-  textPrimary: '#1C2025',
-  textSecondary: '#667085',
+  cardDark: '#F0F0F0', // Slightly darker for nested components
+  divider: '#E0DCD7',
+  textPrimary: '#1E1E1E',
+  textSecondary: '#5A5A5A',
   textAccent: '#333333',
-  divider: '#EAECEE',
-  success: '#28A745',
-  error: '#DC3545',
-  warning: '#FFC107',
-  accentBeige: '#D4C8B6',
-  primaryGradient: 'linear-gradient(135deg, #1C3E5E 0%, #3a7a7a 100%)',
+  success: '#2E7D32', // Green
+  error: '#C62828',   // Red
+  warning: '#FFC107', // Yellow/Gold
+  accentBeige: '#D4C8B4',
+  primaryGradient: 'linear-gradient(135deg, #1C3E5E 0%, #58A6A6 100%)',
 };
 
-import {
-  DifficultyLevel,
-  Exercise,
-  ExerciseType,
-  Module,
-  VoiceRubricCriterion,
-} from './types';
-import {
-  BarChartIcon,
-  CheckCircleIcon,
-  HomeIcon,
-  LightbulbIcon,
-  MicIcon,
-  QuestionIcon,
-  SendIcon,
-  TargetIcon,
-  VoiceIcon,
-  WrittenIcon,
-  BackIcon,
-  SpeakerIcon,
-  SpeakerOffIcon,
-  RetryIcon,
-  NextIcon,
-  WarningIcon,
-  XCircleIcon,
-  InfoIcon,
-  CloseIcon,
-  CrownIcon,
-  DownloadIcon,
-  UploadIcon,
-  DocumentTextIcon,
-} from './components/Icons';
-import * as assets from './assets';
-
-
-export const EXERCISE_TYPE_ICONS: { [key in ExerciseType]: any } = {
+export const EXERCISE_TYPE_ICONS = {
   [ExerciseType.WRITTEN]: WrittenIcon,
   [ExerciseType.VERBAL]: VoiceIcon,
 };
 
-export const VOICE_RUBRIC_CRITERIA: VoiceRubricCriterion[] = [
-  { id: 'ritmo', label: 'Ritmo', description: 'La velocità del parlato. Troppo veloce può risultare ansiogeno, troppo lento noioso.' },
-  { id: 'tono', label: 'Tono', description: 'La variazione melodica della voce. Un tono monotono è poco coinvolgente.' },
-  { id: 'volume', label: 'Volume', description: 'L\'intensità della voce. Deve essere adeguata al contesto e all\'interlocutore.' },
-  { id: 'pause', label: 'Pause', description: 'L\'uso strategico del silenzio per dare enfasi, creare attesa o permettere la riflessione.' },
-  { id: 'chiarezza', label: 'Chiarezza', description: 'L\'articolazione delle parole. Una dizione chiara è fondamentale per essere compresi.' },
+export const VOICE_RUBRIC_CRITERIA: { id: VoiceAnalysisResult['scores'][0]['criterion_id'], label: string }[] = [
+    { id: 'ritmo', label: 'Ritmo' },
+    { id: 'tono', label: 'Tono' },
+    { id: 'volume', label: 'Volume' },
+    { id: 'pause', label: 'Pause' },
+    { id: 'chiarezza', label: 'Chiarezza' },
 ];
 
-const checkupExercises: Exercise[] = [
-    {
-      id: 'checkup-1',
-      title: 'Check-up: La Riformulazione Sintetica',
-      scenario: 'Un tuo collega, chiaramente frustrato, ti dice: "Sono stufo! Il progetto Rossi è un disastro completo. Il cliente cambia idea ogni due giorni, il budget è quasi esaurito e il team è demotivato. Non so più dove sbattere la testa."',
-      task: 'Riformula sinteticamente la sua preoccupazione per dimostrare che hai capito e per aprire un dialogo costruttivo.',
-      difficulty: DifficultyLevel.BASE,
-      competence: 'riformulazione',
-      exerciseType: ExerciseType.WRITTEN,
-    },
-    {
-      id: 'checkup-2',
-      title: 'Check-up: Gestire una Critica',
-      scenario: 'Il tuo manager ti dice durante una revisione: "Ho notato che ultimamente le tue presentazioni mancano un po\' di mordente. Sono corrette, ma non riescono a coinvolgere veramente il pubblico. Dobbiamo lavorarci su."',
-      task: 'Rispondi alla critica in modo assertivo e aperto al feedback, senza metterti sulla difensiva.',
-      difficulty: DifficultyLevel.INTERMEDIO,
-      competence: 'gestione_conflitto',
-      exerciseType: ExerciseType.WRITTEN,
-    },
-    {
-      id: 'checkup-3',
-      title: 'Check-up: Porre una Domanda Potente',
-      scenario: 'Durante una riunione di team, un membro dice: "Questa nuova procedura è troppo complicata e ci farà solo perdere tempo". L\'atmosfera si fa tesa.',
-      task: 'Poni una sola domanda strategica per sbloccare la situazione, spostando il focus dalla lamentela alla soluzione.',
-      difficulty: DifficultyLevel.AVANZATO,
-      competence: 'ascolto',
-      exerciseType: ExerciseType.WRITTEN,
-    },
+export const STRATEGIC_CHECKUP_EXERCISES: Exercise[] = [
+  {
+    id: 'checkup-1',
+    title: 'Dare un Feedback Correttivo',
+    scenario: 'Un tuo collaboratore, Marco, ha commesso per la terza volta un errore di distrazione in un report importante per un cliente. L\'errore è stato corretto in tempo, ma ha creato un piccolo ritardo.',
+    task: 'Come daresti un feedback a Marco per affrontare la situazione in modo costruttivo e prevenire che accada di nuovo?',
+    difficulty: 'Medio',
+    competence: 'riformulazione',
+  },
+  {
+    id: 'checkup-2',
+    title: 'Gestire un Cliente Insoddisfatto',
+    scenario: 'Un cliente ti chiama lamentandosi che il servizio ricevuto non è all\'altezza delle sue aspettative e minaccia di interrompere il rapporto di collaborazione.',
+    task: 'Come rispondi al telefono per calmare il cliente e iniziare a gestire la situazione in modo strategico?',
+    difficulty: 'Difficile',
+    competence: 'gestione_conflitto',
+  },
+  {
+    id: 'checkup-3',
+    title: 'Chiarire le Aspettative',
+    scenario: 'Il tuo capo ti ha assegnato un nuovo progetto con la direttiva "Voglio un risultato eccellente, sorprendimi". Le istruzioni sono molto vaghe.',
+    task: 'Quali domande fai al tuo capo per chiarire le aspettative e assicurarti di partire con il piede giusto?',
+    difficulty: 'Facile',
+    competence: 'ascolto',
+  },
 ];
-export const STRATEGIC_CHECKUP_EXERCISES: Exercise[] = checkupExercises;
 
 export const MODULES: Module[] = [
   {
-    id: 'm4',
-    title: 'Ascolto Attivo Strategico',
-    description: 'Vai oltre il "sentire". Impara ad ascoltare per capire veramente, creare sintonia e cogliere le opportunità nascoste.',
-    icon: CheckCircleIcon,
-    headerImage: assets.ascoltoStrategicoHeaderVideo,
-    isPro: false,
-    prerequisites: [], // Modulo base, nessun prerequisito
-    exercises: [
-        { id: 'e10', title: 'Riformulazione Empatica', scenario: 'Un amico ti confida: "Mi sento sopraffatto, ho troppe cose da fare e non riesco a stare dietro a nulla. Credo di non essere all\'altezza."', task: 'Rispondi con una riformulazione che validi la sua emozione e gli faccia capire che lo stai ascoltando veramente.', difficulty: DifficultyLevel.BASE, competence: 'ascolto' },
-        { id: 'e11', title: 'Ascoltare per Identificare il "Non Detto"', scenario: 'Durante una trattativa, il fornitore dice: "Possiamo discutere uno sconto, ma la nostra priorità è una partnership a lungo termine".', task: 'Formula una risposta che dimostri di aver colto il suo bisogno nascosto (la stabilità) oltre alla richiesta esplicita (lo sconto).', difficulty: DifficultyLevel.INTERMEDIO, competence: 'ascolto' },
-        { id: 'e12', title: 'Usare il Silenzio Strategicamente', scenario: 'Hai appena presentato una proposta complessa. L\'interlocutore rimane in silenzio, pensieroso.', task: 'Descrivi come gestiresti questo silenzio e quale breve frase (o domanda) useresti per riprendere il dialogo senza mettere pressione.', difficulty: DifficultyLevel.AVANZATO, competence: 'ascolto' },
-    ],
-  },
-  {
     id: 'm1',
     title: 'Dare un Feedback Efficace',
-    description: 'Impara a dare feedback costruttivi che motivano al cambiamento invece di generare conflitto.',
-    icon: LightbulbIcon,
-    headerImage: assets.dareFeedbackEfficaceHeaderVideo,
-    isPro: false,
-    prerequisites: ['m4'], // Si sblocca dopo "Ascolto Attivo"
+    description: 'Impara a dare feedback, sia positivi che correttivi, in modo che vengano accolti e trasformati in azione.',
+    icon: CheckCircleIcon,
+    color: '#2E7D32',
+    headerImage: dareFeedbackEfficaceHeaderVideo,
     exercises: [
-      { id: 'e1', title: 'Feedback Correttivo a un Collaboratore', scenario: 'Un tuo collaboratore, Marco, ha consegnato un report importante con diversi errori di battitura e dati imprecisi. È la seconda volta che succede.', task: 'Dai un feedback a Marco in modo costruttivo, focalizzandoti sul comportamento e sulla soluzione.', difficulty: DifficultyLevel.BASE, competence: 'riformulazione', headerImage: assets.riformulazioneSinteticaHeaderImg },
-      { id: 'e2', title: 'Feedback Assertivo al Tuo Manager', scenario: 'Il tuo manager continua ad assegnarti compiti dell\'ultimo minuto che ti costringono a fare straordinari non pianificati, impattando sulla qualità del tuo lavoro principale.', task: 'Comunica al tuo manager l\'impatto di queste richieste e proponi una soluzione alternativa.', difficulty: DifficultyLevel.AVANZATO, competence: 'assertivita' },
-      { id: 'e7', title: 'Rinforzare un Comportamento Positivo', scenario: 'Hai notato che una collega, Giulia, ha gestito in modo eccellente un cliente difficile, mantenendo la calma e trovando una soluzione brillante.', task: 'Dai un feedback di rinforzo a Giulia che sia specifico e che la incoraggi a mantenere questo approccio.', difficulty: DifficultyLevel.INTERMEDIO, competence: 'riformulazione' },
-    ],
+      { id: 'e1', title: 'Feedback Correttivo a un Collaboratore', scenario: 'Un tuo collaboratore continua a consegnare il lavoro in ritardo, impattando le scadenze del team.', task: 'Prepara e scrivi il discorso che faresti per affrontare il problema in modo costruttivo.', difficulty: 'Facile', competence: 'riformulazione' },
+      { id: 'e2', title: 'Feedback a un Manager', scenario: 'Il tuo manager tende a micro-gestire il tuo lavoro, limitando la tua autonomia e rallentandoti.', task: 'Come chiederesti un incontro e cosa diresti per dare un feedback assertivo ma rispettoso?', difficulty: 'Difficile', competence: 'assertivita' },
+      { id: 'e7', title: 'Rinforzare un Comportamento Positivo', scenario: 'Un membro del tuo team ha gestito in modo eccellente una situazione difficile con un cliente.', task: 'Scrivi un feedback di rinforzo specifico ed efficace che vada oltre un semplice "bravo!".', difficulty: 'Facile', competence: 'riformulazione' },
+    ]
   },
   {
     id: 'm2',
     title: 'Gestire Conversazioni Difficili',
-    description: 'Trasforma discussioni tese in dialoghi produttivi, gestendo obiezioni e disaccordi con sicurezza.',
-    icon: BarChartIcon,
-    headerImage: assets.gestireConversazioniDifficiliHeaderVideo,
-    isPro: false,
-    prerequisites: ['m1'], // Si sblocca dopo "Dare Feedback"
+    description: 'Trasforma i conflitti e le obiezioni in opportunità di dialogo e crescita attraverso tecniche strategiche.',
+    icon: FlameIcon,
+    color: '#C62828',
+    headerImage: cardImage2,
     exercises: [
-      { id: 'e3', title: 'Rispondere a una Critica Ingiusta', scenario: 'Un cliente ti accusa via email di "scarsa professionalità" perché non hai risposto a una sua richiesta inviata alle 22:00 della sera precedente.', task: 'Scrivi una risposta che sia professionale, assertiva e che ridefinisca i confini della collaborazione senza creare una rottura.', difficulty: DifficultyLevel.INTERMEDIO, competence: 'gestione_conflitto' },
-      { id: 'e4', title: 'Comunicare una Decisione Impopolare', scenario: 'Devi comunicare al tuo team che, a causa di tagli al budget, il bonus annuale verrà ridotto del 50%.', task: 'Prepara un breve discorso per comunicare la notizia in modo trasparente, empatico ma fermo, gestendo il probabile malcontento.', difficulty: DifficultyLevel.AVANZATO, competence: 'assertivita' },
-      { id: 'e8', title: 'Dire di "No" a una Richiesta', scenario: 'Un collega ti chiede di farti carico di una parte significativa del suo lavoro perché lui è "troppo impegnato", ma anche tu sei al limite delle tue capacità.', task: 'Rifiuta la sua richiesta in modo gentile ma inequivocabile, proteggendo il tuo tempo senza rovinare il rapporto.', difficulty: DifficultyLevel.BASE, competence: 'assertivita' },
+      { id: 'e3', title: 'Rispondere a un\'Obiezione Forte', scenario: 'Durante una presentazione, un cliente afferma: "La vostra soluzione costa il doppio rispetto al vostro competitor principale".', task: 'Formula una risposta che riconosca il punto del cliente ma sposti il focus sul valore.', difficulty: 'Medio', competence: 'gestione_conflitto' },
+      { id: 'e4', title: 'Comunicare una Decisione Impopolare', scenario: 'Devi comunicare al tuo team che il bonus annuale è stato ridotto a causa dei risultati aziendali.', task: 'Scrivi il messaggio chiave che useresti per comunicare la notizia con empatia e trasparenza.', difficulty: 'Difficile', competence: 'assertivita' },
+      { id: 'e8', title: 'Dire di No a una Richiesta', scenario: 'Un collega ti chiede di farti carico di una parte significativa del suo lavoro perché è in difficoltà con le scadenze, ma tu sei già al limite.', task: 'Come rifiuti la richiesta in modo assertivo, preservando la relazione con il collega?', difficulty: 'Medio', competence: 'assertivita' },
     ],
+    isPro: true,
   },
   {
     id: 'm3',
-    title: 'Padroneggiare l\'Arte delle Domande',
+    title: 'Padroneggiare le Domande Strategiche',
     description: 'Scopri come usare le domande per guidare le conversazioni, scoprire bisogni nascosti e stimolare la riflessione.',
     icon: QuestionIcon,
-    headerImage: assets.domandeStrategicheHeaderVideo,
-    isPro: true,
-    prerequisites: ['m2'], // Modulo PRO
+    color: '#FFC107',
+    headerImage: cardImage3,
     exercises: [
-        { id: 'e5', title: 'Domanda per Chiarire un\'Aspettativa', scenario: 'Il tuo capo ti dice: "Voglio che questo report sia perfetto e che abbia un forte impatto".', task: 'Fai una domanda per trasformare questa richiesta vaga in un\'istruzione concreta e misurabile.', difficulty: DifficultyLevel.BASE, competence: 'riformulazione' },
-        { id: 'e6', title: 'Domanda per Sbloccare un "Sì"', scenario: 'Un potenziale cliente dice: "La vostra proposta è interessante, ma il prezzo è troppo alto".', task: 'Poni una domanda che sposti il focus dal prezzo al valore, per riaprire la negoziazione.', difficulty: DifficultyLevel.INTERMEDIO, competence: 'riformulazione' },
-        { id: 'e9', title: 'Domanda per Gestire una Lamentela', scenario: 'Un membro del team si lamenta dicendo: "Le riunioni sono una perdita di tempo, non ne posso più".', task: 'Fai una domanda che lo responsabilizzi e lo inviti a proporre una soluzione.', difficulty: DifficultyLevel.AVANZATO, competence: 'ascolto' },
+      { id: 'e5', title: 'Da Lamentela a Richiesta', scenario: 'Un membro del team si lamenta: "C\'è troppa burocrazia, non riusciamo a lavorare velocemente".', task: 'Quale domanda faresti per trasformare la lamentela in una proposta costruttiva?', difficulty: 'Facile', competence: 'riformulazione' },
+      { id: 'e6', title: 'Scoprire il "Perché" Nascosto', scenario: 'Un cliente insiste per avere una funzionalità che tecnicamente è molto complessa e poco utile per la maggior parte degli utenti.', task: 'Quali domande faresti per capire il bisogno reale che si nasconde dietro la sua richiesta specifica?', difficulty: 'Medio', competence: 'ascolto' },
+      { id: 'e9', title: 'Domanda per Sbloccare un Impasse', scenario: 'Durante un brainstorming, il team è bloccato e non emergono nuove idee.', task: 'Formula una domanda "ipotetica" o "magica" per riattivare la creatività del gruppo.', difficulty: 'Medio', competence: 'ascolto' },
     ],
+  },
+  {
+    id: 'm4',
+    title: 'Ascolto Attivo e Riformulazione',
+    description: 'Vai oltre il semplice "sentire". Impara ad ascoltare per comprendere e a riformulare per confermare e costruire fiducia.',
+    icon: TargetIcon, // Placeholder
+    color: '#1C3E5E',
+    headerImage: cardImage5,
+    exercises: [
+        { id: 'e10', title: 'Riformulazione a Specchio', scenario: 'Un collega ti dice, con tono preoccupato: "Sono sommerso di lavoro, non so da dove iniziare e temo di non farcela per la scadenza."', task: 'Riformula la sua frase per dimostrargli che hai capito sia il contenuto che l\'emozione.', difficulty: 'Facile', competence: 'ascolto' },
+        { id: 'e11', title: 'Sintesi Strategica', scenario: 'Dopo 15 minuti di conversazione, un cliente ti ha spiegato una serie di problemi complessi e intrecciati tra loro.', task: 'Come sintetizzeresti i punti chiave per assicurarti di aver capito bene e definire il prossimo passo?', difficulty: 'Medio', competence: 'ascolto' },
+        { id: 'e12', title: 'Ascoltare per l\'"Non Detto"', scenario: 'Un membro del tuo team dice "Sì, sì, ho capito tutto" ma il suo linguaggio del corpo (sguardo basso, braccia conserte) comunica insicurezza.', task: 'Cosa diresti per verificare la sua reale comprensione in modo non inquisitorio?', difficulty: 'Difficile', competence: 'ascolto' },
+    ]
   },
   {
     id: 'm5',
     title: 'Voce Strategica (Paraverbale)',
-    description: 'Allena il "come" dici le cose. Modula tono, ritmo e volume per rendere il tuo messaggio più persuasivo e sicuro.',
+    description: 'Allena il tuo strumento più potente: la voce. Impara a gestire tono, ritmo e volume per aumentare il tuo impatto.',
     icon: VoiceIcon,
-    headerImage: assets.voceStrategicaHeaderVideo,
+    color: '#58A6A6',
+    headerImage: voceStrategicaHeaderVideo,
     isPro: true,
-    prerequisites: ['m3'], // Modulo PRO avanzato
     exercises: [
-        { id: 'v1', title: 'Comunicare Calma e Controllo', scenario: 'Devi annunciare al team un problema tecnico imprevisto che causerà un ritardo. L\'ansia è palpabile.', task: 'Registra un messaggio audio (massimo 30 secondi) per comunicare la situazione, usando un tono pacato e un ritmo controllato per trasmettere sicurezza.', difficulty: DifficultyLevel.BASE, exerciseType: ExerciseType.VERBAL, competence: 'riformulazione' },
-        { id: 'v2', title: 'Creare Entusiasmo e Motivazione', scenario: 'È l\'inizio di un nuovo progetto e devi presentare gli obiettivi al team.', task: 'Registra un breve discorso (massimo 45 secondi) usando un tono energico, variazioni di ritmo e pause strategiche per creare coinvolgimento.', difficulty: DifficultyLevel.INTERMEDIO, exerciseType: ExerciseType.VERBAL, competence: 'riformulazione' },
-        { id: 'v3', title: 'Essere Assertivo e Fermo', scenario: 'Devi interrompere un collega che sta divagando durante una riunione importante, per riportare la discussione sul punto principale.', task: 'Registra la frase che useresti, concentrandoti su un volume deciso, un tono fermo (ma non aggressivo) e una dizione chiara.', difficulty: DifficultyLevel.AVANZATO, exerciseType: ExerciseType.VERBAL, competence: 'riformulazione' },
-    ],
+        { id: 'v1', title: 'Comunicare Urgenza e Calma', scenario: 'C\'è un problema critico sulla produzione. Devi comunicarlo al team tecnico.', task: 'Registra un messaggio vocale che comunichi l\'urgenza del problema ma infonda calma e fiducia nella capacità del team di risolverlo.', difficulty: 'Facile', competence: 'riformulazione', exerciseType: ExerciseType.VERBAL },
+        { id: 'v2', title: 'Proiettare Sicurezza', scenario: 'Stai per presentare la tua idea a un gruppo di investitori.', task: 'Registra la frase di apertura della tua presentazione. Usa un tono di voce, un ritmo e un volume che comunichino sicurezza e competenza.', difficulty: 'Medio', competence: 'riformulazione', exerciseType: ExerciseType.VERBAL },
+        { id: 'v3', title: 'Usare le Pause Efficaci', scenario: 'Devi comunicare un punto molto importante durante una riunione.', task: 'Registra la frase: "La nostra priorità assoluta per il prossimo trimestre è una sola: la soddisfazione del cliente." Usa le pause per dare massimo impatto alle parole chiave.', difficulty: 'Difficile', competence: 'riformulazione', exerciseType: ExerciseType.VERBAL },
+    ]
   },
   {
     id: 'm6',
-    title: 'Allenamento Personalizzato',
-    description: 'Crea un esercizio su misura per te. L\'AI genererà uno scenario basato sulla tua professione e le tue sfide specifiche.',
-    icon: TargetIcon,
-    headerImage: assets.allenamentoPersonalizzatoVideo,
-    isPro: true,
     isCustom: true,
-    prerequisites: [], // Sempre accessibile
-    exercises: [], // Gli esercizi sono generati dinamicamente
+    title: 'Allenamento Personalizzato',
+    description: 'Crea un esercizio su misura per te. L\'AI genererà uno scenario basato sulle tue sfide professionali specifiche.',
+    icon: AdminIcon,
+    color: '#6D4C41',
+    headerImage: allenamentoPersonalizzatoVideo,
+    exercises: [] // Gli esercizi sono generati dinamicamente
   },
-  {
+   {
     id: 'm7',
-    title: 'Chat Strategica (AI Trainer)',
-    description: 'Hai un messaggio difficile da scrivere? Usa questo trainer per generare risposte strategiche a email, chat e messaggi.',
-    icon: SendIcon,
-    headerImage: assets.chatTrainerHeaderVideo,
-    isPro: true,
-    isCustom: true, // Questo modulo ha una schermata speciale
-    prerequisites: [], // Sempre accessibile (se PRO)
-    exercises: [],
+    isCustom: true,
+    title: 'Chat Trainer Strategico',
+    description: 'Allenati in tempo reale. Incolla un messaggio che hai ricevuto e ottieni suggerimenti strategici su come rispondere.',
+    icon: QuestionIcon,
+    color: '#4A148C',
+    headerImage: chatTrainerHeaderVideo,
+    exercises: []
   },
 ];

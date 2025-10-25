@@ -3,7 +3,7 @@ class SoundService {
   private audioCtx: AudioContext | null = null;
   public isEnabled: boolean = true; // Could be controlled by a UI setting in the future
 
-  private initializeAudioContext() {
+  private initializeAudioContext = () => {
     if (this.audioCtx || typeof window === 'undefined' || window.document.hidden) {
         return;
     }
@@ -15,7 +15,7 @@ class SoundService {
     }
   }
 
-  public toggleSound(forceState?: boolean) {
+  public toggleSound = (forceState?: boolean) => {
     if (forceState !== undefined) {
       this.isEnabled = forceState;
     } else {
@@ -25,12 +25,12 @@ class SoundService {
     // For this simple implementation, we'll just prevent new sounds from starting.
   }
 
-  private playSound(
+  private playSound = (
     frequency: number,
     type: OscillatorType,
     duration: number,
     volume: number = 0.5
-  ) {
+  ) => {
     this.initializeAudioContext();
     if (!this.audioCtx || !this.isEnabled) return;
 
@@ -54,7 +54,7 @@ class SoundService {
     oscillator.stop(this.audioCtx.currentTime + duration);
   }
   
-  private playFailSound() {
+  private playFailSound = () => {
     this.initializeAudioContext();
     if (!this.audioCtx || !this.isEnabled) return;
 
@@ -77,7 +77,7 @@ class SoundService {
     oscillator.stop(now + duration);
   }
   
-  private playTriumphSound() {
+  public playTriumphSound = () => {
     this.initializeAudioContext();
     if (!this.audioCtx || !this.isEnabled) return;
     const volume = 0.3;
@@ -121,23 +121,23 @@ class SoundService {
     }, 400); // Start sparkles after arpeggio begins
   }
 
-  public playClick() {
+  public playClick = () => {
     this.playSound(2000, 'triangle', 0.05, 0.3);
   }
   
-  public playHover() {
+  public playHover = () => {
     this.playSound(2500, 'sine', 0.03, 0.1);
   }
   
-  public playStartRecording() {
+  public playStartRecording = () => {
       this.playSound(600, 'sine', 0.1, 0.4);
   }
 
-  public playStopRecording() {
+  public playStopRecording = () => {
       this.playSound(440, 'sine', 0.1, 0.4);
   }
   
-  public playSuccess() {
+  public playSuccess = () => {
     this.initializeAudioContext();
     if (!this.audioCtx || !this.isEnabled) return;
     
@@ -147,7 +147,7 @@ class SoundService {
     setTimeout(() => this.playSound(659, 'sine', 0.3, 0.3), 160); // E5, prolonged
   }
 
-  public playScoreSound(score: number) {
+  public playScoreSound = (score: number) => {
     this.initializeAudioContext();
     if (!this.audioCtx || !this.isEnabled) return;
     
