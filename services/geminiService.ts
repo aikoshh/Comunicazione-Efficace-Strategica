@@ -13,18 +13,15 @@ import {
 import { hasProAccess } from './monetizationService';
 import { FALLBACK_API_KEY } from '../config';
 
-// FIX: Updated `getClient` to exclusively use `process.env.API_KEY` as per the coding guidelines.
 // Helper to get the Gemini API client
 const getClient = (): GoogleGenAI => {
-  // The API key must be obtained exclusively from the environment variable.
-  const apiKey = process.env.API_KEY;
-  if (!apiKey) {
-     throw new Error("API key not configured. Please set the API_KEY environment variable.");
+  // Use the environment variable if available, otherwise use the fallback key.
+  const apiKey = process.env.API_KEY || FALLBACK_API_KEY;
+  
+  if (!apiKey || apiKey.startsWith('INCOLLA-QUI')) {
+     throw new Error("API key not configured. Please set the API_KEY environment variable or update it in config.ts.");
   }
-  // This check prevents using a clearly placeholder key.
-  if (apiKey === 'AIzaSyCPKmoJbTg3jhxo9oJIcY7DKPYXKj1kA_c') {
-      throw new Error("Default fallback API key is being used. Please configure a valid API key.");
-  }
+
   return new GoogleGenAI({ apiKey });
 };
 
