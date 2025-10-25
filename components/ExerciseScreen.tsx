@@ -140,7 +140,7 @@ export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({
             onClick={handleAnalyze} 
             style={{...styles.analyzeButton, backgroundColor: moduleColor}}
             // FIX: This comparison was checking against a string literal 'verbal' instead of the enum member.
-            disabled={exerciseType === ExerciseType.VERBAL ? !transcript : !userResponse}
+            disabled={(exerciseType === ExerciseType.VERBAL ? !transcript : !userResponse) || isListening}
         >
             Analizza Risposta <SendIcon />
         </button>
