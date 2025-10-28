@@ -9,7 +9,7 @@ import { ProgressAnalytics } from './ProgressAnalytics';
 import { VideoPlayerModal } from './VideoPlayerModal';
 import { 
     checkupHeaderImage,
-    dailyChallengeHeaderImage,
+    dailyChallengeMedia,
 } from '../assets';
 
 type Screen = 'preloading' | 'login' | 'home' | 'module' | 'exercise' | 'analysisReport' | 'strategicCheckup' | 'communicatorProfile' | 'customSetup' | 'chatTrainer' | 'apiKeyError' | 'paywall' | 'admin' | 'achievements' | 'competence_report' | 'levels';
@@ -104,7 +104,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ user, progress, onSelect
                         </div>
                     )}
                      <div className="action-card" style={styles.actionCard} onClick={onStartDailyChallenge}>
-                        <MediaDisplay src={dailyChallengeHeaderImage} alt="Sfida del giorno" style={styles.actionCardImage} />
+                        <MediaDisplay src={dailyChallengeMedia} alt="Sfida del giorno" style={styles.actionCardImage} />
                         <div style={styles.actionCardContent}>
                             <LightbulbIcon style={styles.actionCardIcon} />
                             <div>
