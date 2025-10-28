@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { onAuthUserChanged, logout } from './services/authService';
 import { databaseService } from './services/databaseService';
@@ -30,7 +31,6 @@ import { AchievementsScreen } from './components/AchievementsScreen';
 import { CompetenceReportScreen } from './components/CompetenceReportScreen';
 import { LevelsScreen } from './components/LevelsScreen';
 import { Footer } from './components/Footer';
-import { DailyChallengeScreen } from './components/DailyChallengeScreen';
 import { hasProAccess } from './services/monetizationService';
 import { FullScreenLoader } from './components/Loader';
 
@@ -53,20 +53,27 @@ const App: React.FC = () => {
         const unsubscribe = onAuthUserChanged(async (authUser) => {
             setUser(authUser);
             if (authUser) {
-                const [userProgress, userEntitlements] = await Promise.all([
-                    databaseService.getUserProgress(authUser.uid),
-                    getUserEntitlements(authUser),
-                ]);
-                setProgress(userProgress || gamificationService.getInitialProgress());
-                setEntitlements(userEntitlements);
-                setScreen('home');
+                try {
+                    const [userProgress, userEntitlements] = await Promise.all([
+                        databaseService.getUserProgress(authUser.uid),
+                        getUserEntitlements(authUser),
+                    ]);
+                    setProgress(userProgress || gamificationService.getInitialProgress());
+                    setEntitlements(userEntitlements);
+                    setScreen('home');
+                } catch (error) {
+                    console.error("Failed to load user data:", error);
+                    addToast("Impossibile caricare i dati del profilo.", 'error');
+                    await logout(); // Log out the user if data loading fails
+                    setScreen('login');
+                }
             } else {
                 setScreen('login');
             }
             setAuthLoading(false);
         });
         return () => unsubscribe();
-    }, []);
+    }, [addToast]);
 
     const updateProgress = useCallback(async (newProgress: UserProgress) => {
         if (user) {
@@ -74,6 +81,35 @@ const App: React.FC = () => {
             await databaseService.saveUserProgress(user.uid, newProgress);
         }
     }, [user]);
+    
+    const handleBack = () => {
+        soundService.playClick();
+        switch(screen) {
+            case 'module':
+            case 'strategicCheckup':
+            case 'customSetup':
+            case 'chatTrainer':
+            case 'paywall':
+            case 'admin':
+            case 'achievements':
+            case 'competence_report':
+            case 'levels':
+            case 'communicatorProfile':
+                handleNavigate('home');
+                break;
+            case 'exercise':
+            case 'analysisReport':
+                if (currentModule) {
+                    handleNavigate('module');
+                } else {
+                    handleNavigate('home');
+                }
+                break;
+            default:
+                handleNavigate('home');
+                break;
+        }
+    };
 
     const handleApiKeyError = (error: string) => {
         setApiKeyError(error);
@@ -181,7 +217,6 @@ const App: React.FC = () => {
 
     const handleStartDailyChallenge = () => {
         soundService.playClick();
-        // The daily challenge is now a direct link to a predefined exercise.
         const firstModule = MODULES.find(m => m.exercises.length > 0 && !m.isCustom);
         if (firstModule?.exercises[0]) {
             setCurrentModule(firstModule);
@@ -240,7 +275,14 @@ const App: React.FC = () => {
 
         const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => (
             <>
-                <Header user={user} onLogout={handleLogout} onNavigate={handleNavigate} />
+                <Header 
+                    user={user} 
+                    onLogout={handleLogout} 
+                    onNavigate={handleNavigate} 
+                    showBack={screen !== 'home'}
+                    onBack={handleBack}
+                    currentModule={currentModule}
+                />
                 <div style={{ paddingTop: '64px', display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
                   <div style={{ flex: 1 }}>{children}</div>
                   <Footer />
@@ -257,10 +299,10 @@ const App: React.FC = () => {
                 return <Layout><HomeScreen user={user} progress={progress} onSelectModule={handleSelectModule} onStartCheckup={() => handleNavigate('strategicCheckup')} onNavigateToReport={() => handleNavigate('competence_report')} onStartDailyChallenge={handleStartDailyChallenge} entitlements={entitlements} onNavigate={handleNavigate} /></Layout>;
             case 'module':
                 if (!currentModule) return <Layout><div>Modulo non trovato.</div></Layout>;
-                return <Layout><ModuleScreen module={currentModule} moduleColor={currentModule.color} onSelectExercise={handleSelectExercise} onBack={() => handleNavigate('home')} completedExerciseIds={progress?.completedExerciseIds || []} entitlements={entitlements} analysisHistory={progress?.analysisHistory || {}} onReviewExercise={handleReviewExercise} /></Layout>;
+                return <Layout><ModuleScreen module={currentModule} moduleColor={currentModule.color} onSelectExercise={handleSelectExercise} completedExerciseIds={progress?.completedExerciseIds || []} entitlements={entitlements} analysisHistory={progress?.analysisHistory || {}} onReviewExercise={handleReviewExercise} /></Layout>;
             case 'exercise':
                 if (!currentExercise) return <Layout><div>Esercizio non trovato.</div></Layout>;
-                return <Layout><ExerciseScreen exercise={currentExercise} moduleColor={currentModule?.color || '#333'} onComplete={handleExerciseComplete} onBack={() => handleNavigate(currentModule ? 'module' : 'home')} entitlements={entitlements} analysisHistory={progress?.analysisHistory || {}} onApiKeyError={handleApiKeyError} /></Layout>;
+                return <Layout><ExerciseScreen exercise={currentExercise} moduleColor={currentModule?.color || '#333'} onComplete={handleExerciseComplete} entitlements={entitlements} analysisHistory={progress?.analysisHistory || {}} onApiKeyError={handleApiKeyError} /></Layout>;
             case 'analysisReport':
                 if (!analysisResult || !currentExercise) return <Layout><div>Report non disponibile.</div></Layout>;
                 const nextExercise = MODULES.flatMap(m => m.exercises).find(e => e.id > currentExercise.id && !progress?.completedExerciseIds.includes(e.id));
@@ -271,26 +313,29 @@ const App: React.FC = () => {
                 }
                 return <Layout><AnalysisReportScreen result={analysisResult} exercise={currentExercise} onRetry={() => handleSelectExercise(currentExercise)} onNextExercise={() => nextExercise ? handleSelectExercise(nextExercise) : handleNavigate('home')} nextExerciseLabel={nextExercise ? 'Prossimo Esercizio' : 'Torna alla Home'} entitlements={entitlements} onNavigateToPaywall={() => handleNavigate('paywall')} onPurchase={handlePurchase} userResponse={userResponseForReport} isReview={isReview} /></Layout>;
             case 'strategicCheckup':
-                return <Layout><StrategicCheckupScreen onComplete={handleCheckupComplete} onBack={() => handleNavigate('home')} entitlements={entitlements} onApiKeyError={handleApiKeyError} /></Layout>;
+                return <Layout><StrategicCheckupScreen onComplete={handleCheckupComplete} entitlements={entitlements} onApiKeyError={handleApiKeyError} /></Layout>;
             case 'communicatorProfile':
                 return <Layout><CommunicatorProfileScreen profile={progress?.checkupProfile} onContinue={() => handleNavigate('home')} /></Layout>;
             case 'customSetup':
                 const customModule = MODULES.find(m => m.id === 'm6');
                 if (!customModule) return <Layout><div>Modulo non trovato.</div></Layout>;
-                return <Layout><CustomSetupScreen module={customModule} onStart={handleStartCustomExercise} onBack={() => handleNavigate('home')} onApiKeyError={handleApiKeyError} /></Layout>;
+// FIX: Added missing 'onBack' prop to satisfy the CustomSetupScreenProps interface.
+                return <Layout><CustomSetupScreen module={customModule} onStart={handleStartCustomExercise} onApiKeyError={handleApiKeyError} onBack={handleBack} /></Layout>;
             case 'chatTrainer':
-                return <Layout><StrategicChatTrainerScreen user={user} onBack={() => handleNavigate('home')} isPro={hasProAccess(entitlements)} onApiKeyError={handleApiKeyError} /></Layout>;
+                return <Layout><StrategicChatTrainerScreen user={user} isPro={hasProAccess(entitlements)} onApiKeyError={handleApiKeyError} /></Layout>;
             case 'paywall':
                 if (!entitlements) return <FullScreenLoader />;
-                return <Layout><PaywallScreen entitlements={entitlements} onPurchase={handlePurchase} onRestore={handleRestore} onBack={() => handleNavigate('home')} /></Layout>;
+// FIX: Added missing 'onBack' prop to satisfy the PaywallScreenProps interface.
+                return <Layout><PaywallScreen entitlements={entitlements} onPurchase={handlePurchase} onRestore={handleRestore} onBack={handleBack} /></Layout>;
             case 'admin':
-                return user.isAdmin ? <Layout><AdminScreen onBack={() => handleNavigate('home')} /></Layout> : <Layout><div>Accesso non autorizzato.</div></Layout>;
+                return user.isAdmin ? <Layout><AdminScreen /></Layout> : <Layout><div>Accesso non autorizzato.</div></Layout>;
             case 'achievements':
-                return <Layout><AchievementsScreen progress={progress!} onBack={() => handleNavigate('home')} /></Layout>;
+                return <Layout><AchievementsScreen progress={progress!} /></Layout>;
             case 'competence_report':
-                return <Layout><CompetenceReportScreen userProgress={progress!} onBack={() => handleNavigate('home')} onSelectExercise={handleSelectExercise} /></Layout>;
+// FIX: Added missing 'onBack' prop to satisfy the CompetenceReportScreenProps interface.
+                return <Layout><CompetenceReportScreen userProgress={progress!} onSelectExercise={handleSelectExercise} onBack={handleBack} /></Layout>;
             case 'levels':
-                 return <Layout><LevelsScreen onBack={() => handleNavigate('home')} /></Layout>;
+                 return <Layout><LevelsScreen /></Layout>;
             default:
                 return <LoginScreen />;
         }

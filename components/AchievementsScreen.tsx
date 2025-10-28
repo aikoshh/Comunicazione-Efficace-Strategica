@@ -6,10 +6,9 @@ import { ACHIEVEMENTS } from '../services/gamificationService';
 
 interface AchievementsScreenProps {
   progress: UserProgress;
-  onBack: () => void;
 }
 
-export const AchievementsScreen: React.FC<AchievementsScreenProps> = ({ progress, onBack }) => {
+export const AchievementsScreen: React.FC<AchievementsScreenProps> = ({ progress }) => {
   return (
     <div style={styles.container}>
       <h1 style={styles.title}>I Tuoi Traguardi</h1>
@@ -25,7 +24,6 @@ export const AchievementsScreen: React.FC<AchievementsScreenProps> = ({ progress
           );
         })}
       </div>
-      <button onClick={onBack} style={styles.backButton}>Torna alla Home</button>
     </div>
   );
 };
@@ -79,16 +77,4 @@ const styles: { [key: string]: React.CSSProperties } = {
         lineHeight: 1.5,
         margin: 0,
     },
-    backButton: {
-        display: 'block',
-        margin: '40px auto 0',
-        padding: '12px 24px',
-        fontSize: '16px',
-        fontWeight: 'bold',
-        color: 'white',
-        background: COLORS.primary,
-        border: 'none',
-        borderRadius: '8px',
-        cursor: 'pointer',
-    }
 };

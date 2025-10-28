@@ -2,11 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { UserProfile } from '../types';
 import { userService } from '../services/userService';
 import { COLORS } from '../constants';
-import { BackIcon, DownloadIcon, UploadIcon } from './Icons';
+import { DownloadIcon, UploadIcon } from './Icons';
 import { Spinner } from './Loader';
 import { useToast } from '../hooks/useToast';
 
-export const AdminScreen: React.FC<{ onBack: () => void }> = ({ onBack }) => {
+export const AdminScreen: React.FC = () => {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
@@ -84,7 +84,6 @@ export const AdminScreen: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   return (
     <div style={styles.container}>
       <header style={styles.header}>
-        <button onClick={onBack} style={styles.backButton}><BackIcon/> Indietro</button>
         <h1 style={styles.title}>Pannello di Amministrazione</h1>
         <div style={styles.actions}>
             <button onClick={handleExport} style={styles.actionButton}><DownloadIcon/> Esporta DB</button>
@@ -96,8 +95,8 @@ export const AdminScreen: React.FC<{ onBack: () => void }> = ({ onBack }) => {
       {isLoading ? (
         <Spinner size={48} color={COLORS.primary} />
       ) : (
-        <div style={styles.tableContainer}>
-          <table style={styles.table}>
+        <div style={styles.tableContainer} className="admin-table-container">
+          <table style={styles.table} className="admin-table">
             <thead style={styles.tableHead}>
               <tr>
                 <th style={styles.tableHeader}>Email</th>
@@ -134,7 +133,6 @@ const styles: { [key: string]: React.CSSProperties } = {
   container: { maxWidth: '1200px', margin: '0 auto', padding: '40px 20px' },
   header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' },
   title: { fontSize: '28px', fontWeight: 'bold', color: COLORS.primary },
-  backButton: { background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '16px' },
   actions: { display: 'flex', gap: '12px' },
   actionButton: { padding: '10px 16px', fontSize: '15px', border: `1px solid ${COLORS.secondary}`, backgroundColor: 'transparent', color: COLORS.secondary, borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' },
   tableContainer: { overflowX: 'auto', backgroundColor: COLORS.card, borderRadius: '12px', padding: '16px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' },

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Exercise, AnalysisResult, VoiceAnalysisResult, Entitlements, AnalysisHistoryItem, ExerciseType } from '../types';
 import { COLORS, EXERCISE_TYPE_ICONS } from '../constants';
-import { BackIcon, SendIcon, MicIcon, TargetIcon, LightbulbIcon, QuestionIcon } from './Icons';
+import { SendIcon, MicIcon, TargetIcon, LightbulbIcon, QuestionIcon } from './Icons';
 import { soundService } from '../services/soundService';
 import { useSpeech } from '../hooks/useSpeech';
 import { analyzeResponse, analyzeParaverbalResponse } from '../services/geminiService';
@@ -15,7 +15,6 @@ interface ExerciseScreenProps {
   exercise: Exercise;
   moduleColor: string;
   onComplete: (result: AnalysisResult | VoiceAnalysisResult, userResponse: string, exerciseId: string, type: 'written' | 'verbal') => void;
-  onBack: () => void;
   entitlements: Entitlements | null;
   analysisHistory: { [exerciseId: string]: AnalysisHistoryItem };
   onApiKeyError: (error: string) => void;
@@ -25,7 +24,6 @@ export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({
   exercise,
   moduleColor,
   onComplete,
-  onBack,
   entitlements,
   onApiKeyError
 }) => {
@@ -87,7 +85,6 @@ export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({
   return (
     <div style={styles.container}>
       <header style={{...styles.header, backgroundColor: moduleColor}}>
-        <button onClick={onBack} style={styles.backButton}><BackIcon /> Indietro</button>
         <div style={styles.titleContainer}>
             <ExerciseIcon style={styles.titleIcon} />
             <h1 style={styles.title}>{exercise.title}</h1>
@@ -158,21 +155,9 @@ const styles: { [key: string]: React.CSSProperties } = {
     minHeight: '100vh',
   },
   header: {
-    padding: '24px',
+    padding: '40px 24px 24px 24px',
     color: 'white',
     position: 'relative',
-  },
-  backButton: {
-    background: 'none',
-    border: 'none',
-    color: 'white',
-    padding: '8px',
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    fontSize: '16px',
-    marginBottom: '16px',
   },
   titleContainer: {
       display: 'flex',

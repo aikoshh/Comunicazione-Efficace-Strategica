@@ -1,10 +1,8 @@
 // components/LevelsScreen.tsx
 import React from 'react';
 import { COLORS } from '../constants';
-import { BackIcon } from './Icons';
 
 interface LevelsScreenProps {
-  onBack: () => void;
 }
 
 const levels = [
@@ -34,13 +32,10 @@ const levels = [
   },
 ];
 
-export const LevelsScreen: React.FC<LevelsScreenProps> = ({ onBack }) => {
+export const LevelsScreen: React.FC<LevelsScreenProps> = () => {
   return (
     <div style={styles.container}>
       <header style={styles.header}>
-        <button onClick={onBack} style={styles.backButton}>
-          <BackIcon /> Torna alla Home
-        </button>
         <h1 style={styles.title}>Livelli di Competenza</h1>
         <p style={styles.subtitle}>
           Il tuo punteggio riflette il tuo livello attuale. Ogni esercizio che completi ti aiuta a salire di livello.
@@ -72,19 +67,6 @@ const styles: { [key: string]: React.CSSProperties } = {
   header: {
     textAlign: 'center',
     marginBottom: '40px',
-  },
-  backButton: {
-    background: 'none',
-    border: 'none',
-    color: COLORS.textSecondary,
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    fontSize: '16px',
-    position: 'absolute',
-    top: '40px',
-    left: '40px',
   },
   title: {
     fontSize: '28px',

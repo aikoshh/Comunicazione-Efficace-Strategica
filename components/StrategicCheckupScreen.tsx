@@ -2,7 +2,7 @@
 import React, { useState, useRef } from 'react';
 import { CommunicatorProfile, Entitlements } from '../types';
 import { COLORS, STRATEGIC_CHECKUP_EXERCISES } from '../constants';
-import { BackIcon, SendIcon } from './Icons';
+import { SendIcon } from './Icons';
 import { generateCommunicatorProfile } from '../services/geminiService';
 import { FullScreenLoader } from './Loader';
 import { useToast } from '../hooks/useToast';
@@ -10,12 +10,11 @@ import { soundService } from '../services/soundService';
 
 interface StrategicCheckupScreenProps {
   onComplete: (profile: CommunicatorProfile) => void;
-  onBack: () => void;
   entitlements: Entitlements | null;
   onApiKeyError: (error: string) => void;
 }
 
-export const StrategicCheckupScreen: React.FC<StrategicCheckupScreenProps> = ({ onComplete, onBack, onApiKeyError }) => {
+export const StrategicCheckupScreen: React.FC<StrategicCheckupScreenProps> = ({ onComplete, onApiKeyError }) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [responses, setResponses] = useState<string[]>([]);
   const [currentResponse, setCurrentResponse] = useState('');
@@ -104,7 +103,6 @@ export const StrategicCheckupScreen: React.FC<StrategicCheckupScreenProps> = ({ 
       </div>
       
       <footer style={styles.footer}>
-          <button onClick={onBack} style={styles.secondaryButton}><BackIcon/> Indietro</button>
           <button onClick={handleNext} style={styles.primaryButton} disabled={!currentResponse.trim()}>
               {isLastStep ? 'Genera Profilo' : 'Prossima Domanda'} <SendIcon/>
           </button>
@@ -142,13 +140,8 @@ const styles: { [key: string]: React.CSSProperties } = {
   footer: {
     position: 'fixed', bottom: 0, left: 0, right: 0, backgroundColor: COLORS.card,
     padding: '16px 24px', borderTop: `1px solid ${COLORS.divider}`, display: 'flex',
-    justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 -2px 10px rgba(0,0,0,0.05)',
+    justifyContent: 'flex-end', alignItems: 'center', boxShadow: '0 -2px 10px rgba(0,0,0,0.05)',
     zIndex: 50,
-  },
-  secondaryButton: {
-    display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 20px', fontSize: '16px',
-    border: `1px solid ${COLORS.secondary}`, backgroundColor: 'transparent', color: COLORS.secondary,
-    borderRadius: '8px', cursor: 'pointer', fontWeight: 500
   },
   primaryButton: {
     display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 20px', fontSize: '16px',

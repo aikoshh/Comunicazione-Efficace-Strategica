@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { UserProfile } from '../types';
+import { UserProfile, Module } from '../types';
 import { COLORS } from '../constants';
-import { LogOutIcon, AdminIcon, TargetIcon, BarChartIcon, CheckCircleIcon, SettingsIcon, CrownIcon } from './Icons';
+import { LogOutIcon, AdminIcon, TargetIcon, BarChartIcon, CheckCircleIcon, SettingsIcon, CrownIcon, BackIcon, HomeIcon } from './Icons';
 import { Logo } from './Logo';
 import { soundService } from '../services/soundService';
 
@@ -10,10 +10,13 @@ type Screen = 'home' | 'paywall' | 'admin' | 'achievements' | 'competence_report
 interface HeaderProps {
     user: UserProfile;
     onLogout: () => void;
-    onNavigate: (screen: Screen) => void;
+    onNavigate: (screen: Screen | 'module') => void;
+    showBack: boolean;
+    onBack: () => void;
+    currentModule: Module | null;
 }
 
-export const Header: React.FC<HeaderProps> = ({ user, onLogout, onNavigate }) => {
+export const Header: React.FC<HeaderProps> = ({ user, onLogout, onNavigate, showBack, onBack, currentModule }) => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
     const buttonRef = useRef<HTMLButtonElement>(null);
@@ -47,14 +50,36 @@ export const Header: React.FC<HeaderProps> = ({ user, onLogout, onNavigate }) =>
         onLogout();
         setIsMenuOpen(false);
     }
+    
+    const handleModuleNav = () => {
+        soundService.playClick();
+        onNavigate('module');
+        setIsMenuOpen(false);
+    }
 
     return (
-        <header style={styles.header}>
+        <header style={styles.header} className="responsive-header">
             <div style={styles.container}>
-                <div style={styles.logoContainer} onClick={() => handleNavigation('home')}>
-                    <Logo style={{ height: '40px', width: 'auto' }} />
-                    <span style={styles.logoText}>CES Coach</span>
+                <div style={styles.leftSection}>
+                    <Logo style={{ height: '40px', width: 'auto', cursor: 'pointer' }} onClick={() => handleNavigation('home')} />
+                    {showBack ? (
+                        <button onClick={onBack} style={styles.navButton}>
+                            <BackIcon />
+                            <span>Indietro</span>
+                        </button>
+                    ) : (
+                        <button onClick={() => handleNavigation('home')} style={{...styles.navButton, color: COLORS.secondary}}>
+                            <HomeIcon />
+                        </button>
+                    )}
                 </div>
+                
+                {showBack && currentModule && (
+                    <div style={styles.breadcrumbs} onClick={handleModuleNav}>
+                        {currentModule.title}
+                    </div>
+                )}
+
                 <div style={styles.userMenu}>
                     <button
                         ref={buttonRef}
@@ -75,7 +100,6 @@ export const Header: React.FC<HeaderProps> = ({ user, onLogout, onNavigate }) =>
                             </div>
                             <div style={styles.dropdownDivider} />
                             <a onClick={() => handleNavigation('achievements')} style={styles.dropdownItem}><TargetIcon /> Traguardi</a>
-                            {/* FIX: Changed 'competenceReport' to 'competence_report' to match the Screen type. */}
                             <a onClick={() => handleNavigation('competence_report')} style={styles.dropdownItem}><BarChartIcon /> Report Competenze</a>
                             <a onClick={() => handleNavigation('levels')} style={styles.dropdownItem}><CheckCircleIcon /> Livelli</a>
                              <a onClick={() => handleNavigation('paywall')} style={styles.dropdownItemPro}><CrownIcon /> Passa a PRO</a>
@@ -114,16 +138,32 @@ const styles: { [key: string]: React.CSSProperties } = {
         justifyContent: 'space-between',
         alignItems: 'center',
     },
-    logoContainer: {
+    leftSection: {
         display: 'flex',
         alignItems: 'center',
-        gap: '12px',
-        cursor: 'pointer',
+        gap: '16px',
     },
-    logoText: {
-        fontSize: '20px',
-        fontWeight: 'bold',
-        color: COLORS.primary,
+    navButton: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        background: 'none',
+        border: 'none',
+        cursor: 'pointer',
+        fontSize: '16px',
+        fontWeight: 500,
+        color: COLORS.textSecondary,
+        padding: '8px',
+    },
+    breadcrumbs: {
+        color: COLORS.textPrimary,
+        fontWeight: 600,
+        fontSize: '18px',
+        cursor: 'pointer',
+        whiteSpace: 'nowrap',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        maxWidth: '300px',
     },
     userMenu: {
         position: 'relative',

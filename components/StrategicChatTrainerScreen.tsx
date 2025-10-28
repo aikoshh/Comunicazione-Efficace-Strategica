@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { UserProfile } from '../types';
 import { COLORS } from '../constants';
-import { BackIcon, SendIcon, LightbulbIcon } from './Icons';
+import { SendIcon, LightbulbIcon } from './Icons';
 import { generateStrategicChatResponse } from '../services/geminiService';
 import { useToast } from '../hooks/useToast';
 import { soundService } from '../services/soundService';
@@ -10,14 +10,13 @@ import ReactMarkdown from 'react-markdown';
 
 interface StrategicChatTrainerScreenProps {
   user: UserProfile;
-  onBack: () => void;
   isPro: boolean;
   onApiKeyError: (error: string) => void;
 }
 
 type Tone = 'Empatico' | 'Diretto' | 'Chiarificatore';
 
-export const StrategicChatTrainerScreen: React.FC<StrategicChatTrainerScreenProps> = ({ onBack, onApiKeyError }) => {
+export const StrategicChatTrainerScreen: React.FC<StrategicChatTrainerScreenProps> = ({ onApiKeyError }) => {
     const [receivedMessage, setReceivedMessage] = useState('');
     const [objective, setObjective] = useState('');
     const [context, setContext] = useState('');
@@ -65,7 +64,6 @@ export const StrategicChatTrainerScreen: React.FC<StrategicChatTrainerScreenProp
     return (
         <div style={styles.container}>
             <header style={styles.header}>
-                <button onClick={onBack} style={styles.backButton}><BackIcon/> Indietro</button>
                 <div style={styles.titleContainer}>
                     <LightbulbIcon style={styles.titleIcon} />
                     <h1 style={styles.title}>Chat Trainer Strategico</h1>
@@ -154,7 +152,6 @@ export const StrategicChatTrainerScreen: React.FC<StrategicChatTrainerScreenProp
 const styles: { [key: string]: React.CSSProperties } = {
     container: { maxWidth: '800px', margin: '0 auto', padding: '40px 20px' },
     header: { textAlign: 'center', marginBottom: '32px', position: 'relative' },
-    backButton: { background: 'none', border: 'none', color: COLORS.textSecondary, padding: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '16px', position: 'absolute', top: 0, left: 0 },
     titleContainer: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px' },
     titleIcon: { width: '32px', height: '32px', color: COLORS.primary },
     title: { fontSize: '28px', fontWeight: 'bold', color: COLORS.primary, margin: 0 },

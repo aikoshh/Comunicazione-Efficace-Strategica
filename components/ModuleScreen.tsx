@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Module, Exercise, Entitlements, AnalysisHistoryItem } from '../types';
 import { COLORS } from '../constants';
 import { hasProAccess } from '../services/monetizationService';
-import { BackIcon, CheckCircleIcon, LockIcon } from './Icons';
+import { CheckCircleIcon, LockIcon } from './Icons';
 import { soundService } from '../services/soundService';
 import { ExercisePreviewModal } from './ExercisePreviewModal';
 
@@ -11,7 +11,6 @@ interface ModuleScreenProps {
   moduleColor: string;
   onSelectExercise: (exercise: Exercise) => void;
   onReviewExercise: (exerciseId: string) => void;
-  onBack: () => void;
   completedExerciseIds: string[];
   entitlements: Entitlements | null;
   analysisHistory: { [exerciseId: string]: AnalysisHistoryItem };
@@ -22,7 +21,6 @@ export const ModuleScreen: React.FC<ModuleScreenProps> = ({
   moduleColor,
   onSelectExercise,
   onReviewExercise,
-  onBack,
   completedExerciseIds,
   entitlements,
   analysisHistory
@@ -33,7 +31,6 @@ export const ModuleScreen: React.FC<ModuleScreenProps> = ({
   const handleExerciseClick = (exercise: Exercise) => {
     soundService.playClick();
     if (module.isPro && !isPro) {
-      // This case should ideally be handled on the home screen, but as a safeguard:
       return; 
     }
     setPreviewingExercise(exercise);
@@ -56,7 +53,6 @@ export const ModuleScreen: React.FC<ModuleScreenProps> = ({
         )}
         <div style={styles.headerOverlay} />
         <div style={styles.headerContent}>
-            <button onClick={onBack} style={styles.backButton}><BackIcon /> Torna alla Home</button>
             <div style={styles.titleContainer}>
                 <module.icon style={styles.moduleIcon} />
                 <h1 style={styles.title}>{module.title}</h1>
@@ -79,7 +75,6 @@ export const ModuleScreen: React.FC<ModuleScreenProps> = ({
                     <span style={{...styles.difficultyBadge, backgroundColor: COLORS.secondary}}>{exercise.difficulty}</span>
                 </div>
                 <div style={styles.exerciseActions}>
-                    {/* FIX: Removed the 'title' prop which was causing a type error. */}
                     {isCompleted && <CheckCircleIcon style={{color: COLORS.success}}/>}
                     {canReview && <button onClick={(e) => { e.stopPropagation(); onReviewExercise(exercise.id); }} style={styles.reviewButton}>Rivedi</button>}
                 </div>
@@ -114,7 +109,6 @@ const styles: { [key: string]: React.CSSProperties } = {
   headerImage: { position: 'absolute', width: '100%', height: '100%', objectFit: 'cover', zIndex: 1 },
   headerOverlay: { position: 'absolute', width: '100%', height: '100%', backgroundColor: 'rgba(28, 62, 94, 0.7)', zIndex: 2 },
   headerContent: { zIndex: 3, textAlign: 'center', padding: '20px' },
-  backButton: { background: 'none', border: 'none', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '16px', position: 'absolute', top: '20px', left: '20px' },
   titleContainer: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', marginBottom: '16px' },
   moduleIcon: { width: '40px', height: '40px' },
   title: { fontSize: '32px', fontWeight: 'bold', margin: 0 },
