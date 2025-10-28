@@ -155,7 +155,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ user, progress, onSelect
             </main>
              {videoToPlay && <VideoPlayerModal isOpen={!!videoToPlay} onClose={() => setVideoToPlay(null)} videoSrc={videoToPlay} />}
         </div>
-    );
+    ); 
 };
 
 const styles: { [key: string]: React.CSSProperties } = {
