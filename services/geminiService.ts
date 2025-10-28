@@ -1,4 +1,3 @@
-// services/geminiService.ts
 import { GoogleGenAI, Type } from '@google/genai';
 import {
   Exercise,
@@ -11,13 +10,24 @@ import {
   DetailedRubricScore,
 } from '../types';
 import { hasProAccess } from './monetizationService';
+import { FALLBACK_API_KEY } from '../config';
 
 // Helper to get the Gemini API client
 const getClient = (): GoogleGenAI => {
-  const apiKey = process.env.API_KEY;
+  // Prioritize environment variable, but use fallback if it's not set.
+  const apiKey = process.env.API_KEY || FALLBACK_API_KEY;
   
-  if (!apiKey) {
-     throw new Error("API key not configured. The API_KEY environment variable must be set.");
+  if (!apiKey || apiKey.includes('INCOLLA-QUI')) {
+     throw new Error("Nessuna chiave API valida trovata. Configura la variabile d'ambiente API_KEY o inserisci una chiave valida in config.ts.");
+  }
+
+  // Add a warning if using the fallback key in a non-local environment
+  if (apiKey === FALLBACK_API_KEY && !process.env.API_KEY) {
+    console.warn(
+        'ATTENZIONE: Si sta utilizzando una chiave API di fallback hardcodata. ' +
+        'Questa pratica è insicura e sconsigliata per ambienti di produzione. ' +
+        'Configurare la variabile d\'ambiente API_KEY per una maggiore sicurezza.'
+    );
   }
 
   return new GoogleGenAI({ apiKey });
