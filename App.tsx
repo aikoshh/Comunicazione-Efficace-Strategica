@@ -34,7 +34,7 @@ import { DailyChallengeScreen } from './components/DailyChallengeScreen';
 import { hasProAccess } from './services/monetizationService';
 import { FullScreenLoader } from './components/Loader';
 
-type Screen = 'preloading' | 'login' | 'home' | 'module' | 'exercise' | 'analysisReport' | 'strategicCheckup' | 'communicatorProfile' | 'customSetup' | 'chatTrainer' | 'apiKeyError' | 'paywall' | 'admin' | 'achievements' | 'competence_report' | 'levels' | 'dailyChallenge';
+type Screen = 'preloading' | 'login' | 'home' | 'module' | 'exercise' | 'analysisReport' | 'strategicCheckup' | 'communicatorProfile' | 'customSetup' | 'chatTrainer' | 'apiKeyError' | 'paywall' | 'admin' | 'achievements' | 'competence_report' | 'levels';
 
 const App: React.FC = () => {
     const [user, setUser] = useState<UserProfile | null>(null);
@@ -179,7 +179,18 @@ const App: React.FC = () => {
         handleNavigate('exercise');
     };
 
-    const handleStartDailyChallenge = () => handleNavigate('dailyChallenge');
+    const handleStartDailyChallenge = () => {
+        soundService.playClick();
+        // The daily challenge is now a direct link to a predefined exercise.
+        const firstModule = MODULES.find(m => m.exercises.length > 0 && !m.isCustom);
+        if (firstModule?.exercises[0]) {
+            setCurrentModule(firstModule);
+            setCurrentExercise(firstModule.exercises[0]);
+            handleNavigate('exercise');
+        } else {
+            addToast("Nessuna sfida del giorno disponibile al momento.", "info");
+        }
+    };
 
     const handleReviewExercise = (exerciseId: string) => {
         if (!progress) return;
@@ -269,8 +280,6 @@ const App: React.FC = () => {
                 return <Layout><CustomSetupScreen module={customModule} onStart={handleStartCustomExercise} onBack={() => handleNavigate('home')} onApiKeyError={handleApiKeyError} /></Layout>;
             case 'chatTrainer':
                 return <Layout><StrategicChatTrainerScreen user={user} onBack={() => handleNavigate('home')} isPro={hasProAccess(entitlements)} onApiKeyError={handleApiKeyError} /></Layout>;
-            case 'dailyChallenge':
-                return <Layout><DailyChallengeScreen onChallengeReady={(ex) => handleSelectExercise(ex)} onApiKeyError={handleApiKeyError} /></Layout>;
             case 'paywall':
                 if (!entitlements) return <FullScreenLoader />;
                 return <Layout><PaywallScreen entitlements={entitlements} onPurchase={handlePurchase} onRestore={handleRestore} onBack={() => handleNavigate('home')} /></Layout>;
