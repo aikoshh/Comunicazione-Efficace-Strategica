@@ -11,15 +11,13 @@ import {
   DetailedRubricScore,
 } from '../types';
 import { hasProAccess } from './monetizationService';
-import { FALLBACK_API_KEY } from '../config';
 
 // Helper to get the Gemini API client
 const getClient = (): GoogleGenAI => {
-  // Use the environment variable if available, otherwise use the fallback key.
-  const apiKey = process.env.API_KEY || FALLBACK_API_KEY;
+  const apiKey = process.env.API_KEY;
   
-  if (!apiKey || apiKey.startsWith('INCOLLA-QUI')) {
-     throw new Error("API key not configured. Please set the API_KEY environment variable or update it in config.ts.");
+  if (!apiKey) {
+     throw new Error("API key not configured. The API_KEY environment variable must be set.");
   }
 
   return new GoogleGenAI({ apiKey });

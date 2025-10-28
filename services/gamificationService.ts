@@ -1,5 +1,4 @@
 // services/gamificationService.ts
-// FIX: Added Achievement and AnalysisHistoryItem to imports.
 import { UserProgress, Achievement, VoiceAnalysisResult, CompetenceScores, CommunicatorProfile, AnalysisHistoryItem } from '../types';
 import { HomeIcon, TargetIcon, CheckCircleIcon } from '../components/Icons';
 import { MODULES } from '../constants';
@@ -81,7 +80,6 @@ function calculateConsistency(progress: UserProgress): number {
     const history = progress.analysisHistory || {};
     if (Object.keys(history).length < 2) return 50; // Neutral score if not enough data
 
-    // FIX: Cast history items to the correct type to resolve property access errors.
     const timestamps = (Object.values(history) as AnalysisHistoryItem[]).map(h => new Date(h.timestamp).getTime());
     timestamps.sort((a, b) => a - b);
 
@@ -98,7 +96,6 @@ function calculateConsistency(progress: UserProgress): number {
 
 function calculateRecency(progress: UserProgress): number {
     const history = progress.analysisHistory || {};
-    // FIX: Cast history items to the correct type to resolve property access errors.
     const timestamps = (Object.values(history) as AnalysisHistoryItem[]).map(h => new Date(h.timestamp).getTime());
     if (timestamps.length === 0) return 0;
 
@@ -113,7 +110,6 @@ function calculateVoiceDelta(progress: UserProgress): number {
     const history = progress.analysisHistory || {};
     const voiceScores: number[] = [];
 
-    // FIX: Cast history items to the correct type to resolve property access errors.
     (Object.values(history) as AnalysisHistoryItem[]).forEach(historyItem => {
         if (historyItem.type === 'verbal' && historyItem.result) {
             const voiceResult = historyItem.result as VoiceAnalysisResult;
@@ -164,7 +160,6 @@ const getInitialProgress = (): UserProgress => ({
     gestione_conflitto: 0,
   },
   analysisHistory: {},
-  // FIX: Added missing gamification properties to initial progress object.
   xp: 0,
   level: 1,
   streak: 0,
@@ -212,7 +207,6 @@ const processCompletion = (
     };
 };
 
-// FIX: Added missing processCheckupCompletion function.
 const processCheckupCompletion = (progress: UserProgress) => {
     const oldProgress = JSON.parse(JSON.stringify(progress));
     const oldUnlockedAchievements = new Set(getUnlockedAchievements(oldProgress).map(a => a.id));

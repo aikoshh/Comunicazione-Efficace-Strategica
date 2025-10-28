@@ -105,7 +105,6 @@ export const LightbulbIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) =>
     </Icon>
 );
 
-// FIX: Added missing LockIcon component.
 export const LockIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   <Icon {...props}>
     <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
@@ -261,7 +260,6 @@ export const NotificationOffIcon: React.FC<React.SVGProps<SVGSVGElement>> = (pro
     </Icon>
 );
 
-// FIX: Added missing PlayIcon and ArrowDownIcon components.
 export const PlayIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     <Icon {...props}>
         <polygon points="5 3 19 12 5 21 5 3" />
@@ -273,4 +271,31 @@ export const ArrowDownIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) =>
         <line x1="12" y1="5" x2="12" y2="19" />
         <polyline points="19 12 12 19 5 12" />
     </Icon>
+);
+
+export const BadgeIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+  <Icon {...props}>
+    <path d="M3.85 8.62a4 4 0 0 1 4.78-4.78l1.41 1.42 1.42-1.42a4 4 0 0 1 4.78 4.78l-1.42 1.41 1.42 1.42a4 4 0 0 1-4.78 4.78l-1.42-1.41-1.41 1.41a4 4 0 0 1-4.78-4.78l1.41-1.42-1.41-1.41z"/>
+  </Icon>
+);
+
+export const FirstStepsIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+  <Icon {...props}>
+     <path d="M12 3a2 2 0 0 0-2 2v7.55a4 4 0 0 1-2.9 3.78L6 17.21V20a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-2.79l-1.1-1.88a4 4 0 0 1-2.9-3.78V5a2 2 0 0 0-2-2z"/>
+  </Icon>
+);
+
+export const MarathonerIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+  <Icon {...props}>
+    <circle cx="9" cy="4" r="1" />
+    <path d="M16 21.5L13 17l-1 1-2-3-5.5 2.5" />
+    <path d="M11 11.5 8 13l-1-1-3 2" />
+    <path d="M14 20l1-1 3-3 1 1.5" />
+  </Icon>
+);
+
+export const StreakIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+  <Icon {...props}>
+    <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+  </Icon>
 );

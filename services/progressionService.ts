@@ -1,11 +1,10 @@
-// FIX: Create the progression service to calculate and provide user progress data.
+// services/progressionService.ts
 import {
   UserProfile,
   UserProgress,
   ProgressOverviewData,
   ScoreExplanation,
   VoiceAnalysisResult,
-  // FIX: Added AnalysisHistoryItem to correctly type history items.
   AnalysisHistoryItem,
 } from '../types';
 import { MODULES } from '../constants';
@@ -52,7 +51,6 @@ function calculateConsistency(progress: UserProgress): number {
     const history = progress.analysisHistory || {};
     if (Object.keys(history).length < 2) return 50; // Neutral score if not enough data
 
-    // FIX: Cast history items to the correct type to resolve property access errors.
     const timestamps = (Object.values(history) as AnalysisHistoryItem[]).map(h => new Date(h.timestamp).getTime());
     timestamps.sort((a, b) => a - b);
 
@@ -69,7 +67,6 @@ function calculateConsistency(progress: UserProgress): number {
 
 function calculateRecency(progress: UserProgress): number {
     const history = progress.analysisHistory || {};
-    // FIX: Cast history items to the correct type to resolve property access errors.
     const timestamps = (Object.values(history) as AnalysisHistoryItem[]).map(h => new Date(h.timestamp).getTime());
     if (timestamps.length === 0) return 0;
 
@@ -84,7 +81,6 @@ function calculateVoiceDelta(progress: UserProgress): number {
     const history = progress.analysisHistory || {};
     const voiceScores: number[] = [];
 
-    // FIX: Cast history items to the correct type to resolve property access errors.
     (Object.values(history) as AnalysisHistoryItem[]).forEach(historyItem => {
         if (historyItem.type === 'verbal' && historyItem.result) {
             const voiceResult = historyItem.result as VoiceAnalysisResult;

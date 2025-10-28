@@ -1,5 +1,6 @@
 // constants.ts
-import { Module, ExerciseType, VoiceAnalysisResult, Exercise } from './types';
+// FIX: Imported UserProgress to resolve type errors.
+import { Module, ExerciseType, VoiceAnalysisResult, Exercise, Achievement, Level, UserProgress } from './types';
 import {
   FlameIcon,
   CheckCircleIcon,
@@ -9,22 +10,27 @@ import {
   VoiceIcon,
   HomeIcon,
   AdminIcon,
+  // FIX: Added missing icon imports.
+  BadgeIcon,
+  FirstStepsIcon,
+  MarathonerIcon,
+  StreakIcon,
 } from './components/Icons';
-import {
-  cardImage1,
-  cardImage2,
-  cardImage3,
-  cardImage4,
-  cardImage5,
-  cardImage6,
-  chatTrainerCardImage,
-  dareFeedbackEfficaceHeaderVideo,
-  gestireConversazioniDifficiliHeaderVideo,
-  domandeStrategicheHeaderVideo,
-  ascoltoStrategicoHeaderVideo,
-  voceStrategicaHeaderVideo,
-  allenamentoPersonalizzatoVideo,
-  chatTrainerHeaderVideo
+import { 
+    cardImage1,
+    cardImage2,
+    cardImage3,
+    cardImage4,
+    cardImage5,
+    cardImage6,
+    chatTrainerCardImage,
+    dareFeedbackEfficaceHeaderVideo,
+    gestireConversazioniDifficiliHeaderVideo,
+    domandeStrategicheHeaderVideo,
+    ascoltoStrategicoHeaderVideo,
+    voceStrategicaHeaderVideo,
+    allenamentoPersonalizzatoVideo,
+    chatTrainerHeaderVideo
 } from './assets';
 
 export const COLORS = {
@@ -160,7 +166,8 @@ export const MODULES: Module[] = [
     icon: AdminIcon,
     color: '#6D4C41',
     headerImage: allenamentoPersonalizzatoVideo,
-    exercises: [] // Gli esercizi sono generati dinamicamente
+    exercises: [],
+    isPro: true,
   },
    {
     id: 'm7',
@@ -170,6 +177,67 @@ export const MODULES: Module[] = [
     icon: QuestionIcon,
     color: '#4A148C',
     headerImage: chatTrainerHeaderVideo,
-    exercises: []
+    exercises: [],
+    isPro: true,
   },
+];
+
+
+// --- GAMIFICATION CONSTANTS ---
+
+export const XP_PER_COMPLETION = 25;
+export const XP_PER_STREAK_DAY = 15;
+export const XP_PER_DAILY_CHALLENGE = 50;
+
+export const LEVELS: Level[] = [
+    { level: 1, minXp: 0, label: "Novizio della Comunicazione" },
+    { level: 2, minXp: 100, label: "Apprendista Oratore" },
+    { level: 3, minXp: 250, label: "Praticante Abile" },
+    { level: 4, minXp: 500, label: "Comunicatore Consapevole" },
+    { level: 5, minXp: 800, label: "Dialogatore Efficace" },
+    { level: 6, minXp: 1200, label: "Persuasore Competente" },
+    { level: 7, minXp: 1700, label: "Tessitore di Relazioni" },
+    { level: 8, minXp: 2300, label: "Facilitatore Esperto" },
+    { level: 9, minXp: 3000, label: "Leader Ispiratore" },
+    { level: 10, minXp: 4000, label: "Maestro della Strategia" },
+];
+
+
+export const BADGES: Achievement[] = [
+  {
+    id: 'first_step',
+    title: 'Primi Passi',
+    description: 'Hai completato il tuo primo esercizio! Continua così.',
+    icon: FirstStepsIcon,
+    isUnlocked: (progress) => progress.completedExerciseIds.length >= 1,
+  },
+  {
+    id: 'checkup_complete',
+    title: 'Consapevolezza Strategica',
+    description: 'Hai completato il check-up e scoperto il tuo profilo.',
+    icon: BadgeIcon,
+    isUnlocked: (progress) => !!progress.checkupProfile,
+  },
+  {
+    id: 'five_completed',
+    title: 'Allievo Costante',
+    description: 'Hai completato 5 esercizi diversi. La pratica rende perfetti.',
+    icon: MarathonerIcon,
+    isUnlocked: (progress) => new Set(progress.completedExerciseIds).size >= 5,
+  },
+  {
+    id: 'streak_3_days',
+    title: 'Abitudine Creata',
+    description: 'Ti sei allenato per 3 giorni di fila!',
+    icon: StreakIcon,
+    isUnlocked: (progress) => progress.streak >= 3,
+  },
+  {
+    id: 'pro_user',
+    title: 'Investitore in Crescita',
+    description: 'Hai sbloccato la versione PRO! Accedi al tuo pieno potenziale.',
+    icon: BadgeIcon, // Placeholder, can be a specific PRO icon
+    isUnlocked: (progress, entitlements) => entitlements?.productIDs.has('ces.pro.monthly'),
+  },
+  // Add more badges here
 ];
