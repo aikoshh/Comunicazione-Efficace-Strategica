@@ -1,6 +1,7 @@
 // services/geminiService.ts
 
 import { GoogleGenAI, Type } from "@google/genai";
+import { FALLBACK_API_KEY } from '../config';
 import type {
   Exercise,
   AnalysisResult,
@@ -17,14 +18,23 @@ import { hasProAccess } from './monetizationService';
 // Helper function to initialize the client.
 // As per guidelines, this ensures the most up-to-date API key is used for each call.
 const getClient = () => {
-    // The API key MUST be obtained exclusively from the environment variable `process.env.API_KEY`.
-    const apiKey = process.env.API_KEY;
-    if (!apiKey) {
-        // This is a critical configuration error.
-        throw new Error("API_KEY environment variable not set. Please configure it in your hosting environment.");
+    // Prioritize environment variable for security
+    let apiKey = process.env.API_KEY;
+
+    // If env var is not set, use the fallback key from the config file
+    if (!apiKey || apiKey.trim() === '') {
+        console.warn("API_KEY environment variable not set. Using fallback key from config.ts. This is not recommended for production.");
+        apiKey = FALLBACK_API_KEY;
     }
+
+    // Final check: if the key is still missing or is a placeholder, throw a clear error.
+    if (!apiKey || apiKey.startsWith('INCOLLA-QUI')) {
+        throw new Error("API key not configured. Please set the API_KEY environment variable or provide a valid key in config.ts.");
+    }
+    
     return new GoogleGenAI({ apiKey });
 };
+
 
 // --- PROMPTS and SCHEMAS ---
 
@@ -147,6 +157,36 @@ const strategicResponseSchema = {
 
 // --- API FUNCTIONS ---
 
+async function handleResponse(responsePromise: Promise<any>): Promise<any> {
+    try {
+        const response = await responsePromise;
+        const candidate = response.candidates?.[0];
+
+        if (!candidate || !candidate.content || candidate.finishReason !== 'STOP') {
+            const safetyReason = candidate?.finishReason;
+            const safetyMessage = `L'analisi è stata interrotta per motivi di sicurezza (${safetyReason || 'sconosciuto'}). Prova a riformulare la tua risposta.`;
+            throw new Error(safetyMessage);
+        }
+        
+        // Pulizia del testo da eventuali markdown
+        let jsonText = candidate.content.parts[0].text.trim();
+        if (jsonText.startsWith('```json')) {
+            jsonText = jsonText.substring(7, jsonText.length - 3).trim();
+        } else if (jsonText.startsWith('```')) {
+             jsonText = jsonText.substring(3, jsonText.length - 3).trim();
+        }
+        
+        return JSON.parse(jsonText);
+    } catch (e: any) {
+        console.error("Error processing AI response:", e);
+        if (e.message.includes('JSON')) {
+             throw new Error("L'AI ha restituito un formato imprevisto. Riprova.");
+        }
+        throw e; // Rilancia l'errore originale (es. blocco di sicurezza)
+    }
+}
+
+
 export async function analyzeResponse(
   exercise: Exercise,
   userResponse: string,
@@ -184,31 +224,17 @@ export async function analyzeResponse(
         FORMATTA L'OUTPUT ESCLUSIVAMENTE IN JSON.
     `;
 
-    try {
-        const response = await ai.models.generateContent({
-            model: 'gemini-2.5-pro',
-            contents: prompt,
-            config: {
-                responseMimeType: 'application/json',
-                responseSchema: isPro ? proAnalysisResultSchema : analysisResultSchema,
-                temperature: 0.3,
-            }
-        });
-
-        const jsonText = response.text.trim();
-        const result = JSON.parse(jsonText);
-        
-        // Ensure all required fields are present
-        if (!result.score || !result.strengths || !result.areasForImprovement || !result.suggestedResponse) {
-             throw new Error("L'analisi ha restituito un formato imprevisto. Riprova.");
+    const responsePromise = ai.models.generateContent({
+        model: 'gemini-2.5-pro',
+        contents: prompt,
+        config: {
+            responseMimeType: 'application/json',
+            responseSchema: isPro ? proAnalysisResultSchema : analysisResultSchema,
+            temperature: 0.3,
         }
-        
-        return result as AnalysisResult;
-
-    } catch (e) {
-        console.error("Error analyzing response:", e);
-        throw new Error("Si è verificato un errore durante l'analisi. Riprova.");
-    }
+    });
+    
+    return handleResponse(responsePromise);
 }
 
 
@@ -244,24 +270,17 @@ export async function analyzeParaverbalResponse(
         FORMATTA L'OUTPUT ESCLUSIVAMENTE IN JSON.
     `;
 
-    try {
-        const response = await ai.models.generateContent({
-            model: 'gemini-2.5-pro',
-            contents: prompt,
-            config: {
-                responseMimeType: 'application/json',
-                responseSchema: voiceAnalysisResultSchema,
-                temperature: 0.5,
-            }
-        });
-        
-        const jsonText = response.text.trim();
-        return JSON.parse(jsonText) as VoiceAnalysisResult;
-
-    } catch (e) {
-        console.error("Error analyzing paraverbal response:", e);
-        throw new Error("Si è verificato un errore durante l'analisi vocale. Riprova.");
-    }
+    const responsePromise = ai.models.generateContent({
+        model: 'gemini-2.5-pro',
+        contents: prompt,
+        config: {
+            responseMimeType: 'application/json',
+            responseSchema: voiceAnalysisResultSchema,
+            temperature: 0.5,
+        }
+    });
+    
+    return handleResponse(responsePromise);
 }
 
 
@@ -283,31 +302,24 @@ export async function generateCustomExercise(
         - Rispondi SOLO con un oggetto JSON contenente "scenario" e "task". Non aggiungere altro testo.
     `;
 
-     try {
-        const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: prompt,
-            config: {
-                responseMimeType: 'application/json',
-                responseSchema: {
-                    type: Type.OBJECT,
-                    properties: {
-                        scenario: { type: Type.STRING },
-                        task: { type: Type.STRING },
-                    },
-                    required: ['scenario', 'task'],
+     const responsePromise = ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt,
+        config: {
+            responseMimeType: 'application/json',
+            responseSchema: {
+                type: Type.OBJECT,
+                properties: {
+                    scenario: { type: Type.STRING },
+                    task: { type: Type.STRING },
                 },
-                temperature: 0.8,
-            }
-        });
-        
-        const jsonText = response.text.trim();
-        return JSON.parse(jsonText);
-
-    } catch (e) {
-        console.error("Error generating custom exercise:", e);
-        throw new Error("Impossibile generare l'esercizio personalizzato. Riprova.");
-    }
+                required: ['scenario', 'task'],
+            },
+            temperature: 0.8,
+        }
+    });
+    
+    return handleResponse(responsePromise);
 }
 
 export async function generateCommunicatorProfile(
@@ -331,24 +343,17 @@ export async function generateCommunicatorProfile(
         FORMATTA L'OUTPUT ESCLUSIVAMENTE IN JSON.
     `;
 
-    try {
-        const response = await ai.models.generateContent({
-            model: 'gemini-2.5-pro',
-            contents: prompt,
-            config: {
-                responseMimeType: 'application/json',
-                responseSchema: communicatorProfileSchema,
-                temperature: 0.4,
-            }
-        });
+    const responsePromise = ai.models.generateContent({
+        model: 'gemini-2.5-pro',
+        contents: prompt,
+        config: {
+            responseMimeType: 'application/json',
+            responseSchema: communicatorProfileSchema,
+            temperature: 0.4,
+        }
+    });
         
-        const jsonText = response.text.trim();
-        return JSON.parse(jsonText) as CommunicatorProfile;
-
-    } catch (e) {
-        console.error("Error generating communicator profile:", e);
-        throw new Error("Impossibile generare il profilo. Riprova.");
-    }
+    return handleResponse(responsePromise);
 }
 
 export async function getStrategicSuggestions(
@@ -375,24 +380,17 @@ export async function getStrategicSuggestions(
         FORMATTA L'OUTPUT ESCLUSIVAMENTE IN JSON.
     `;
 
-     try {
-        const response = await ai.models.generateContent({
-            model: 'gemini-2.5-pro',
-            contents: prompt,
-            config: {
-                responseMimeType: 'application/json',
-                responseSchema: strategicResponseSchema,
-                temperature: 0.7,
-            }
-        });
+     const responsePromise = ai.models.generateContent({
+        model: 'gemini-2.5-pro',
+        contents: prompt,
+        config: {
+            responseMimeType: 'application/json',
+            responseSchema: strategicResponseSchema,
+            temperature: 0.7,
+        }
+    });
         
-        const jsonText = response.text.trim();
-        return JSON.parse(jsonText) as StrategicResponse;
-
-    } catch (e) {
-        console.error("Error getting strategic suggestions:", e);
-        throw new Error("Impossibile generare i suggerimenti. Riprova.");
-    }
+    return handleResponse(responsePromise);
 }
 
 export async function continueStrategicChat(
@@ -434,22 +432,15 @@ export async function continueStrategicChat(
         required: [...(strategicResponseSchema.required || []), 'personaResponse'],
     };
 
-    try {
-        const response = await ai.models.generateContent({
-            model: 'gemini-2.5-pro',
-            contents: prompt,
-            config: {
-                responseMimeType: 'application/json',
-                responseSchema: continuedStrategicResponseSchema,
-                temperature: 0.8,
-            }
-        });
+    const responsePromise = ai.models.generateContent({
+        model: 'gemini-2.5-pro',
+        contents: prompt,
+        config: {
+            responseMimeType: 'application/json',
+            responseSchema: continuedStrategicResponseSchema,
+            temperature: 0.8,
+        }
+    });
         
-        const jsonText = response.text.trim();
-        return JSON.parse(jsonText) as ContinuedStrategicResponse;
-
-    } catch (e) {
-        console.error("Error continuing strategic chat:", e);
-        throw new Error("Impossibile continuare la simulazione. Riprova.");
-    }
+    return handleResponse(responsePromise);
 }
