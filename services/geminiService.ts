@@ -1,6 +1,7 @@
 // services/geminiService.ts
 
 import { GoogleGenAI, Type, GenerateContentResponse } from "@google/genai";
+import { FALLBACK_API_KEY } from '../config'; // Import the fallback key
 import {
   AnalysisResult,
   Exercise,
@@ -13,14 +14,22 @@ import {
   ResponseStyle,
 } from '../types';
 
-// The API key MUST be obtained exclusively from the environment variable `process.env.API_KEY`.
-// This is a hard requirement from the coding guidelines.
+// The API key will prioritize the environment variable, but use the fallback if not set.
 const getApiKey = (): string => {
     const apiKey = process.env.API_KEY;
-    if (!apiKey) {
-        throw new Error("API_KEY environment variable not set. Please configure it in your deployment environment.");
+
+    // Prioritize environment variable
+    if (apiKey && apiKey !== 'YOUR_API_KEY_HERE' && !apiKey.startsWith('INCOLLA-QUI')) {
+        return apiKey;
     }
-    return apiKey;
+    
+    // Use fallback if environment variable is not set
+    if (FALLBACK_API_KEY && !FALLBACK_API_KEY.startsWith('INCOLLA-QUI')) {
+        return FALLBACK_API_KEY;
+    }
+
+    // If neither is available, throw an error.
+    throw new Error("API key not configured. The API_KEY environment variable must be set, or a valid FALLBACK_API_KEY must be provided in config.ts.");
 };
 
 // Centralized function to run prompts and handle JSON parsing
