@@ -104,7 +104,7 @@ export const StrategicChatTrainerScreen: React.FC<StrategicChatTrainerScreenProp
         setCurrentUserMessage('');
         setIsLoading(true);
 
-        // FIX: The `map` function now explicitly casts `m.role` to the correct narrowed type.
+        // FIX: The `map` function now explicitly casts `m.role` and `m.content` to the correct narrowed types.
         // This ensures `apiHistory` matches the type expected by `continueStrategicChat`.
         const apiHistory = updatedHistory
             .filter(m => m.role === 'user' || m.role === 'persona')
