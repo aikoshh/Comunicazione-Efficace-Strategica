@@ -1,368 +1,455 @@
 // services/geminiService.ts
 
-import { GoogleGenAI, Type, GenerateContentResponse } from "@google/genai";
-import { FALLBACK_API_KEY } from '../config'; // Import the fallback key
-import {
-  AnalysisResult,
+import { GoogleGenAI, Type } from "@google/genai";
+import type {
   Exercise,
+  AnalysisResult,
+  VoiceAnalysisResult,
   Entitlements,
   PersonalizationData,
   CommunicatorProfile,
-  VoiceAnalysisResult,
   StrategicResponse,
   ContinuedStrategicResponse,
   ResponseStyle,
 } from '../types';
+import { hasProAccess } from './monetizationService';
 
-// The API key will prioritize the environment variable, but use the fallback if not set.
-const getApiKey = (): string => {
+// Helper function to initialize the client.
+// As per guidelines, this ensures the most up-to-date API key is used for each call.
+const getClient = () => {
+    // The API key MUST be obtained exclusively from the environment variable `process.env.API_KEY`.
     const apiKey = process.env.API_KEY;
-
-    // Prioritize environment variable
-    if (apiKey && apiKey !== 'YOUR_API_KEY_HERE' && !apiKey.startsWith('INCOLLA-QUI')) {
-        return apiKey;
+    if (!apiKey) {
+        // This is a critical configuration error.
+        throw new Error("API_KEY environment variable not set. Please configure it in your hosting environment.");
     }
-    
-    // Use fallback if environment variable is not set
-    if (FALLBACK_API_KEY && !FALLBACK_API_KEY.startsWith('INCOLLA-QUI')) {
-        return FALLBACK_API_KEY;
-    }
-
-    // If neither is available, throw an error.
-    throw new Error("API key not configured. The API_KEY environment variable must be set, or a valid FALLBACK_API_KEY must be provided in config.ts.");
+    return new GoogleGenAI({ apiKey });
 };
 
-// Centralized function to run prompts and handle JSON parsing
-async function runJsonPrompt<T>(prompt: string, schema: any, model: "gemini-2.5-pro" | "gemini-2.5-flash" = "gemini-2.5-pro"): Promise<T> {
-  const ai = new GoogleGenAI({ apiKey: getApiKey() });
-  try {
-    const response: GenerateContentResponse = await ai.models.generateContent({
-      model: model,
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: schema,
-        temperature: 0.5,
-      },
-    });
-
-    const text = response.text;
-    if (!text) {
-        throw new Error("Empty response from AI model.");
-    }
-
-    return JSON.parse(text) as T;
-
-  } catch (error: any) {
-    console.error("Gemini API Error:", error);
-    // Provide a more user-friendly error message
-    if (error.message.includes('400') || error.message.includes('invalid')) {
-         throw new Error("La richiesta all'AI non è valida. Controlla il testo inserito.");
-    }
-     if (error.message.includes('API key not valid')) {
-        throw new Error("La chiave API non è valida. Per favore, controlla la configurazione.");
-    }
-    throw new Error("Errore durante l'analisi della risposta da parte dell'AI. Riprova.");
-  }
-}
-
-// --- Schemas for JSON Responses ---
-
-const detailedRubricSchema = {
-    type: Type.OBJECT,
-    properties: {
-        criterion: { type: Type.STRING },
-        score: { type: Type.INTEGER, description: "Punteggio da 0 a 10" },
-        justification: { type: Type.STRING },
-    },
-    required: ['criterion', 'score', 'justification']
-};
+// --- PROMPTS and SCHEMAS ---
 
 const analysisResultSchema = {
     type: Type.OBJECT,
     properties: {
-        score: { type: Type.INTEGER, description: "Punteggio generale da 0 a 100." },
+        score: { type: Type.NUMBER, description: "Punteggio generale da 0 a 100." },
         strengths: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Elenco puntato dei punti di forza." },
         areasForImprovement: {
             type: Type.ARRAY,
             items: {
                 type: Type.OBJECT,
                 properties: {
-                    suggestion: { type: Type.STRING, description: "Area di miglioramento principale." },
+                    suggestion: { type: Type.STRING, description: "Area di miglioramento specifica." },
                     example: { type: Type.STRING, description: "Esempio pratico di come migliorare." },
                 },
-                required: ['suggestion', 'example']
+                required: ['suggestion', 'example'],
             },
-            description: "Elenco delle aree di miglioramento con esempi."
+            description: "Elenco delle aree di miglioramento con suggerimenti ed esempi."
         },
         suggestedResponse: {
             type: Type.OBJECT,
             properties: {
-                short: { type: Type.STRING, description: "Una versione breve e concisa della risposta ideale." },
-                long: { type: Type.STRING, description: "Una versione più elaborata e dettagliata della risposta ideale, con spiegazioni." },
+                short: { type: Type.STRING, description: "Versione breve e concisa della risposta ideale." },
+                long: { type: Type.STRING, description: "Versione più elaborata e dettagliata della risposta ideale, con eventuali spiegazioni." },
             },
-            required: ['short', 'long']
+            required: ['short', 'long'],
+            description: "Una risposta suggerita in versione breve ed elaborata."
         },
+    },
+    required: ['score', 'strengths', 'areasForImprovement', 'suggestedResponse'],
+};
+
+const proAnalysisResultSchema = {
+    ...analysisResultSchema,
+    properties: {
+        ...analysisResultSchema.properties,
         detailedRubric: {
             type: Type.ARRAY,
-            items: detailedRubricSchema,
-            description: "Valutazione dettagliata PRO basata su 5 criteri: Chiarezza, Tono, Orientamento alla Soluzione, Assertività, Struttura."
+            items: {
+                type: Type.OBJECT,
+                properties: {
+                    criterion: { type: Type.STRING, description: "Criterio di valutazione (es. Chiarezza, Tono, Soluzione)." },
+                    score: { type: Type.NUMBER, description: "Punteggio da 0 a 10 per il criterio." },
+                    justification: { type: Type.STRING, description: "Motivazione del punteggio assegnato." },
+                },
+                required: ['criterion', 'score', 'justification'],
+            },
+            description: "Valutazione dettagliata PRO basata su 5 rubriche."
         }
     },
-    required: ['score', 'strengths', 'areasForImprovement', 'suggestedResponse']
+     required: [...(analysisResultSchema.required || []), 'detailedRubric']
 };
 
 
-const voiceAnalysisSchema = {
+const voiceAnalysisResultSchema = {
     type: Type.OBJECT,
     properties: {
         scores: {
             type: Type.ARRAY,
-            description: "Un array di 5 oggetti, uno per ogni criterio: ritmo, tono, volume, pause, chiarezza.",
             items: {
                 type: Type.OBJECT,
                 properties: {
-                    criterion_id: { type: Type.STRING, enum: ['ritmo', 'tono', 'volume', 'pause', 'chiarezza'] },
-                    score: { type: Type.INTEGER, description: "Punteggio da 1 a 10." },
-                    justification: { type: Type.STRING, description: "Breve motivazione del punteggio." },
+                    criterion_id: { type: Type.STRING, description: "ID del criterio: 'ritmo', 'tono', 'volume', 'pause', 'chiarezza'." },
+                    score: { type: Type.NUMBER, description: "Punteggio da 0 a 10." },
+                    justification: { type: Type.STRING, description: "Motivazione del punteggio." },
                 },
-                required: ['criterion_id', 'score', 'justification']
-            }
+                required: ['criterion_id', 'score', 'justification'],
+            },
+            description: "Punteggi dettagliati per i criteri paraverbali."
         },
-        strengths: { type: Type.ARRAY, items: { type: Type.STRING }, description: "2-3 punti di forza principali della performance paraverbale." },
-        improvements: { type: Type.ARRAY, items: { type: Type.STRING }, description: "2-3 aree di miglioramento principali." },
-        actions: { type: Type.ARRAY, items: { type: Type.STRING }, description: "2-3 azioni pratiche e concrete che l'utente può intraprendere." },
-        micro_drill_60s: { type: Type.STRING, description: "Un esercizio pratico di 60 secondi che l'utente può fare subito." },
+        strengths: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Punti di forza dell'analisi paraverbale." },
+        improvements: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Aree di miglioramento dell'analisi paraverbale." },
+        actions: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Azioni pratiche e concrete suggerite." },
+        micro_drill_60s: { type: Type.STRING, description: "Un breve esercizio (micro-drill) da 60 secondi." },
         suggested_delivery: {
             type: Type.OBJECT,
             properties: {
-                instructions: { type: Type.STRING, description: "Spiegazione su come dovrebbe essere la dizione ideale (es. 'Parla con un tono più caldo...')." },
-                ideal_script: { type: Type.STRING, description: "Il testo della risposta ideale, pulito, da usare per il Text-to-Speech." },
-                annotated_text: { type: Type.STRING, description: "Lo stesso testo, ma con annotazioni per le pause (☐) e l'enfasi (△)." },
+                instructions: { type: Type.STRING, description: "Istruzioni su come interpretare la consegna ideale." },
+                ideal_script: { type: Type.STRING, description: "Trascrizione pulita della risposta ideale da usare per il text-to-speech." },
+                annotated_text: { type: Type.STRING, description: "Testo annotato con simboli per pause (☐) ed enfasi (△)." },
             },
-            required: ['instructions', 'ideal_script', 'annotated_text']
-        }
+            required: ['instructions', 'ideal_script', 'annotated_text'],
+            description: "Suggerimenti sulla consegna ideale della risposta."
+        },
     },
-    required: ['scores', 'strengths', 'improvements', 'actions', 'micro_drill_60s', 'suggested_delivery']
+    required: ['scores', 'strengths', 'improvements', 'actions', 'micro_drill_60s', 'suggested_delivery'],
 };
-
 
 const communicatorProfileSchema = {
     type: Type.OBJECT,
     properties: {
-        profileTitle: { type: Type.STRING, description: "Un titolo accattivante per il profilo, es: 'Il Mediatore Empatico'." },
-        profileDescription: { type: Type.STRING, description: "Una descrizione di 2-3 frasi del profilo di comunicazione dell'utente." },
-        strengths: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Elenco dei principali punti di forza comunicativi." },
-        areasToImprove: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Elenco delle principali aree da allenare." },
+        profileTitle: { type: Type.STRING, description: "Titolo accattivante per il profilo (es. 'Il Diplomatico Pragmatico')." },
+        profileDescription: { type: Type.STRING, description: "Descrizione di 2-3 frasi del profilo." },
+        strengths: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Elenco di 3-4 punti di forza." },
+        areasToImprove: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Elenco di 2-3 aree di miglioramento primarie." },
     },
-    required: ['profileTitle', 'profileDescription', 'strengths', 'areasToImprove']
-};
-
-const customExerciseSchema = {
-    type: Type.OBJECT,
-    properties: {
-        scenario: { type: Type.STRING, description: "Lo scenario dettagliato generato per l'utente." },
-        task: { type: Type.STRING, description: "Il compito specifico che l'utente deve svolgere." },
-    },
-    required: ['scenario', 'task']
+    required: ['profileTitle', 'profileDescription', 'strengths', 'areasToImprove'],
 };
 
 const strategicResponseSchema = {
     type: Type.OBJECT,
     properties: {
-        analysis: { type: Type.STRING, description: "Una breve analisi strategica del messaggio ricevuto." },
+        analysis: { type: Type.STRING, description: "Breve analisi strategica della situazione." },
         suggestions: {
             type: Type.ARRAY,
             items: {
                 type: Type.OBJECT,
                 properties: {
-                    type: { type: Type.STRING, enum: ['assertiva', 'empatica', 'chiarificatrice', 'solutiva'] },
-                    response: { type: Type.STRING, description: "La bozza di risposta suggerita." },
+                    type: { type: Type.STRING, description: "Tipo di risposta: 'assertiva', 'empatica', 'chiarificatrice', 'solutiva'." },
+                    response: { type: Type.STRING, description: "Bozza di risposta suggerita." },
                 },
-                required: ['type', 'response']
-            }
-        }
+                required: ['type', 'response'],
+            },
+            description: "Elenco di 4 suggerimenti di risposta, uno per ogni tipo."
+        },
     },
-    required: ['analysis', 'suggestions']
+    required: ['analysis', 'suggestions'],
 };
 
-const continuedStrategicResponseSchema = {
-    ...strategicResponseSchema,
-    type: Type.OBJECT,
-    properties: {
-        ...strategicResponseSchema.properties,
-        personaResponse: { type: Type.STRING, description: "La risposta simulata dell'interlocutore al messaggio dell'utente." },
-    },
-    required: [...strategicResponseSchema.required, 'personaResponse'],
-};
+// --- API FUNCTIONS ---
 
-
-// --- Service Functions ---
-
-export const analyzeResponse = async (
+export async function analyzeResponse(
   exercise: Exercise,
   userResponse: string,
   entitlements: Entitlements | null,
-  history: any,
-  style: ResponseStyle | null,
-): Promise<AnalysisResult> => {
-  const isPro = entitlements?.productIDs.has('ces.pro.monthly');
-  
-  const prompt = `
-    Sei un coach esperto in comunicazione strategica. Analizza la risposta di un utente a un esercizio.
-    
-    CONTESTO ESERCIZIO:
-    - Titolo: ${exercise.title}
-    - Scenario: ${exercise.scenario}
-    - Compito: ${exercise.task}
+  personalization: Partial<PersonalizationData>,
+  style: ResponseStyle | null
+): Promise<AnalysisResult> {
+    const ai = getClient();
+    const isPro = hasProAccess(entitlements);
 
-    STILE SCELTO DALL'UTENTE: ${style || 'Nessuno stile specifico richiesto.'}
+    const prompt = `
+        Sei un coach di comunicazione strategica di livello mondiale. Il tuo compito è analizzare la risposta di un utente a uno scenario specifico e fornire un feedback costruttivo e dettagliato.
+        
+        CONTESTO DELL'ESERCIZIO:
+        - Titolo: ${exercise.title}
+        - Scenario: ${exercise.scenario}
+        - Compito: ${exercise.task}
 
-    RISPOSTA DELL'UTENTE:
-    "${userResponse}"
+        RISPOSTA DELL'UTENTE:
+        "${userResponse}"
 
-    ISTRUZIONI:
-    Fornisci un'analisi completa in formato JSON. Basa la tua valutazione sull'efficacia della risposta in relazione allo STILE SCELTO.
-    1.  **score**: Assegna un punteggio generale da 0 a 100.
-    2.  **strengths**: Identifica 2-3 punti di forza specifici, commentando come si allineano allo stile scelto.
-    3.  **areasForImprovement**: Identifica 2-3 aree di miglioramento, suggerendo come aderire meglio allo stile scelto. Per ciascuna, fornisci una "suggestion" chiara e un "example" pratico.
-    4.  **suggestedResponse**: Fornisci una risposta ideale.
-        -   **short**: Una versione breve e diretta.
-        -   **long**: Una versione più elaborata che spiega il perché di certe scelte comunicative, sempre in relazione allo stile.
-    ${isPro ? `5. **detailedRubric**: Valuta la risposta su 5 criteri (Chiarezza, Tono, Soluzione, Assertività, Struttura), ciascuno con un punteggio da 0 a 10 e una motivazione.` : ''}
-
-    Sii costruttivo, incoraggiante e strategico nel tuo feedback.
+        ISTRUZIONI PER L'ANALISI:
+        1.  Valuta la risposta su una scala da 0 a 100, considerando efficacia, strategia, chiarezza ed empatia.
+        2.  Identifica 2-3 punti di forza specifici.
+        3.  Identifica 2-3 aree di miglioramento concrete. Per ogni area, fornisci un suggerimento chiaro e un esempio pratico di come l'utente avrebbe potuto riformulare una parte della sua risposta.
+        4.  Scrivi una risposta suggerita ideale, sia in versione breve che elaborata. Includi **markdown bold** per le parole chiave.
+        ${isPro ? `5.  FORNISCI UNA VALUTAZIONE DETTAGLIATA (detailedRubric) basata sui seguenti 5 criteri, assegnando un punteggio da 0 a 10 e una breve giustificazione per ciascuno:
+            - Chiarezza: Il messaggio è chiaro, conciso e facile da capire?
+            - Tono: Il tono è appropriato per la situazione e l'obiettivo?
+            - Orientamento alla Soluzione: La risposta è proattiva e orientata a risolvere il problema o a raggiungere l'obiettivo?
+            - Assertività: L'utente esprime il suo punto di vista in modo rispettoso ma fermo?
+            - Struttura: La comunicazione ha una struttura logica e ben organizzata?` : ''
+        }
+        
+        FORMATTA L'OUTPUT ESCLUSIVAMENTE IN JSON.
     `;
 
-    const schema = JSON.parse(JSON.stringify(analysisResultSchema));
-    if (!isPro) {
-        delete schema.properties.detailedRubric;
+    try {
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-pro',
+            contents: prompt,
+            config: {
+                responseMimeType: 'application/json',
+                responseSchema: isPro ? proAnalysisResultSchema : analysisResultSchema,
+                temperature: 0.3,
+            }
+        });
+
+        const jsonText = response.text.trim();
+        const result = JSON.parse(jsonText);
+        
+        // Ensure all required fields are present
+        if (!result.score || !result.strengths || !result.areasForImprovement || !result.suggestedResponse) {
+             throw new Error("L'analisi ha restituito un formato imprevisto. Riprova.");
+        }
+        
+        return result as AnalysisResult;
+
+    } catch (e) {
+        console.error("Error analyzing response:", e);
+        throw new Error("Si è verificato un errore durante l'analisi. Riprova.");
     }
-
-    return runJsonPrompt<AnalysisResult>(prompt, schema);
-};
+}
 
 
-export const analyzeParaverbalResponse = async (
+export async function analyzeParaverbalResponse(
   transcript: string,
   scenario: string,
   task: string
-): Promise<VoiceAnalysisResult> => {
+): Promise<VoiceAnalysisResult> {
+    const ai = getClient();
     const prompt = `
-        Sei un coach vocale e di comunicazione paraverbale. Analizza la trascrizione di una risposta vocale di un utente.
-        Dato che non puoi sentire l'audio, basa la tua analisi sulla scelta delle parole, la struttura della frase e la probabile intenzione paraverbale.
-
+        Sei un coach esperto in comunicazione paraverbale e vocale. Analizza la trascrizione di un messaggio audio in relazione a uno scenario. Il tuo focus è SOLO sul CONTENUTO del testo per INFERIRE le probabili qualità paraverbali.
+        
         SCENARIO: ${scenario}
         COMPITO: ${task}
         TRASCRIZIONE UTENTE: "${transcript}"
 
         ISTRUZIONI:
-        Fornisci un'analisi completa in formato JSON.
-        1.  **scores**: Valuta la trascrizione su 5 criteri (ritmo, tono, volume, pause, chiarezza). Assegna un punteggio da 1 a 10 per ciascuno, deducendo la performance dalla scelta delle parole e dalla struttura. Ad esempio, frasi lunghe e complesse potrebbero indicare un ritmo veloce e poche pause. Parole assertive potrebbero suggerire un volume adeguato. Giustifica brevemente ogni punteggio.
-        2.  **strengths**: Identifica 2-3 punti di forza della comunicazione basandoti sul testo.
-        3.  **improvements**: Identifica 2-3 aree di miglioramento paraverbale suggerite dal testo.
-        4.  **actions**: Fornisci 2-3 azioni pratiche che l'utente può fare per migliorare.
-        5.  **micro_drill_60s**: Proponi un esercizio pratico e veloce (max 60 secondi) basato sulla sua performance.
-        6.  **suggested_delivery**:
-            -   **instructions**: Descrivi come dovrebbe essere la dizione ideale per questa risposta.
-            -   **ideal_script**: Riscrivi la risposta in modo ideale. Questo testo sarà usato per un Text-to-Speech, quindi deve essere pulito.
-            -   **annotated_text**: Prendi l'ideal_script e inserisci il simbolo ☐ dove suggeriresti una pausa e △ prima di una parola o frase da enfatizzare.
+        1.  VALUTAZIONE (scores): Valuta la trascrizione su 5 criteri paraverbali. Assegna un punteggio da 0 a 10 per ciascuno e una giustificazione basata SUL TESTO.
+            - 'ritmo': Un ritmo troppo veloce suggerisce ansia, troppo lento noia. Un buon ritmo è variato.
+            - 'tono': Il tono è assertivo, empatico, aggressivo? Deduci dal lessico.
+            - 'volume': Le parole suggeriscono un volume alto (rabbia) o basso (insicurezza)?
+            - 'pause': Il testo ha una struttura che suggerisce pause efficaci o è un flusso ininterrotto?
+            - 'chiarezza': Il messaggio è diretto e facile da seguire o è contorto?
+        2.  PUNTI DI FORZA (strengths): Identifica 2-3 punti di forza DEDOTTI dal testo.
+        3.  AREE DI MIGLIORAMENTO (improvements): Identifica 2-3 aree di miglioramento DEDOTTE dal testo.
+        4.  AZIONI PRATICHE (actions): Fornisci 2-3 azioni concrete che l'utente può fare per migliorare.
+        5.  MICRO-DRILL (micro_drill_60s): Proponi un esercizio pratico di 60 secondi correlato a un'area di miglioramento.
+        6.  RISPOSTA CONSIGLIATA (suggested_delivery):
+            - 'instructions': Spiega brevemente come dovrebbe essere la consegna ideale (es. "Inizia con un tono calmo...").
+            - 'ideal_script': Scrivi la trascrizione della risposta ideale. Questo testo sarà usato per un text-to-speech, quindi deve essere pulito.
+            - 'annotated_text': Riscrivi l'ideal_script inserendo il simbolo '☐' dove suggerisci una pausa e '△' dove suggerisci enfasi vocale.
+        
+        FORMATTA L'OUTPUT ESCLUSIVAMENTE IN JSON.
     `;
-    return runJsonPrompt<VoiceAnalysisResult>(prompt, voiceAnalysisSchema);
-};
 
-export const generateCommunicatorProfile = async (
-  responses: { exerciseTitle: string; userResponse: string }[]
-): Promise<CommunicatorProfile> => {
-  const responsesText = responses.map(r => `- ${r.exerciseTitle}:\n  "${r.userResponse}"`).join('\n\n');
-  
-  const prompt = `
-    Sei un profiler esperto di stili comunicativi. Analizza le seguenti risposte di un utente a tre scenari diversi per creare il suo profilo di comunicatore.
+    try {
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-pro',
+            contents: prompt,
+            config: {
+                responseMimeType: 'application/json',
+                responseSchema: voiceAnalysisResultSchema,
+                temperature: 0.5,
+            }
+        });
+        
+        const jsonText = response.text.trim();
+        return JSON.parse(jsonText) as VoiceAnalysisResult;
 
-    RISPOSTE DELL'UTENTE:
-    ${responsesText}
-
-    ISTRUZIONI:
-    Sintetizza l'analisi in un profilo JSON.
-    1.  **profileTitle**: Crea un titolo accattivante e descrittivo per il profilo (es: "Il Solutore Pragmatico", "Il Diplomatico Cauto").
-    2.  **profileDescription**: Scrivi una descrizione di 2-3 frasi che riassuma lo stile comunicativo emerso.
-    3.  **strengths**: Elenca 2-3 punti di forza comunicativi chiave dell'utente.
-    4.  **areasToImprove**: Elenca 2-3 aree di miglioramento più importanti su cui l'utente dovrebbe concentrarsi.
-    
-    Sii acuto, costruttivo e incoraggiante.
-  `;
-  return runJsonPrompt<CommunicatorProfile>(prompt, communicatorProfileSchema, "gemini-2.5-flash");
-};
-
-export const generateCustomExercise = async (data: PersonalizationData): Promise<{ scenario: string; task: string; }> => {
-    const prompt = `
-        Sei un creatore di scenari formativi per la comunicazione. Genera un esercizio personalizzato per un utente basato sul suo profilo.
-
-        PROFILO UTENTE:
-        - Professione: ${data.professione}
-        - Livello Carriera: ${data.livelloCarriera}
-        - Contesto Comunicativo Tipico: ${data.contestoComunicativo}
-        - Sfida Principale: "${data.sfidaPrincipale}"
-
-        ISTRUZIONI:
-        Crea uno scenario e un compito realistici, specifici e sfidanti per questo utente.
-        1.  **scenario**: Descrivi una situazione lavorativa plausibile che l'utente potrebbe affrontare, legata alla sua sfida principale e al suo contesto.
-        2.  **task**: Definisci chiaramente cosa l'utente deve fare o dire per risolvere lo scenario.
-
-        Il risultato deve essere in formato JSON.
-    `;
-    return runJsonPrompt<{ scenario: string; task: string; }>(prompt, customExerciseSchema, "gemini-2.5-flash");
-};
-
-
-export const getStrategicSuggestions = async (message: string, objective: string, context: string): Promise<StrategicResponse> => {
-    const prompt = `
-    Sei un coach di comunicazione strategica. Un utente ha ricevuto un messaggio e ha bisogno di aiuto per rispondere.
-
-    CONTESTO:
-    - Messaggio Ricevuto: "${message}"
-    - Obiettivo dell'utente: "${objective}"
-    - Contesto aggiuntivo: "${context}"
-
-    ISTRUZIONI:
-    Fornisci un'analisi e dei suggerimenti in formato JSON.
-    1.  **analysis**: Analizza brevemente la situazione, l'intenzione probabile del mittente e l'obiettivo strategico della risposta.
-    2.  **suggestions**: Fornisci 3 o 4 bozze di risposta, ciascuna con un approccio diverso e un 'type' corrispondente:
-        -   'assertiva': chiara, diretta e che difende una posizione.
-        -   'empatica': che si concentra sul comprendere e validare il punto di vista dell'altro.
-        -   'chiarificatrice': che fa domande per capire meglio.
-        -   'solutiva': che propone soluzioni concrete.
-    `;
-    return runJsonPrompt<StrategicResponse>(prompt, strategicResponseSchema, "gemini-2.5-flash");
+    } catch (e) {
+        console.error("Error analyzing paraverbal response:", e);
+        throw new Error("Si è verificato un errore durante l'analisi vocale. Riprova.");
+    }
 }
 
 
-export const continueStrategicChat = async (
-    chatHistory: { role: 'user' | 'persona', content: string }[],
+export async function generateCustomExercise(
+  data: PersonalizationData
+): Promise<{ scenario: string, task: string }> {
+    const ai = getClient();
+    const prompt = `
+        Crea uno scenario di comunicazione e un compito su misura per un utente con questo profilo:
+        - Professione: ${data.professione}
+        - Livello Carriera: ${data.livelloCarriera}
+        - Età: ${data.eta}
+        - Contesto Comunicativo Tipico: ${data.contestoComunicativo}
+        - Sfida Principale: ${data.sfidaPrincipale}
+
+        REGOLE:
+        - Lo scenario deve essere realistico e specifico per il profilo.
+        - Il compito deve essere chiaro e richiedere all'utente di formulare una risposta.
+        - Rispondi SOLO con un oggetto JSON contenente "scenario" e "task". Non aggiungere altro testo.
+    `;
+
+     try {
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: prompt,
+            config: {
+                responseMimeType: 'application/json',
+                responseSchema: {
+                    type: Type.OBJECT,
+                    properties: {
+                        scenario: { type: Type.STRING },
+                        task: { type: Type.STRING },
+                    },
+                    required: ['scenario', 'task'],
+                },
+                temperature: 0.8,
+            }
+        });
+        
+        const jsonText = response.text.trim();
+        return JSON.parse(jsonText);
+
+    } catch (e) {
+        console.error("Error generating custom exercise:", e);
+        throw new Error("Impossibile generare l'esercizio personalizzato. Riprova.");
+    }
+}
+
+export async function generateCommunicatorProfile(
+  responses: { exerciseTitle: string; userResponse: string }[]
+): Promise<CommunicatorProfile> {
+    const ai = getClient();
+    const userResponses = responses.map(r => `- Esercizio "${r.exerciseTitle}": "${r.userResponse}"`).join('\n');
+    
+    const prompt = `
+        Sei un profiler psicologico specializzato in stili di comunicazione. Analizza le seguenti risposte di un utente a tre diversi scenari di check-up per delineare il suo profilo di comunicatore.
+
+        RISPOSTE DELL'UTENTE:
+        ${userResponses}
+
+        ISTRUZIONI:
+        1.  Sintetizza lo stile comunicativo emergente in un titolo accattivante (es. "Il Mediatore Analitico", "Il Risolutore Diretto", "L'Empatico Cauto").
+        2.  Scrivi una breve descrizione (2-3 frasi) che riassuma le tendenze principali.
+        3.  Identifica 3-4 punti di forza chiari e specifici.
+        4.  Identifica 2-3 aree di miglioramento primarie su cui l'utente dovrebbe concentrarsi.
+
+        FORMATTA L'OUTPUT ESCLUSIVAMENTE IN JSON.
+    `;
+
+    try {
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-pro',
+            contents: prompt,
+            config: {
+                responseMimeType: 'application/json',
+                responseSchema: communicatorProfileSchema,
+                temperature: 0.4,
+            }
+        });
+        
+        const jsonText = response.text.trim();
+        return JSON.parse(jsonText) as CommunicatorProfile;
+
+    } catch (e) {
+        console.error("Error generating communicator profile:", e);
+        throw new Error("Impossibile generare il profilo. Riprova.");
+    }
+}
+
+export async function getStrategicSuggestions(
     situation: string,
     goal: string,
     context: string
-): Promise<ContinuedStrategicResponse> => {
-    const historyString = chatHistory.map(m => `${m.role === 'user' ? 'Utente' : 'Interlocutore'}: ${m.content}`).join('\n');
-
+): Promise<StrategicResponse> {
+    const ai = getClient();
     const prompt = `
-    Sei un coach di comunicazione strategica e un simulatore di conversazioni. La chat è già iniziata.
-    
-    CONTESTO INIZIALE:
-    - Situazione: ${situation}
-    - Obiettivo dell'utente: ${goal}
-    - Contesto aggiuntivo: ${context}
+        Sei un coach di comunicazione strategica. Un utente ha bisogno di suggerimenti per gestire una conversazione.
 
-    CRONOLOGIA CHAT FINORA:
-    ${historyString}
+        - Situazione: ${situation}
+        - Obiettivo dell'utente: ${goal}
+        - Contesto aggiuntivo: ${context || 'Nessuno'}
 
-    ISTRUZIONI:
-    Esegui due compiti in un unico output JSON:
-    1.  **Simula l'interlocutore**: Basandoti sulla cronologia, genera la prossima risposta dell'interlocutore al messaggio dell'utente. Deve essere realistica. Inseriscila nel campo 'personaResponse'.
-    2.  **Agisci come coach**:
-        -   **analysis**: Fornisci una nuova, breve analisi strategica della situazione attuale della chat.
-        -   **suggestions**: Genera 3 o 4 nuove bozze di risposta (assertiva, empatica, ecc.) che l'utente potrebbe usare come sua prossima mossa.
+        ISTRUZIONI:
+        1.  Fornisci una breve analisi strategica (2-3 frasi) della situazione.
+        2.  Crea 4 bozze di risposta, una per ogni approccio:
+            - 'empatica': Focalizzata sulla comprensione e validazione dell'emozione altrui.
+            - 'assertiva': Esprime chiaramente bisogni o posizioni in modo rispettoso.
+            - 'chiarificatrice': Fa domande per capire meglio la situazione.
+            - 'solutiva': Si concentra sul trovare una soluzione pratica.
+
+        FORMATTA L'OUTPUT ESCLUSIVAMENTE IN JSON.
     `;
 
-    return runJsonPrompt<ContinuedStrategicResponse>(prompt, continuedStrategicResponseSchema, "gemini-2.5-flash");
+     try {
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-pro',
+            contents: prompt,
+            config: {
+                responseMimeType: 'application/json',
+                responseSchema: strategicResponseSchema,
+                temperature: 0.7,
+            }
+        });
+        
+        const jsonText = response.text.trim();
+        return JSON.parse(jsonText) as StrategicResponse;
+
+    } catch (e) {
+        console.error("Error getting strategic suggestions:", e);
+        throw new Error("Impossibile generare i suggerimenti. Riprova.");
+    }
+}
+
+export async function continueStrategicChat(
+    history: { role: 'user' | 'persona'; content: string }[],
+    situation: string,
+    goal: string,
+    context: string
+): Promise<ContinuedStrategicResponse> {
+    const ai = getClient();
+    const chatHistory = history.map(m => `- ${m.role === 'user' ? 'Tu' : 'Interlocutore'}: ${m.content}`).join('\n');
+    
+    const prompt = `
+        Sei un coach di comunicazione strategica che agisce in una simulazione di chat. Il tuo compito è duplice:
+        1.  Interpretare il ruolo dell'interlocutore ("persona").
+        2.  Fornire un'analisi da coach sulla risposta dell'utente.
+
+        CONTESTO DELLA SIMULAZIONE:
+        - Situazione Iniziale: ${situation}
+        - Obiettivo dell'utente: ${goal}
+        - Contesto Aggiuntivo: ${context || 'Nessuno'}
+        
+        STORICO DELLA CONVERSAZIONE:
+        ${chatHistory}
+
+        ISTRUZIONI:
+        1.  **Risposta della Persona (personaResponse):** Basandoti sull'ultima risposta dell'utente ("Tu"), formula una risposta realistica e coerente per l'interlocutore ("persona").
+        2.  **Analisi del Coach (analysis):** Valuta l'ultima risposta dell'utente. È strategica? Si avvicina all'obiettivo? Fornisci un feedback conciso.
+        3.  **Suggerimenti del Coach (suggestions):** Come prima, fornisci 4 bozze di risposta alternative (empatica, assertiva, chiarificatrice, solutiva) che l'utente potrebbe usare.
+
+        FORMATTA L'OUTPUT ESCLUSIVAMENTE IN JSON.
+    `;
+    
+    const continuedStrategicResponseSchema = {
+        ...strategicResponseSchema,
+        properties: {
+            ...strategicResponseSchema.properties,
+            personaResponse: { type: Type.STRING, description: "La risposta dell'interlocutore simulato (persona)." },
+        },
+        required: [...(strategicResponseSchema.required || []), 'personaResponse'],
+    };
+
+    try {
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-pro',
+            contents: prompt,
+            config: {
+                responseMimeType: 'application/json',
+                responseSchema: continuedStrategicResponseSchema,
+                temperature: 0.8,
+            }
+        });
+        
+        const jsonText = response.text.trim();
+        return JSON.parse(jsonText) as ContinuedStrategicResponse;
+
+    } catch (e) {
+        console.error("Error continuing strategic chat:", e);
+        throw new Error("Impossibile continuare la simulazione. Riprova.");
+    }
 }
