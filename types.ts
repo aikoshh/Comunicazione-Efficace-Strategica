@@ -1,5 +1,33 @@
 // types.ts
+
 import React from 'react';
+
+// --- USER & AUTH ---
+
+export interface UserProfile {
+  uid: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  isAdmin: boolean;
+  enabled: boolean;
+  createdAt: string; // ISO string
+  expiryDate: string | null; // ISO string
+}
+
+export interface Entitlements {
+    productIDs: Set<string>;
+    teamSeats: number;
+    teamActive: boolean;
+}
+
+export interface StorableEntitlements {
+    productIDs: string[];
+    teamSeats: number;
+    teamActive: boolean;
+}
+
+// --- CORE APP ---
 
 export enum ExerciseType {
   WRITTEN = 'written',
@@ -7,7 +35,13 @@ export enum ExerciseType {
 }
 
 export type CompetenceKey = 'ascolto' | 'riformulazione' | 'assertivita' | 'gestione_conflitto';
-export type CompetenceScores = Record<CompetenceKey, number>;
+
+export interface CompetenceScores {
+    ascolto: number;
+    riformulazione: number;
+    assertivita: number;
+    gestione_conflitto: number;
+}
 
 export interface Exercise {
   id: string;
@@ -23,7 +57,7 @@ export interface Module {
   id: string;
   title: string;
   description: string;
-  icon: React.FC<React.SVGProps<SVGSVGElement>>;
+  icon: React.FC<any>;
   color: string;
   headerImage: string;
   exercises: Exercise[];
@@ -31,64 +65,49 @@ export interface Module {
   isCustom?: boolean;
 }
 
+// --- ANALYSIS & RESULTS ---
+
 export interface DetailedRubricScore {
-    criterion: string;
-    score: number;
-    justification: string;
+  criterion: string;
+  score: number; // 0-10
+  justification: string;
+}
+
+export interface AreaForImprovement {
+    suggestion: string;
+    example: string;
 }
 
 export interface AnalysisResult {
-    score: number;
-    strengths: string[];
-    areasForImprovement: {
-        suggestion: string;
-        example: string;
-    }[];
-    suggestedResponse: {
-        short: string;
-        long: string;
-    };
-    evolutionary_feedback?: string;
-    detailedRubric?: DetailedRubricScore[];
-    utilityScore?: number;
-    clarityScore?: number;
+  score: number; // Overall score 0-100
+  strengths: string[];
+  areasForImprovement: AreaForImprovement[];
+  suggestedResponse: {
+    short: string;
+    long: string;
+  };
+  detailedRubric?: DetailedRubricScore[]; // PRO feature
+}
+
+export interface VoiceAnalysisScore {
+    criterion_id: 'ritmo' | 'tono' | 'volume' | 'pause' | 'chiarezza';
+    score: number; // 0-10
+    justification: string;
 }
 
 export interface VoiceAnalysisResult {
-    scores: {
-        criterion_id: 'ritmo' | 'tono' | 'volume' | 'pause' | 'chiarezza';
-        score: number;
-    }[];
+    scores: VoiceAnalysisScore[];
     strengths: string[];
     improvements: string[];
     actions: string[];
     micro_drill_60s: string;
     suggested_delivery: {
         instructions: string;
-        annotated_text: string;
         ideal_script: string;
+        annotated_text: string;
     };
 }
 
-export interface Entitlements {
-    productIDs: Set<string>;
-    teamSeats: number;
-    teamActive: boolean;
-}
-
-export interface Achievement {
-    id: string;
-    title: string;
-    description: string;
-    icon: React.FC<React.SVGProps<SVGSVGElement>>;
-    isUnlocked: (progress: UserProgress, entitlements?: Entitlements | null) => boolean;
-}
-
-export interface Level {
-    level: number;
-    minXp: number;
-    label: string;
-}
 
 export interface CommunicatorProfile {
     profileTitle: string;
@@ -98,18 +117,23 @@ export interface CommunicatorProfile {
 }
 
 export interface AnalysisHistoryItem {
+    timestamp: string; // ISO string
     result: AnalysisResult | VoiceAnalysisResult;
     userResponse: string;
-    timestamp: string;
     type: 'written' | 'verbal';
 }
 
+// --- GAMIFICATION & PROGRESS ---
+
 export interface UserProgress {
   completedExerciseIds: string[];
-  scores: number[];
+  scores: number[]; // History of overall scores from exercises
   competenceScores: CompetenceScores;
-  analysisHistory: { [exerciseId: string]: AnalysisHistoryItem };
+  analysisHistory: {
+    [exerciseId: string]: AnalysisHistoryItem;
+  };
   checkupProfile?: CommunicatorProfile;
+  // Gamification
   xp: number;
   level: number;
   streak: number;
@@ -117,30 +141,21 @@ export interface UserProgress {
   unlockedBadges: string[];
 }
 
-export interface UserProfile {
-    uid: string;
-    email: string;
-    firstName: string;
-    lastName: string;
-    isAdmin: boolean;
-    enabled: boolean;
-    expiryDate: string | null;
-    createdAt: string;
+export interface Achievement {
+    id: string;
+    title: string;
+    description: string;
+    icon: React.FC<any>;
+    isUnlocked: (progress: UserProgress, entitlements?: Entitlements) => boolean;
 }
 
-export interface StorableEntitlements {
-    productIDs: string[];
-    teamSeats: number;
-    teamActive: boolean;
+export interface Level {
+    level: number;
+    minXp: number;
+    label: string;
 }
 
-export interface PersonalizationData {
-    professione: string;
-    livelloCarriera: string;
-    eta: string;
-    contestoComunicativo: string;
-    sfidaPrincipale: string;
-}
+// --- MONETIZATION ---
 
 export interface Product {
     id: string;
@@ -150,6 +165,29 @@ export interface Product {
     description: string;
     benefits: string[];
     category: string;
+}
+
+// --- UI & MISC ---
+
+export type ToastType = 'success' | 'error' | 'info' | 'badge';
+
+export interface ToastMessage {
+  id: string;
+  message: string;
+  type: ToastType;
+  badge?: Achievement;
+}
+
+export interface ToastContextType {
+  addToast: (message: string, type?: ToastType, badge?: Achievement) => void;
+}
+
+export interface PersonalizationData {
+    professione: string;
+    livelloCarriera: string;
+    eta: string;
+    contestoComunicativo: string;
+    sfidaPrincipale: string;
 }
 
 export interface StrategicQuestion {
@@ -168,19 +206,29 @@ export interface ChecklistItem {
     text: string;
 }
 
-export type ToastType = 'success' | 'error' | 'info' | 'badge';
+export type ResponseStyle = 'Empatica' | 'Diretta' | 'Strategica';
 
-export interface ToastMessage {
+export interface StrategicResponse {
+    analysis: string;
+    suggestions: {
+        type: 'assertiva' | 'empatica' | 'chiarificatrice' | 'solutiva';
+        response: string;
+    }[];
+}
+
+export interface ContinuedStrategicResponse extends StrategicResponse {
+    personaResponse: string;
+}
+
+
+export interface ChatMessage {
     id: string;
-    message: string;
-    type: ToastType;
-    badge?: Achievement;
+    role: 'user' | 'persona' | 'coach-analysis' | 'coach-suggestions';
+    content: string | StrategicResponse['suggestions'];
 }
 
-export interface ToastContextType {
-    addToast: (message: string, type?: ToastType, badge?: Achievement) => void;
-}
 
+// --- PROGRESS OVERVIEW ---
 export interface ProgressOverviewData {
     header: {
         welcome: string;
@@ -193,6 +241,10 @@ export interface ProgressOverviewData {
     };
 }
 
-export type ScoreExplanation = {
-    [key in 'Coverage' | 'Quality' | 'Consistency' | 'Recency' | 'VoiceDelta']: number;
-};
+export interface ScoreExplanation {
+    Coverage: number;
+    Quality: number;
+    Consistency: number;
+    Recency: number;
+    VoiceDelta: number;
+}

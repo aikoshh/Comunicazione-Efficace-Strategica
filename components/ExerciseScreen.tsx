@@ -54,7 +54,8 @@ export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({
             const result = await analyzeParaverbalResponse(responseText, exercise.scenario, exercise.task);
             onComplete(result, responseText, exercise.id, 'verbal');
         } else {
-            const result = await analyzeResponse(exercise, responseText, entitlements, {});
+            // FIX: Added `null` for the 'style' parameter, as it is required by `analyzeResponse` but not selected in this screen.
+            const result = await analyzeResponse(exercise, responseText, entitlements, {}, null);
             onComplete(result, responseText, exercise.id, 'written');
         }
     } catch (error: any) {

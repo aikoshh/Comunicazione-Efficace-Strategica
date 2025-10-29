@@ -1,12 +1,13 @@
+// components/StrategicChatTrainerScreen.tsx
+
 import React, { useState, useRef, useEffect } from 'react';
-import { UserProfile } from '../types';
+import { UserProfile, StrategicResponse, ChatMessage, ContinuedStrategicResponse, ResponseStyle } from '../types';
 import { COLORS } from '../constants';
-import { SendIcon, LightbulbIcon } from './Icons';
-import { generateStrategicChatResponse } from '../services/geminiService';
-import { useToast } from '../hooks/useToast';
+import { LightbulbIcon, SendIcon, CrownIcon, LockIcon } from './Icons';
+import { getStrategicSuggestions, continueStrategicChat } from '../services/geminiService';
 import { soundService } from '../services/soundService';
 import { Spinner } from './Loader';
-import ReactMarkdown from 'react-markdown';
+import { useToast } from '../hooks/useToast';
 
 interface StrategicChatTrainerScreenProps {
   user: UserProfile;
@@ -14,161 +15,295 @@ interface StrategicChatTrainerScreenProps {
   onApiKeyError: (error: string) => void;
 }
 
-type Tone = 'Empatico' | 'Diretto' | 'Chiarificatore';
+const SuggestionCard: React.FC<{ type: StrategicResponse['suggestions'][0]['type'], response: string, onCopy: (text: string) => void }> = ({ type, response, onCopy }) => {
+    const details = {
+        'assertiva': { label: 'Approccio Assertivo', color: COLORS.error },
+        'empatica': { label: 'Approccio Empatico', color: COLORS.success },
+        'chiarificatrice': { label: 'Approccio Chiarificatore', color: COLORS.secondary },
+        'solutiva': { label: 'Approccio Solutivo', color: COLORS.primary },
+    }[type];
 
-export const StrategicChatTrainerScreen: React.FC<StrategicChatTrainerScreenProps> = ({ onApiKeyError }) => {
-    const [receivedMessage, setReceivedMessage] = useState('');
-    const [objective, setObjective] = useState('');
+    return (
+        <div style={{...styles.suggestionCard, borderLeftColor: details.color}}>
+            <h4 style={{...styles.suggestionTitle, color: details.color}}>{details.label}</h4>
+            <p style={styles.suggestionText}>"{response}"</p>
+            <button onClick={() => onCopy(response)} style={styles.copyButton}>Copia Testo</button>
+        </div>
+    )
+};
+
+
+export const StrategicChatTrainerScreen: React.FC<StrategicChatTrainerScreenProps> = ({ user, isPro, onApiKeyError }) => {
+    const [mode, setMode] = useState<'initial' | 'suggestions' | 'chatting'>('initial');
+    
+    // Initial form
+    const [situation, setSituation] = useState('');
+    const [goal, setGoal] = useState('');
     const [context, setContext] = useState('');
-    const [tone, setTone] = useState<Tone>('Empatico');
+    
+    // AI responses
+    const [initialResponse, setInitialResponse] = useState<StrategicResponse | null>(null);
+    const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
+    const [currentUserMessage, setCurrentUserMessage] = useState('');
+    
     const [isLoading, setIsLoading] = useState(false);
-    const [response, setResponse] = useState<string | null>(null);
     const { addToast } = useToast();
-    const resultsRef = useRef<HTMLDivElement>(null);
+    const chatEndRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        if (response) {
-            resultsRef.current?.scrollIntoView({ behavior: 'smooth' });
-        }
-    }, [response]);
-    
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        soundService.playClick();
+        chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [chatHistory]);
 
-        if (!receivedMessage.trim() || !objective.trim()) {
-            addToast('Il messaggio ricevuto e l\'obiettivo sono obbligatori.', 'error');
+    const handleInitialSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!isPro) {
+            addToast("Questa è una funzionalità PRO. Esegui l'upgrade per utilizzarla.", 'info');
             return;
         }
-
+        if (!situation.trim() || !goal.trim()) {
+            addToast('Situazione e Obiettivo sono obbligatori.', 'error');
+            return;
+        }
+        soundService.playClick();
         setIsLoading(true);
-        setResponse(null);
-
+        setInitialResponse(null);
         try {
-            const result = await generateStrategicChatResponse(receivedMessage, objective, context, tone);
-            setResponse(result);
+            const result = await getStrategicSuggestions(situation, goal, context);
+            setInitialResponse(result);
+            setMode('suggestions');
         } catch (error: any) {
-            console.error(error);
-            if (error.message.includes('API key')) {
+             if (error.message.includes('API key') || error.message.includes('API_KEY')) {
                 onApiKeyError(error.message);
             } else {
-                addToast(error.message || "Si è verificato un errore durante la generazione della risposta.", 'error');
+                addToast(error.message || "Si è verificato un errore sconosciuto.", 'error');
             }
         } finally {
             setIsLoading(false);
         }
     };
+    
+    const handleStartChat = () => {
+        soundService.playClick();
+        const firstUserMessage = initialResponse?.suggestions.find(s => s.type === 'empatica')?.response || initialResponse?.suggestions[0].response || '';
+        setChatHistory([
+            { id: `msg-${Date.now()}-1`, role: 'user', content: situation },
+            { id: `msg-${Date.now()}-2`, role: 'coach-analysis', content: initialResponse!.analysis },
+            { id: `msg-${Date.now()}-3`, role: 'coach-suggestions', content: initialResponse!.suggestions },
+        ]);
+        setMode('chatting');
+    }
+    
+    const handleContinueChat = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!currentUserMessage.trim()) return;
 
-    const isFormComplete = receivedMessage.trim() && objective.trim();
+        soundService.playClick();
+        const newUserMessage: ChatMessage = { id: `msg-${Date.now()}`, role: 'user', content: currentUserMessage };
+        const updatedHistory = [...chatHistory, newUserMessage];
+        setChatHistory(updatedHistory);
+        setCurrentUserMessage('');
+        setIsLoading(true);
+
+        // FIX: The `map` function now explicitly casts `m.role` to the correct narrowed type.
+        // This ensures `apiHistory` matches the type expected by `continueStrategicChat`.
+        const apiHistory = updatedHistory
+            .filter(m => m.role === 'user' || m.role === 'persona')
+            .map(m => ({ role: m.role as 'user' | 'persona', content: m.content as string }));
+
+        try {
+            const result = await continueStrategicChat(apiHistory, situation, goal, context);
+            const personaMessage: ChatMessage = { id: `msg-${Date.now()}-persona`, role: 'persona', content: result.personaResponse };
+            const coachAnalysis: ChatMessage = { id: `msg-${Date.now()}-analysis`, role: 'coach-analysis', content: result.analysis };
+            const coachSuggestions: ChatMessage = { id: `msg-${Date.now()}-suggestions`, role: 'coach-suggestions', content: result.suggestions };
+
+            setChatHistory(prev => [...prev, personaMessage, coachAnalysis, coachSuggestions]);
+        } catch (error: any) {
+             if (error.message.includes('API key') || error.message.includes('API_KEY')) {
+                onApiKeyError(error.message);
+            } else {
+                addToast(error.message || "Errore durante la simulazione.", 'error');
+                // Revert history on error
+                setChatHistory(chatHistory);
+            }
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    
+    const handleCopy = (text: string) => {
+        navigator.clipboard.writeText(text);
+        addToast('Testo copiato!', 'success');
+    }
 
     return (
         <div style={styles.container}>
             <header style={styles.header}>
-                <div style={styles.titleContainer}>
-                    <LightbulbIcon style={styles.titleIcon} />
-                    <h1 style={styles.title}>Chat Trainer Strategico</h1>
-                </div>
-                <p style={styles.subtitle}>
-                    Incolla un messaggio, definisci il tuo obiettivo e ottieni una risposta strategica generata dall'AI.
-                </p>
+                 <h1 style={styles.title}>
+                    <LightbulbIcon style={{color: COLORS.primary}}/> Chat Trainer Strategico
+                    {isPro ? <CrownIcon style={{color: COLORS.warning}}/> : <LockIcon style={{color: COLORS.textSecondary}}/>}
+                 </h1>
+                <p style={styles.subtitle}>Simula una conversazione e ricevi feedback ad ogni passo per affinare la tua strategia comunicativa.</p>
             </header>
-            
-            <form onSubmit={handleSubmit} style={styles.form}>
-                <div style={styles.inputGroup}>
-                    <label htmlFor="receivedMessage">1. Messaggio Ricevuto</label>
-                    <textarea
-                        id="receivedMessage"
-                        value={receivedMessage}
-                        onChange={e => setReceivedMessage(e.target.value)}
-                        placeholder="Incolla qui il messaggio che hai ricevuto (email, chat, etc.)"
-                        rows={5}
-                        style={styles.textarea}
-                        required
-                    />
-                </div>
-                <div style={styles.inputGroup}>
-                    <label htmlFor="objective">2. Il Tuo Obiettivo</label>
-                    <input
-                        id="objective"
-                        type="text"
-                        value={objective}
-                        onChange={e => setObjective(e.target.value)}
-                        placeholder="Es: Ottenere uno sconto, declinare la richiesta, chiedere chiarimenti"
-                        style={styles.input}
-                        required
-                    />
-                </div>
-                <div style={styles.inputGroup}>
-                    <label htmlFor="context">3. Contesto Aggiuntivo (Opzionale)</label>
-                    <input
-                        id="context"
-                        type="text"
-                        value={context}
-                        onChange={e => setContext(e.target.value)}
-                        placeholder="Es: È un cliente importante, ho già parlato con il suo collega"
-                        style={styles.input}
-                    />
-                </div>
-                 <div style={styles.inputGroup}>
-                    <label>4. Tono Strategico Richiesto</label>
-                    <div style={styles.toneSelector}>
-                        {(['Empatico', 'Diretto', 'Chiarificatore'] as Tone[]).map(t => (
-                            <button
-                                key={t}
-                                type="button"
-                                onClick={() => setTone(t)}
-                                style={{ ...styles.toneButton, ...(tone === t ? styles.toneButtonActive : {})}}
-                            >
-                                {t}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-                <button type="submit" style={{...styles.submitButton, ...(!isFormComplete || isLoading ? styles.submitButtonDisabled : {})}} disabled={!isFormComplete || isLoading}>
-                    {isLoading ? <Spinner color="white" /> : <>Genera Risposta Strategica <SendIcon/></>}
-                </button>
-            </form>
 
-            {response && (
-                 <div style={styles.responseContainer} ref={resultsRef}>
-                    <ReactMarkdown
-                        components={{
-                            h1: ({node, ...props}) => <h2 style={styles.responseTitle} {...props} />,
-                            h2: ({node, ...props}) => <h3 style={styles.responseSubtitle} {...props} />,
-                            p: ({node, ...props}) => <p style={styles.responseText} {...props} />,
-                            ul: ({node, ...props}) => <ul style={styles.responseList} {...props} />,
-                            li: ({node, ...props}) => <li style={styles.responseListItem} {...props} />,
-                            strong: ({node, ...props}) => <strong style={{color: COLORS.primary}} {...props} />,
-                        }}
-                    >
-                        {response}
-                    </ReactMarkdown>
-                </div>
-            )}
+            <main style={styles.main}>
+                {!isPro && (
+                    <div style={styles.proOverlay}>
+                        <h2>Funzionalità PRO</h2>
+                        <p>Esegui l'upgrade per sbloccare il Chat Trainer e ricevere suggerimenti illimitati in tempo reale.</p>
+                    </div>
+                )}
+                
+                {mode === 'initial' && (
+                    <form onSubmit={handleInitialSubmit} style={styles.inputSection}>
+                        <label style={styles.label}>1. Definisci il Contesto</label>
+                        <input type="text" style={styles.input} placeholder="Situazione (es: 'Un cliente si lamenta di un ritardo')" value={situation} onChange={e => setSituation(e.target.value)} disabled={!isPro || isLoading} />
+                        <input type="text" style={styles.input} placeholder="Il tuo Obiettivo (es: 'Mantenere il cliente e trovare una soluzione')" value={goal} onChange={e => setGoal(e.target.value)} disabled={!isPro || isLoading} />
+                        <textarea
+                            style={styles.textarea}
+                            rows={3}
+                            placeholder="Contesto aggiuntivo (opzionale)"
+                            value={context}
+                            onChange={(e) => setContext(e.target.value)}
+                            disabled={!isPro || isLoading}
+                        />
+                        <button style={styles.analyzeButton} type="submit" disabled={!isPro || isLoading || !situation.trim() || !goal.trim()}>
+                            {isLoading ? <Spinner color="white"/> : <>Genera Analisi Iniziale</>}
+                        </button>
+                    </form>
+                )}
+                
+                {isLoading && mode !== 'chatting' && <div style={{textAlign: 'center', padding: '40px'}}><Spinner size={48} color={COLORS.primary} /></div>}
+
+                {mode === 'suggestions' && initialResponse && (
+                    <div style={styles.resultsSection}>
+                        <div style={styles.analysisBox}>
+                            <h3 style={styles.analysisTitle}>Analisi Strategica</h3>
+                            <p style={styles.analysisText}>{initialResponse.analysis}</p>
+                        </div>
+                        <h3 style={styles.suggestionsHeader}>Bozze di Risposta Suggerite</h3>
+                        <div style={styles.suggestionsGrid}>
+                            {initialResponse.suggestions.map((s, i) => (
+                                <SuggestionCard key={i} type={s.type} response={s.response} onCopy={handleCopy} />
+                            ))}
+                        </div>
+                        <button style={styles.continueButton} onClick={handleStartChat}>
+                            Continua Chat (Simulazione)
+                        </button>
+                    </div>
+                )}
+                
+                {mode === 'chatting' && (
+                    <div style={styles.chatContainer}>
+                        <div style={styles.chatHistory}>
+                            {chatHistory.map(msg => {
+                                if (msg.role === 'user' || msg.role === 'persona') {
+                                    return (
+                                        <div key={msg.id} style={{...styles.bubble, ...(msg.role === 'user' ? styles.userBubble : styles.personaBubble)}}>
+                                            {/* FIX: Cast `msg.content` to string, as React cannot render the complex union type directly. For these roles, content is always a string. */}
+                                            {msg.content as string}
+                                        </div>
+                                    )
+                                }
+                                if (msg.role === 'coach-analysis') {
+                                    return (
+                                        <div key={msg.id} style={styles.analysisBox}>
+                                            <h3 style={styles.analysisTitle}>Analisi Strategica</h3>
+                                            {/* FIX: Cast `msg.content` to string to resolve the render error. For this role, content is always a string. */}
+                                            <p style={styles.analysisText}>{msg.content as string}</p>
+                                        </div>
+                                    )
+                                }
+                                if (msg.role === 'coach-suggestions') {
+                                    return (
+                                        <div key={msg.id}>
+                                            <h3 style={styles.suggestionsHeader}>Bozze di Risposta Suggerite</h3>
+                                            <div style={styles.suggestionsGrid}>
+                                                {(msg.content as StrategicResponse['suggestions']).map((s, i) => (
+                                                    <SuggestionCard key={i} type={s.type} response={s.response} onCopy={handleCopy} />
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )
+                                }
+                                return null;
+                            })}
+                            {isLoading && (
+                                <div style={{...styles.bubble, ...styles.personaBubble, color: COLORS.textSecondary}}>
+                                    <Spinner size={20} color={COLORS.textSecondary}/>
+                                </div>
+                            )}
+                            <div ref={chatEndRef} />
+                        </div>
+                        <form onSubmit={handleContinueChat} style={styles.chatInputForm}>
+                            <input
+                                type="text"
+                                style={styles.chatInput}
+                                placeholder="Scrivi la tua risposta..."
+                                value={currentUserMessage}
+                                onChange={e => setCurrentUserMessage(e.target.value)}
+                                disabled={isLoading}
+                            />
+                            <button type="submit" style={styles.sendButton} disabled={isLoading || !currentUserMessage.trim()}>
+                                <SendIcon />
+                            </button>
+                        </form>
+                    </div>
+                )}
+            </main>
         </div>
     );
 };
 
 const styles: { [key: string]: React.CSSProperties } = {
-    container: { maxWidth: '800px', margin: '0 auto', padding: '40px 20px' },
-    header: { textAlign: 'center', marginBottom: '32px', position: 'relative' },
-    titleContainer: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px' },
-    titleIcon: { width: '32px', height: '32px', color: COLORS.primary },
-    title: { fontSize: '28px', fontWeight: 'bold', color: COLORS.primary, margin: 0 },
-    subtitle: { fontSize: '16px', color: COLORS.textSecondary, lineHeight: 1.6, marginTop: '8px' },
-    form: { display: 'flex', flexDirection: 'column', gap: '20px', backgroundColor: COLORS.card, padding: '24px', borderRadius: '12px', border: `1px solid ${COLORS.divider}` },
-    inputGroup: { display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '16px', fontWeight: 500, color: COLORS.textPrimary },
-    input: { padding: '12px', fontSize: '16px', borderRadius: '8px', border: `1px solid ${COLORS.divider}` },
-    textarea: { padding: '12px', fontSize: '16px', borderRadius: '8px', border: `1px solid ${COLORS.divider}`, fontFamily: 'inherit', resize: 'vertical' },
-    toneSelector: { display: 'flex', gap: '12px', flexWrap: 'wrap' },
-    toneButton: { padding: '10px 16px', fontSize: '15px', borderRadius: '8px', border: `1px solid ${COLORS.divider}`, backgroundColor: COLORS.cardDark, cursor: 'pointer', fontWeight: 500 },
-    toneButtonActive: { backgroundColor: COLORS.secondary, color: 'white', borderColor: COLORS.secondary },
-    submitButton: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', width: '100%', padding: '16px', fontSize: '18px', fontWeight: 'bold', color: 'white', backgroundColor: COLORS.primary, border: 'none', borderRadius: '8px', cursor: 'pointer', marginTop: '16px', minHeight: '58px' },
-    submitButtonDisabled: { backgroundColor: '#ccc', cursor: 'not-allowed' },
-    responseContainer: { marginTop: '32px', backgroundColor: COLORS.card, padding: '24px', borderRadius: '12px', border: `1px solid ${COLORS.divider}`, animation: 'fadeInUp 0.5s ease-out' },
-    responseTitle: { fontSize: '24px', color: COLORS.primary, borderBottom: `2px solid ${COLORS.secondary}`, paddingBottom: '8px' },
-    responseSubtitle: { fontSize: '20px', color: COLORS.textPrimary, marginTop: '24px' },
-    responseText: { fontSize: '16px', color: COLORS.textSecondary, lineHeight: 1.7 },
-    responseList: { paddingLeft: '20px' },
-    responseListItem: { fontSize: '16px', color: COLORS.textSecondary, lineHeight: 1.7, marginBottom: '8px' },
+    container: { maxWidth: '900px', margin: '0 auto', padding: '40px 20px' },
+    header: { textAlign: 'center', marginBottom: '32px' },
+    title: { fontSize: '28px', fontWeight: 'bold', color: COLORS.textPrimary, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px' },
+    subtitle: { fontSize: '16px', color: COLORS.textSecondary, lineHeight: 1.6, maxWidth: '700px', margin: '12px auto 0' },
+    main: { backgroundColor: COLORS.card, borderRadius: '12px', padding: '32px', position: 'relative', border: `1px solid ${COLORS.divider}` },
+    inputSection: { display: 'flex', flexDirection: 'column', gap: '16px'},
+    label: { display: 'block', fontSize: '16px', fontWeight: 600, color: COLORS.textPrimary, marginBottom: '4px' },
+    input: {
+        width: '100%', padding: '12px 16px', fontSize: '16px', borderRadius: '8px', border: `1px solid ${COLORS.divider}`, fontFamily: 'inherit', boxSizing: 'border-box'
+    },
+    textarea: {
+        width: '100%', padding: '12px 16px', fontSize: '16px', borderRadius: '8px', border: `1px solid ${COLORS.divider}`, resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box'
+    },
+    analyzeButton: {
+        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
+        width: '100%', padding: '14px', marginTop: '8px',
+        fontSize: '16px', fontWeight: 'bold', color: 'white',
+        background: COLORS.primaryGradient, border: 'none', borderRadius: '8px', cursor: 'pointer',
+    },
+    proOverlay: {
+        position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+        backgroundColor: 'rgba(248, 247, 244, 0.95)', borderRadius: '12px',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        textAlign: 'center', padding: '20px',
+    },
+    resultsSection: { marginTop: '32px', paddingTop: '32px', borderTop: `1px solid ${COLORS.divider}` },
+    analysisBox: { backgroundColor: COLORS.cardDark, padding: '20px', borderRadius: '8px', margin: '16px 0' },
+    analysisTitle: { margin: '0 0 8px 0', fontSize: '18px', color: COLORS.primary },
+    analysisText: { margin: 0, fontSize: '15px', lineHeight: 1.6, color: COLORS.textSecondary },
+    suggestionsHeader: { fontSize: '20px', fontWeight: 'bold', color: COLORS.textPrimary, marginBottom: '16px' },
+    suggestionsGrid: { display: 'grid', gap: '16px' },
+    suggestionCard: { backgroundColor: COLORS.cardDark, padding: '16px', borderRadius: '8px', borderLeft: '4px solid' },
+    suggestionTitle: { margin: '0 0 8px 0', fontSize: '16px', fontWeight: 600 },
+    suggestionText: { margin: '0 0 12px 0', fontSize: '15px', color: COLORS.textSecondary, fontStyle: 'italic', lineHeight: 1.6 },
+    copyButton: {
+        background: 'none', border: `1px solid ${COLORS.secondary}`, color: COLORS.secondary,
+        padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: 500
+    },
+    continueButton: {
+        display: 'block', margin: '32px auto 0', padding: '12px 24px',
+        fontSize: '16px', fontWeight: 'bold', color: 'white', backgroundColor: COLORS.secondary,
+        border: 'none', borderRadius: '8px', cursor: 'pointer'
+    },
+    chatContainer: { display: 'flex', flexDirection: 'column', height: '60vh' },
+    chatHistory: { flex: 1, overflowY: 'auto', padding: '10px', display: 'flex', flexDirection: 'column', gap: '12px' },
+    bubble: { padding: '10px 15px', borderRadius: '18px', maxWidth: '80%', lineHeight: 1.5 },
+    userBubble: { backgroundColor: COLORS.secondary, color: 'white', alignSelf: 'flex-end' },
+    personaBubble: { backgroundColor: COLORS.cardDark, color: COLORS.textPrimary, alignSelf: 'flex-start' },
+    chatInputForm: { display: 'flex', gap: '10px', paddingTop: '10px', borderTop: `1px solid ${COLORS.divider}` },
+    chatInput: { flex: 1, padding: '12px', borderRadius: '8px', border: `1px solid ${COLORS.divider}` },
+    sendButton: { padding: '12px', borderRadius: '8px', border: 'none', backgroundColor: COLORS.primary, color: 'white', cursor: 'pointer' }
 };

@@ -1,5 +1,2 @@
-// In una vera applicazione, questo sarebbe un database lato server.
-// Questo file rappresenta un semplice archivio persistente per la dimostrazione.
-// Formato: email,password,nome,cognome
-export const initialUserDatabase = `admin@ces.coach,pass123,Admin,User
-aikos@libero.it,aaa,Aikos,User`;
+// This file is intentionally left blank to resolve a build-time issue.
+// It is a remnant from a previous version and is no longer in use.
