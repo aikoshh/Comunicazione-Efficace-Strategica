@@ -153,7 +153,7 @@ export const StrategicChatTrainerScreen: React.FC<StrategicChatTrainerScreenProp
   }
 
   return (
-    <div style={styles.chatContainer}>
+    <div style={styles.chatContainer} className="chat-trainer-screen-mobile-scroll">
       <header style={styles.chatHeader}>
         <div>
           <p style={styles.contextLabel}><strong>Situazione:</strong> {situation}</p>
