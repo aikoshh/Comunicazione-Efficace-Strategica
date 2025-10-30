@@ -1,20 +1,27 @@
+// components/ExerciseScreen.tsx
+// FIX: Populating the full content of the missing ExerciseScreen.tsx file.
 import React, { useState } from 'react';
 import { Exercise, AnalysisResult, VoiceAnalysisResult, Entitlements, AnalysisHistoryItem, ExerciseType } from '../types';
 import { COLORS, EXERCISE_TYPE_ICONS } from '../constants';
-import { SendIcon, MicIcon, TargetIcon, LightbulbIcon, QuestionIcon } from './Icons';
-import { soundService } from '../services/soundService';
-import { useSpeech } from '../hooks/useSpeech';
-import { analyzeResponse, analyzeParaverbalResponse } from '../services/geminiService';
-import { hasProAccess } from '../services/monetizationService';
-import { FullScreenLoader } from './Loader';
+import { analyzeWrittenResponse, analyzeVerbalResponse, generateSuggestedResponse } from '../services/geminiService';
 import { useToast } from '../hooks/useToast';
+import { FullScreenLoader, Spinner } from './Loader';
+import { SendIcon, MicIcon, LightbulbIcon } from './Icons';
+import { hasProAccess } from '../services/monetizationService';
+import { useSpeech } from '../hooks/useSpeech';
 import { QuestionLibraryModal } from './QuestionLibraryModal';
 import { PreparationChecklistModal } from './PreparationChecklistModal';
+import { soundService } from '../services/soundService';
 
 interface ExerciseScreenProps {
   exercise: Exercise;
   moduleColor: string;
-  onComplete: (result: AnalysisResult | VoiceAnalysisResult, userResponse: string, exerciseId: string, type: 'written' | 'verbal') => void;
+  onComplete: (
+    result: AnalysisResult | VoiceAnalysisResult,
+    userResponse: string,
+    exerciseId: string,
+    type: 'written' | 'verbal'
+  ) => void;
   entitlements: Entitlements | null;
   analysisHistory: { [exerciseId: string]: AnalysisHistoryItem };
   onApiKeyError: (error: string) => void;
@@ -25,92 +32,116 @@ export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({
   moduleColor,
   onComplete,
   entitlements,
-  onApiKeyError
+  onApiKeyError,
 }) => {
   const [userResponse, setUserResponse] = useState('');
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSuggesting, setIsSuggesting] = useState(false);
   const { addToast } = useToast();
   const { isListening, transcript, startListening, stopListening, isSupported } = useSpeech();
   
-  const [isLibraryOpen, setIsLibraryOpen] = useState(false);
-  const [isChecklistOpen, setIsChecklistOpen] = useState(false);
-
   const isPro = hasProAccess(entitlements);
   const exerciseType = exercise.exerciseType || ExerciseType.WRITTEN;
   const ExerciseIcon = EXERCISE_TYPE_ICONS[exerciseType];
+  
+  const [isQuestionModalOpen, setIsQuestionModalOpen] = useState(false);
+  const [isChecklistModalOpen, setIsChecklistModalOpen] = useState(false);
 
-  const handleAnalyze = async () => {
+  const handleComplete = async () => {
     soundService.playClick();
-    const responseText = exerciseType === ExerciseType.VERBAL ? transcript : userResponse;
-    if (!responseText.trim()) {
+    const responseToAnalyze = exerciseType === ExerciseType.VERBAL ? transcript : userResponse;
+    if (!responseToAnalyze.trim()) {
       addToast('La risposta non può essere vuota.', 'error');
       return;
     }
     
-    setIsAnalyzing(true);
-    
+    setIsLoading(true);
     try {
-        if (exerciseType === ExerciseType.VERBAL) {
-            const result = await analyzeParaverbalResponse(responseText, exercise.scenario, exercise.task);
-            onComplete(result, responseText, exercise.id, 'verbal');
-        } else {
-            // FIX: Added `null` for the 'style' parameter, as it is required by `analyzeResponse` but not selected in this screen.
-            const result = await analyzeResponse(exercise, responseText, entitlements, {}, null);
-            onComplete(result, responseText, exercise.id, 'written');
-        }
+      let result;
+      if (exerciseType === ExerciseType.VERBAL) {
+        result = await analyzeVerbalResponse(exercise, responseToAnalyze);
+      } else {
+        result = await analyzeWrittenResponse(exercise, responseToAnalyze, isPro);
+      }
+      onComplete(result, responseToAnalyze, exercise.id, exerciseType);
     } catch (error: any) {
-        console.error(error);
-        if (error.message.includes('API key') || error.message.includes('API_KEY')) {
-            onApiKeyError(error.message);
-        } else {
-            addToast(error.message || "Si è verificato un errore sconosciuto.", 'error');
-        }
-        setIsAnalyzing(false);
-    }
-  };
-  
-  const handleRecordToggle = () => {
-    if(isListening) {
-        soundService.playStopRecording();
-        stopListening();
-    } else {
-        soundService.playStartRecording();
-        startListening();
+      console.error("Analysis failed:", error);
+      if (error.message && (error.message.includes('API key') || error.message.includes('API_KEY'))) {
+        onApiKeyError(error.message);
+      } else {
+        addToast(error.message || "Si è verificato un errore durante l'analisi.", 'error');
+      }
+      setIsLoading(false);
     }
   };
 
-  if (isAnalyzing) {
+  const handleSuggestResponse = async () => {
+    soundService.playClick();
+    setIsSuggesting(true);
+    try {
+        const suggestion = await generateSuggestedResponse(exercise);
+        setUserResponse(suggestion);
+    } catch (error: any) {
+        console.error("Suggestion failed:", error);
+        if (error.message && (error.message.includes('API key') || error.message.includes('API_KEY'))) {
+            onApiKeyError(error.message);
+        } else {
+            addToast(error.message || "Impossibile generare il suggerimento.", 'error');
+        }
+    } finally {
+        setIsSuggesting(false);
+    }
+  };
+  
+  const handleToggleListening = () => {
+    if (isListening) {
+      soundService.playStopRecording();
+      stopListening();
+    } else {
+      soundService.playStartRecording();
+      startListening();
+    }
+  };
+
+  if (isLoading) {
     return <FullScreenLoader estimatedTime={exerciseType === ExerciseType.VERBAL ? 25 : 15} />;
   }
 
   return (
     <div style={styles.container}>
-      <header style={{...styles.header, backgroundColor: moduleColor}}>
+      <div style={styles.content}>
         <div style={styles.titleContainer}>
-            <ExerciseIcon style={styles.titleIcon} />
-            <h1 style={styles.title}>{exercise.title}</h1>
+          <ExerciseIcon style={{...styles.icon, color: moduleColor}} />
+          <h1 style={styles.title}>{exercise.title}</h1>
         </div>
-      </header>
-      
-      <main style={styles.content}>
         <div style={styles.section}>
-          <h2 style={styles.sectionTitle}><TargetIcon/> Scenario</h2>
+          <h2 style={styles.sectionTitle}>Scenario</h2>
           <p style={styles.sectionText}>{exercise.scenario}</p>
         </div>
         <div style={styles.section}>
-          <h2 style={styles.sectionTitle}><LightbulbIcon/> Il tuo Compito</h2>
+          <h2 style={styles.sectionTitle}>Il tuo Compito</h2>
           <p style={styles.sectionText}>{exercise.task}</p>
         </div>
-
+        
         {isPro && (
             <div style={styles.proToolsContainer}>
-                <button style={styles.proToolButton} onClick={() => setIsLibraryOpen(true)}><QuestionIcon/> Libreria Domande PRO</button>
-                <button style={styles.proToolButton} onClick={() => setIsChecklistOpen(true)}><TargetIcon/> Checklist Preparazione</button>
+                <button style={styles.proToolButton} onClick={() => setIsQuestionModalOpen(true)}>Libreria Domande PRO</button>
+                <button style={styles.proToolButton} onClick={() => setIsChecklistModalOpen(true)}>Checklist Preparazione PRO</button>
             </div>
         )}
         
         <div style={styles.responseArea}>
-          {exerciseType === ExerciseType.WRITTEN ? (
+          {exerciseType === ExerciseType.VERBAL ? (
+            <>
+              {!isSupported && <p style={styles.notSupported}>Il riconoscimento vocale non è supportato da questo browser.</p>}
+              <textarea
+                style={{ ...styles.textarea, minHeight: '120px' }}
+                value={transcript}
+                readOnly
+                placeholder="La trascrizione della tua risposta apparirà qui..."
+              />
+            </>
+          ) : (
             <textarea
               style={styles.textarea}
               value={userResponse}
@@ -118,182 +149,109 @@ export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({
               placeholder="Scrivi qui la tua risposta..."
               rows={8}
             />
-          ) : (
-             <div style={styles.voiceContainer}>
-                {!isSupported && <p style={styles.warningText}>Il riconoscimento vocale non è supportato da questo browser.</p>}
-                <button onClick={handleRecordToggle} disabled={!isSupported} style={isListening ? styles.recordButtonActive : styles.recordButton}>
-                    <MicIcon />
-                    {isListening ? 'Ferma Registrazione' : 'Avvia Registrazione'}
-                </button>
-                <p style={styles.transcriptPreview}>{isListening ? 'In ascolto...' : (transcript ? `Trascrizione: "${transcript}"` : 'La tua trascrizione apparirà qui.')}</p>
-             </div>
           )}
         </div>
+      </div>
 
-        <button 
-            onClick={handleAnalyze} 
-            style={{...styles.analyzeButton, backgroundColor: moduleColor}}
-            disabled={(exerciseType === ExerciseType.VERBAL ? !transcript : !userResponse) || isListening}
-        >
-            Analizza Risposta <SendIcon />
-        </button>
-      </main>
-
-      {isPro && (
+      <footer style={styles.footer}>
+        {exerciseType === ExerciseType.VERBAL ? (
           <>
-            <QuestionLibraryModal isOpen={isLibraryOpen} onClose={() => setIsLibraryOpen(false)} />
-            <PreparationChecklistModal isOpen={isChecklistOpen} onClose={() => setIsChecklistOpen(false)} />
+            <button onClick={handleToggleListening} style={isListening ? styles.stopButton : styles.recordButton} disabled={!isSupported}>
+              <MicIcon />
+              <span>{isListening ? 'Ferma Registrazione' : 'Avvia Registrazione'}</span>
+            </button>
+            <button onClick={handleComplete} style={styles.primaryButton} disabled={isListening || !transcript.trim()}>
+              Analizza Risposta <SendIcon />
+            </button>
           </>
-      )}
+        ) : (
+          <>
+            <button onClick={handleSuggestResponse} style={styles.secondaryButton} disabled={isLoading || isSuggesting}>
+                {isSuggesting ? <Spinner size={20} /> : <LightbulbIcon />}
+                <span>{isSuggesting ? 'Genero...' : 'Suggerisci Risposta'}</span>
+            </button>
+            <button onClick={handleComplete} style={styles.primaryButton} disabled={!userResponse.trim() || isLoading || isSuggesting}>
+              Invia per Analisi <SendIcon />
+            </button>
+          </>
+        )}
+      </footer>
+      
+      {isPro && <QuestionLibraryModal isOpen={isQuestionModalOpen} onClose={() => setIsQuestionModalOpen(false)} />}
+      {isPro && <PreparationChecklistModal isOpen={isChecklistModalOpen} onClose={() => setIsChecklistModalOpen(false)} />}
     </div>
   );
 };
 
-
 const styles: { [key: string]: React.CSSProperties } = {
   container: {
-    backgroundColor: COLORS.base,
-    minHeight: '100vh',
-  },
-  header: {
-    padding: '40px 24px 24px 24px',
-    color: 'white',
-    position: 'relative',
-  },
-  titleContainer: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '12px',
-      justifyContent: 'center',
-      textAlign: 'center'
-  },
-  titleIcon: {
-      width: '32px',
-      height: '32px',
-  },
-  title: {
-    fontSize: '24px',
-    fontWeight: 'bold',
-    margin: 0,
+    maxWidth: '800px',
+    margin: '0 auto',
+    padding: '40px 20px 120px', // Extra padding at bottom for footer
   },
   content: {
-    maxWidth: '800px',
-    margin: '-40px auto 40px',
     backgroundColor: COLORS.card,
-    borderRadius: '12px',
     padding: '32px',
-    boxShadow: '0 8px 30px rgba(0,0,0,0.12)',
-    position: 'relative',
-    zIndex: 2,
+    borderRadius: '12px',
+    boxShadow: '0 4px 15px rgba(0,0,0,0.05)',
+    border: `1px solid ${COLORS.divider}`
   },
-  section: {
-    marginBottom: '24px',
-  },
+  titleContainer: { display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px' },
+  icon: { width: '32px', height: '32px' },
+  title: { fontSize: '24px', fontWeight: 'bold', color: COLORS.textPrimary, margin: 0 },
+  section: { marginBottom: '24px' },
   sectionTitle: {
-    fontSize: '18px',
-    fontWeight: 600,
-    color: COLORS.textPrimary,
-    display: 'flex',
-    alignItems: 'center',
-    gap: '10px',
-    paddingBottom: '8px',
-    borderBottom: `2px solid ${COLORS.secondary}`,
-    marginBottom: '12px',
+    fontSize: '18px', fontWeight: 600, color: COLORS.textPrimary, paddingBottom: '8px',
+    borderBottom: `2px solid ${COLORS.secondary}`, marginBottom: '12px'
   },
-  sectionText: {
-    fontSize: '16px',
-    color: COLORS.textSecondary,
-    lineHeight: 1.6,
-  },
-  proToolsContainer: {
-      display: 'flex',
-      gap: '12px',
-      marginBottom: '24px',
-      padding: '16px',
-      backgroundColor: COLORS.cardDark,
-      borderRadius: '8px'
-  },
-  proToolButton: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    padding: '10px 16px',
-    border: `1px solid ${COLORS.secondary}`,
-    backgroundColor: 'transparent',
-    color: COLORS.secondary,
-    borderRadius: '8px',
-    cursor: 'pointer',
-    fontWeight: 500
-  },
-  responseArea: {
-    marginTop: '24px',
-  },
+  sectionText: { fontSize: '16px', color: COLORS.textSecondary, lineHeight: 1.6, whiteSpace: 'pre-wrap' },
+  responseArea: { marginTop: '24px' },
   textarea: {
-    width: '100%',
-    padding: '12px 16px',
-    fontSize: '16px',
-    borderRadius: '8px',
-    border: `1px solid ${COLORS.divider}`,
-    resize: 'vertical',
-    fontFamily: 'inherit',
-    backgroundColor: 'white'
+    width: '100%', padding: '12px 16px', fontSize: '16px', borderRadius: '8px',
+    border: `1px solid ${COLORS.divider}`, resize: 'vertical', fontFamily: 'inherit',
+    backgroundColor: 'white', boxSizing: 'border-box'
   },
-  voiceContainer: {
-    textAlign: 'center',
-    padding: '20px',
-    border: `2px dashed ${COLORS.divider}`,
-    borderRadius: '8px',
+  footer: {
+    position: 'fixed', bottom: 0, left: 0, right: 0, backgroundColor: COLORS.card,
+    padding: '16px 24px', borderTop: `1px solid ${COLORS.divider}`,
+    display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '16px',
+    boxShadow: '0 -2px 10px rgba(0,0,0,0.05)', zIndex: 50,
+  },
+  primaryButton: {
+    display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 20px', fontSize: '16px',
+    fontWeight: 'bold', border: 'none', backgroundColor: COLORS.secondary, color: 'white',
+    borderRadius: '8px', cursor: 'pointer'
+  },
+  secondaryButton: {
+    display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 20px', fontSize: '16px',
+    fontWeight: 'bold', border: `1px solid ${COLORS.secondary}`, backgroundColor: 'transparent', color: COLORS.secondary,
+    borderRadius: '8px', cursor: 'pointer'
   },
   recordButton: {
-    padding: '12px 24px',
-    fontSize: '16px',
-    fontWeight: 'bold',
-    color: 'white',
-    backgroundColor: COLORS.primary,
-    border: 'none',
-    borderRadius: '8px',
-    cursor: 'pointer',
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: '10px',
+    display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 20px', fontSize: '16px',
+    fontWeight: 'bold', border: 'none', backgroundColor: COLORS.success, color: 'white',
+    borderRadius: '8px', cursor: 'pointer'
   },
-  recordButtonActive: {
-    padding: '12px 24px',
-    fontSize: '16px',
-    fontWeight: 'bold',
-    color: 'white',
-    backgroundColor: COLORS.error,
-    border: 'none',
-    borderRadius: '8px',
-    cursor: 'pointer',
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: '10px',
+  stopButton: {
+    display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 20px', fontSize: '16px',
+    fontWeight: 'bold', border: 'none', backgroundColor: COLORS.error, color: 'white',
+    borderRadius: '8px', cursor: 'pointer'
   },
-  transcriptPreview: {
-      marginTop: '16px',
-      fontSize: '15px',
-      color: COLORS.textSecondary,
-      fontStyle: 'italic',
-      minHeight: '22px'
-  },
-  warningText: {
-      color: COLORS.error,
-      marginBottom: '16px',
-  },
-  analyzeButton: {
+  notSupported: { color: COLORS.error, fontWeight: 'bold' },
+  proToolsContainer: {
     display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '10px',
-    width: '100%',
-    padding: '16px',
-    fontSize: '18px',
-    fontWeight: 'bold',
-    color: 'white',
-    border: 'none',
+    gap: '12px',
+    margin: '24px 0',
+    paddingTop: '16px',
+    borderTop: `1px dashed ${COLORS.divider}`
+  },
+  proToolButton: {
+    padding: '8px 16px',
+    fontSize: '14px',
+    border: `1px solid ${COLORS.warning}`,
+    backgroundColor: '#FFFBEA',
+    color: COLORS.textAccent,
     borderRadius: '8px',
-    cursor: 'pointer',
-    marginTop: '24px',
+    cursor: 'pointer'
   }
 };
