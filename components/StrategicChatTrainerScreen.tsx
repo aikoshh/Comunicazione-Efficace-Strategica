@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { UserProfile, ChatMessage, ResponseStyle } from '../types';
 import { COLORS } from '../constants';
 import { SendIcon, LightbulbIcon, TargetIcon, CrownIcon, LockIcon } from './Icons';
-import { continueStrategicChat } from '../services/geminiService';
+import { continueStrategicChat, generateChatSuggestion } from '../services/geminiService';
 import { useToast } from '../hooks/useToast';
 import { Spinner } from './Loader';
 import { soundService } from '../services/soundService';
@@ -17,6 +17,7 @@ interface StrategicChatTrainerScreenProps {
 export const StrategicChatTrainerScreen: React.FC<StrategicChatTrainerScreenProps> = ({ user, isPro, onApiKeyError }) => {
   const [step, setStep] = useState<'setup' | 'chat'>('setup');
   const [isLoading, setIsLoading] = useState(false);
+  const [isSuggesting, setIsSuggesting] = useState(false);
   const { addToast } = useToast();
   const chatEndRef = useRef<HTMLDivElement>(null);
 
@@ -83,6 +84,24 @@ export const StrategicChatTrainerScreen: React.FC<StrategicChatTrainerScreenProp
       }
     } finally {
       setIsLoading(false);
+    }
+  };
+  
+  const handleSuggestResponse = async () => {
+    soundService.playClick();
+    setIsSuggesting(true);
+    try {
+      const suggestion = await generateChatSuggestion(history, situation, goal);
+      setUserInput(suggestion);
+    } catch (error: any) {
+      console.error(error);
+      if (error.message.includes('API key')) {
+        onApiKeyError(error.message);
+      } else {
+        addToast(error.message || "Impossibile generare il suggerimento.", 'error');
+      }
+    } finally {
+      setIsSuggesting(false);
     }
   };
 
@@ -183,9 +202,12 @@ export const StrategicChatTrainerScreen: React.FC<StrategicChatTrainerScreenProp
                       handleSendMessage();
                   }
               }}
-              disabled={isLoading}
+              disabled={isLoading || isSuggesting}
             />
-            <button onClick={handleSendMessage} style={styles.sendButton} disabled={isLoading || !userInput.trim()}>
+            <button onClick={handleSuggestResponse} style={styles.suggestButton} disabled={isLoading || isSuggesting}>
+              {isSuggesting ? <Spinner size={24} /> : <LightbulbIcon />}
+            </button>
+            <button onClick={handleSendMessage} style={styles.sendButton} disabled={isLoading || isSuggesting || !userInput.trim()}>
               {isLoading ? <Spinner size={24} /> : <SendIcon />}
             </button>
         </div>
@@ -374,7 +396,7 @@ const styles: { [key: string]: React.CSSProperties } = {
   inputRow: {
     display: 'flex',
     alignItems: 'flex-end',
-    gap: '12px'
+    gap: '8px'
   },
   chatInput: {
     flex: 1,
@@ -385,6 +407,19 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontFamily: 'inherit',
     fontSize: '16px',
     boxSizing: 'border-box',
+  },
+  suggestButton: {
+    backgroundColor: 'transparent',
+    border: `1px solid ${COLORS.secondary}`,
+    color: COLORS.secondary,
+    borderRadius: '50%',
+    width: '48px',
+    height: '48px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+    flexShrink: 0,
   },
   sendButton: {
     backgroundColor: COLORS.secondary,
