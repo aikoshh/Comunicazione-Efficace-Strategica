@@ -14,17 +14,22 @@ import type {
   ChatMessage,
 } from '../types';
 import { hasProAccess } from './monetizationService';
+import { FALLBACK_API_KEY } from '../config';
 
 // Helper function to initialize the client.
 // As per guidelines, this ensures the most up-to-date API key is used for each call.
 const getClient = () => {
-    // FIX: Per security guidelines, the API key must come exclusively from environment variables.
-    // The fallback logic has been removed.
-    const apiKey = process.env.API_KEY;
+    // Prioritize environment variable
+    let apiKey = process.env.API_KEY;
+
+    // If environment variable is not set or is empty, use the fallback from config
+    if (!apiKey || apiKey.trim() === '') {
+        apiKey = FALLBACK_API_KEY;
+    }
 
     // Final check: if the key is still missing or is a placeholder, throw a clear error.
     if (!apiKey || apiKey.trim() === '' || apiKey.startsWith('INCOLLA-QUI')) {
-        throw new Error("API key not configured. Please set the API_KEY environment variable.");
+        throw new Error("API key not configured. Please set the API_KEY environment variable or provide a fallback in config.ts.");
     }
     
     return new GoogleGenAI({ apiKey });
