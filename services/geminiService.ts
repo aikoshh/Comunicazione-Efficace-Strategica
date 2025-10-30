@@ -1,7 +1,6 @@
 // services/geminiService.ts
 
 import { GoogleGenAI, Type } from "@google/genai";
-import { FALLBACK_API_KEY } from '../config';
 import type {
   Exercise,
   AnalysisResult,
@@ -12,24 +11,20 @@ import type {
   StrategicResponse,
   ContinuedStrategicResponse,
   ResponseStyle,
+  ChatMessage,
 } from '../types';
 import { hasProAccess } from './monetizationService';
 
 // Helper function to initialize the client.
 // As per guidelines, this ensures the most up-to-date API key is used for each call.
 const getClient = () => {
-    // Prioritize environment variable for security
-    let apiKey = process.env.API_KEY;
-
-    // If env var is not set, use the fallback key from the config file
-    if (!apiKey || apiKey.trim() === '') {
-        console.warn("API_KEY environment variable not set. Using fallback key from config.ts. This is not recommended for production.");
-        apiKey = FALLBACK_API_KEY;
-    }
+    // FIX: Per security guidelines, the API key must come exclusively from environment variables.
+    // The fallback logic has been removed.
+    const apiKey = process.env.API_KEY;
 
     // Final check: if the key is still missing or is a placeholder, throw a clear error.
-    if (!apiKey || apiKey.startsWith('INCOLLA-QUI')) {
-        throw new Error("API key not configured. Please set the API_KEY environment variable or provide a valid key in config.ts.");
+    if (!apiKey || apiKey.trim() === '' || apiKey.startsWith('INCOLLA-QUI')) {
+        throw new Error("API key not configured. Please set the API_KEY environment variable.");
     }
     
     return new GoogleGenAI({ apiKey });
@@ -168,8 +163,8 @@ async function handleResponse(responsePromise: Promise<any>): Promise<any> {
             throw new Error(safetyMessage);
         }
         
-        // Pulizia del testo da eventuali markdown
-        let jsonText = candidate.content.parts[0].text.trim();
+        // FIX: Use response.text as per guidelines for extracting text.
+        let jsonText = response.text.trim();
         if (jsonText.startsWith('```json')) {
             jsonText = jsonText.substring(7, jsonText.length - 3).trim();
         } else if (jsonText.startsWith('```')) {
@@ -204,15 +199,17 @@ export async function analyzeResponse(
         - Titolo: ${exercise.title}
         - Scenario: ${exercise.scenario}
         - Compito: ${exercise.task}
+        
+        ${style ? `STILE RICHIESTO: L'utente sta cercando di allenare uno stile di risposta '${style}'. La tua valutazione deve tener conto di questo obiettivo.` : ''}
 
         RISPOSTA DELL'UTENTE:
         "${userResponse}"
 
         ISTRUZIONI PER L'ANALISI:
-        1.  Valuta la risposta su una scala da 0 a 100, considerando efficacia, strategia, chiarezza ed empatia.
+        1.  Valuta la risposta su una scala da 0 a 100, considerando efficacia, strategia, chiarezza, empatia e aderenza allo stile richiesto (se presente).
         2.  Identifica 2-3 punti di forza specifici.
         3.  Identifica 2-3 aree di miglioramento concrete. Per ogni area, fornisci un suggerimento chiaro e un esempio pratico di come l'utente avrebbe potuto riformulare una parte della sua risposta.
-        4.  Scrivi una risposta suggerita ideale, sia in versione breve che elaborata. Includi **markdown bold** per le parole chiave.
+        4.  Scrivi una risposta suggerita ideale, sia in versione breve che elaborata, che rispetti lo stile richiesto (se presente). Includi **markdown bold** per le parole chiave.
         ${isPro ? `5.  FORNISCI UNA VALUTAZIONE DETTAGLIATA (detailedRubric) basata sui seguenti 5 criteri, assegnando un punteggio da 0 a 10 e una breve giustificazione per ciascuno:
             - Chiarezza: Il messaggio è chiaro, conciso e facile da capire?
             - Tono: Il tono è appropriato per la situazione e l'obiettivo?
@@ -394,42 +391,46 @@ export async function getStrategicSuggestions(
 }
 
 export async function continueStrategicChat(
-    history: { role: 'user' | 'persona'; content: string }[],
-    situation: string,
-    goal: string,
-    context: string
-): Promise<ContinuedStrategicResponse> {
+  history: ChatMessage[],
+  situation: string,
+  goal: string,
+  style: ResponseStyle
+): Promise<{ personaResponse: string, coachFeedback: string }> {
     const ai = getClient();
     const chatHistory = history.map(m => `- ${m.role === 'user' ? 'Tu' : 'Interlocutore'}: ${m.content}`).join('\n');
+    const lastUserMessage = history[history.length - 1].content;
     
     const prompt = `
         Sei un coach di comunicazione strategica che agisce in una simulazione di chat. Il tuo compito è duplice:
-        1.  Interpretare il ruolo dell'interlocutore ("persona").
-        2.  Fornire un'analisi da coach sulla risposta dell'utente.
+        1.  Fornire un feedback sulla risposta dell'utente.
+        2.  Interpretare il ruolo dell'interlocutore ("persona") e rispondere in modo coerente.
 
         CONTESTO DELLA SIMULAZIONE:
         - Situazione Iniziale: ${situation}
         - Obiettivo dell'utente: ${goal}
-        - Contesto Aggiuntivo: ${context || 'Nessuno'}
         
         STORICO DELLA CONVERSAZIONE:
         ${chatHistory}
 
+        STILE DI RISPOSTA RICHIESTO DALL'UTENTE per la TUA prossima risposta (come Interlocutore): ${style}
+        - Empatica: Usa riformulazione e domande aperte.
+        - Diretta: Usa riformulazione e una richiesta esplicita.
+        - Strategica: Usa riformulazione e domande dicotomiche.
+
         ISTRUZIONI:
-        1.  **Risposta della Persona (personaResponse):** Basandoti sull'ultima risposta dell'utente ("Tu"), formula una risposta realistica e coerente per l'interlocutore ("persona").
-        2.  **Analisi del Coach (analysis):** Valuta l'ultima risposta dell'utente. È strategica? Si avvicina all'obiettivo? Fornisci un feedback conciso.
-        3.  **Suggerimenti del Coach (suggestions):** Come prima, fornisci 4 bozze di risposta alternative (empatica, assertiva, chiarificatrice, solutiva) che l'utente potrebbe usare.
+        1.  **Feedback del Coach (coachFeedback):** Valuta l'ultima risposta dell'utente ("${lastUserMessage}"). È efficace? Si avvicina all'obiettivo? Fornisci un feedback sintetico di 1-2 frasi.
+        2.  **Risposta della Persona (personaResponse):** Basandoti sull'ultima risposta dell'utente, formula una risposta realistica per l'interlocutore, aderendo STRETTAMENTE allo stile "${style}" richiesto.
 
         FORMATTA L'OUTPUT ESCLUSIVAMENTE IN JSON.
     `;
     
-    const continuedStrategicResponseSchema = {
-        ...strategicResponseSchema,
+    const responseSchema = {
+        type: Type.OBJECT,
         properties: {
-            ...strategicResponseSchema.properties,
             personaResponse: { type: Type.STRING, description: "La risposta dell'interlocutore simulato (persona)." },
+            coachFeedback: { type: Type.STRING, description: "Valutazione sintetica del coach sull'ultima risposta dell'utente." },
         },
-        required: [...(strategicResponseSchema.required || []), 'personaResponse'],
+        required: ['personaResponse', 'coachFeedback'],
     };
 
     const responsePromise = ai.models.generateContent({
@@ -437,7 +438,7 @@ export async function continueStrategicChat(
         contents: prompt,
         config: {
             responseMimeType: 'application/json',
-            responseSchema: continuedStrategicResponseSchema,
+            responseSchema: responseSchema,
             temperature: 0.8,
         }
     });

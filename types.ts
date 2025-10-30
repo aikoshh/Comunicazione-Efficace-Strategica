@@ -223,8 +223,9 @@ export interface ContinuedStrategicResponse extends StrategicResponse {
 
 export interface ChatMessage {
     id: string;
-    role: 'user' | 'persona' | 'coach-analysis' | 'coach-suggestions';
-    content: string | StrategicResponse['suggestions'];
+    role: 'user' | 'persona' | 'coach';
+    content: string;
+    feedback?: string;
 }
 
 
