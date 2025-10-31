@@ -128,7 +128,7 @@ export const StrategicChatTrainerScreen: React.FC<StrategicChatTrainerScreenProp
           <p style={styles.setupDescription}>Simula una conversazione difficile. Definisci il contesto e allenati a rispondere in tempo reale con il feedback dell'AI.</p>
           
           <div style={styles.inputGroup}>
-            <label style={styles.label} htmlFor="situation">1. Incolla qui il messaggio ricevuto o spiega qual è la situazione</label>
+            <label style={styles.label} htmlFor="situation">1. Qual è la situazione?</label>
             <textarea id="situation" value={situation} onChange={(e) => setSituation(e.target.value)} style={styles.textarea} rows={3} placeholder="Es: 'Devo comunicare al mio team una decisione impopolare che so non piacerà.'" />
           </div>
           
@@ -153,7 +153,7 @@ export const StrategicChatTrainerScreen: React.FC<StrategicChatTrainerScreenProp
   }
 
   return (
-    <div style={styles.chatContainer} className="chat-trainer-screen-mobile-scroll">
+    <div style={styles.chatContainer}>
       <header style={styles.chatHeader}>
         <div>
           <p style={styles.contextLabel}><strong>Situazione:</strong> {situation}</p>
@@ -192,11 +192,6 @@ export const StrategicChatTrainerScreen: React.FC<StrategicChatTrainerScreenProp
         <textarea
           value={userInput}
           onChange={e => setUserInput(e.target.value)}
-          onFocus={(e) => {
-              setTimeout(() => {
-                  e.target.scrollIntoView({ behavior: 'smooth' });
-              }, 300);
-          }}
           onKeyDown={e => {
             if (e.key === 'Enter' && !e.shiftKey) {
               e.preventDefault();
@@ -239,7 +234,7 @@ const styles: { [key: string]: React.CSSProperties } = {
   chatArea: { flex: 1, overflowY: 'auto', padding: '20px', backgroundColor: COLORS.base },
   messageRow: { display: 'flex', marginBottom: '16px' },
   messageBubble: { maxWidth: '75%', padding: '12px 16px', borderRadius: '18px', lineHeight: 1.5 },
-  messageContent: { margin: 0, whiteSpace: 'pre-wrap' },
+  messageContent: { margin: 0 },
   bubble_user: { backgroundColor: COLORS.primary, color: 'white', alignSelf: 'flex-end', borderBottomRightRadius: '4px' },
   bubble_persona: { backgroundColor: COLORS.card, color: COLORS.textPrimary, border: `1px solid ${COLORS.divider}`, borderBottomLeftRadius: '4px' },
   bubble_coach: { width: '100%', backgroundColor: 'transparent', color: COLORS.textSecondary, textAlign: 'center', fontStyle: 'italic', fontSize: '14px', padding: '8px 0' },
