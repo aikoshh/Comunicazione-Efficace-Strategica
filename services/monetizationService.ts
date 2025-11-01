@@ -1,5 +1,5 @@
 import type { Entitlements, Product, UserProfile, StorableEntitlements } from '../types';
-import { databaseService } from './databaseService';
+import { databaseService } from './firebase';
 
 // Simulate a delay to mimic network latency
 const simulateNetworkDelay = (ms: number = 500) => new Promise(resolve => setTimeout(resolve, ms));

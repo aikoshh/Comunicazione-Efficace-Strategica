@@ -9,6 +9,7 @@ import {
 import { MODULES, COLORS } from '../constants';
 import { hasProAccess } from '../services/monetizationService';
 import { ProgressOverview } from './ProgressOverview';
+import { ProgressAnalytics } from './ProgressAnalytics'; // <-- Importato il componente del grafico
 import { soundService } from '../services/soundService';
 import { LockIcon, CrownIcon } from './Icons';
 import { homeScreenHeaderVideo, checkupMedia, dailyChallengeMedia } from '../assets';
@@ -76,6 +77,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   entitlements,
   onSelectModule,
   onStartCheckup,
+  onNavigateToReport,
   onStartDailyChallenge,
 }) => {
     const isPro = hasProAccess(entitlements);
@@ -93,6 +95,15 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       
       <main style={styles.mainContent}>
         <ProgressOverview user={user} progress={progress} />
+        
+        {/* Reinserito il grafico delle competenze */}
+        {progress && (
+          <ProgressAnalytics 
+            userProgress={progress}
+            onNavigateToReport={onNavigateToReport}
+            onSelectModule={onSelectModule}
+          />
+        )}
         
         <section style={styles.specialCardsSection}>
             <div style={styles.specialCard} onClick={() => { soundService.playClick(); onStartCheckup(); }}>

@@ -19,7 +19,7 @@ interface ExerciseScreenProps {
   onComplete: (
     result: AnalysisResult | VoiceAnalysisResult,
     userResponse: string,
-    exerciseId: string,
+    exercise: Exercise,
     type: 'written' | 'verbal'
   ) => void;
   entitlements: Entitlements | null;
@@ -63,7 +63,7 @@ export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({
       } else {
         result = await analyzeWrittenResponse(exercise, responseToAnalyze, isPro);
       }
-      onComplete(result, responseToAnalyze, exercise.id, exerciseType);
+      onComplete(result, responseToAnalyze, exercise, exerciseType);
     } catch (error: any) {
       console.error("Analysis failed:", error);
       if (error.message && (error.message.includes('API key') || error.message.includes('API_KEY'))) {

@@ -21,6 +21,7 @@ export interface Entitlements {
     teamActive: boolean;
 }
 
+// FIX: Corrected typo in interface name from StorableEntitleaments to StorableEntitlements.
 export interface StorableEntitlements {
     productIDs: string[];
     teamSeats: number;
@@ -211,7 +212,7 @@ export type ResponseStyle = 'Empatica' | 'Diretta' | 'Strategica';
 export interface StrategicResponse {
     analysis: string;
     suggestions: {
-        type: 'assertiva' | 'empatica' | 'chiarificatrice' | 'solutiva';
+        type: 'assertiva' | 'empatica' | 'chiarificatrice' | 'strategica';
         response: string;
     }[];
 }
@@ -248,4 +249,17 @@ export interface ScoreExplanation {
     Consistency: number;
     Recency: number;
     VoiceDelta: number;
+}
+
+// --- ADMIN & REPORTING ---
+export type ReportStatus = 'new' | 'read' | 'resolved';
+
+export interface ProblemReport {
+    id: string;
+    userId: string;
+    userEmail: string;
+    userName: string;
+    message: string;
+    timestamp: string; // ISO string
+    status: ReportStatus;
 }

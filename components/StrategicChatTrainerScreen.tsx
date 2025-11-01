@@ -1,12 +1,20 @@
 // components/StrategicChatTrainerScreen.tsx
+// FIX: Create full content for the Strategic Chat Trainer component.
 import React, { useState, useRef, useEffect } from 'react';
-import { UserProfile, ChatMessage, ResponseStyle } from '../types';
+import {
+  UserProfile,
+  ChatMessage,
+  StrategicResponse,
+  ResponseStyle,
+} from '../types';
 import { COLORS } from '../constants';
-import { continueStrategicChat, generateChatSuggestion } from '../services/geminiService';
+import { getStrategicResponse, continueWithPersona } from '../services/geminiService';
 import { useToast } from '../hooks/useToast';
 import { Spinner } from './Loader';
-import { SendIcon, LightbulbIcon, CloseIcon } from './Icons';
+import { SendIcon, LightbulbIcon } from './Icons';
 import { soundService } from '../services/soundService';
+import { SuggestionStyleModal } from './SuggestionStyleModal';
+import { chatTrainerHeaderVideo } from '../assets';
 
 interface StrategicChatTrainerScreenProps {
   user: UserProfile;
@@ -14,235 +22,251 @@ interface StrategicChatTrainerScreenProps {
   onApiKeyError: (error: string) => void;
 }
 
+const CoachMessage: React.FC<{ analysis: string, suggestions: StrategicResponse['suggestions'], onSelectSuggestion: (text: string) => void }> = ({ analysis, suggestions, onSelectSuggestion }) => {
+    return (
+        <div style={styles.coachMessage}>
+            <div style={styles.coachHeader}>
+                <LightbulbIcon style={{color: COLORS.warning}} />
+                <h3 style={styles.coachTitle}>Analisi Strategica del Coach</h3>
+            </div>
+            <p style={styles.analysisText}>{analysis}</p>
+            <div style={styles.suggestionsContainer}>
+                {suggestions.map((s, i) => (
+                    <div key={i} style={styles.suggestionItem}>
+                        <div style={styles.suggestionContent}>
+                            <span style={styles.suggestionType}>{s.type.charAt(0).toUpperCase() + s.type.slice(1)}</span>
+                            <p style={styles.suggestionText}>"{s.response}"</p>
+                        </div>
+                        <button style={styles.selectButton} onClick={() => onSelectSuggestion(s.response)}>
+                            Seleziona
+                        </button>
+                    </div>
+                ))}
+            </div>
+        </div>
+    )
+};
+
 export const StrategicChatTrainerScreen: React.FC<StrategicChatTrainerScreenProps> = ({ user, isPro, onApiKeyError }) => {
-  // State for setup
-  const [situation, setSituation] = useState('');
-  const [goal, setGoal] = useState('');
-  const [personaStyle, setPersonaStyle] = useState<ResponseStyle>('Diretta');
-  const [isChatting, setIsChatting] = useState(false);
-  
-  // State for chat
-  const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [userInput, setUserInput] = useState('');
+  const [context, setContext] = useState('');
+  const [objective, setObjective] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [isSuggesting, setIsSuggesting] = useState(false);
-  
   const { addToast } = useToast();
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const [currentStrategicResponse, setCurrentStrategicResponse] = useState<StrategicResponse | null>(null);
+  const [conversationState, setConversationState] = useState<'idle' | 'analyzing' | 'suggesting' | 'waiting_for_persona'>('idle');
+  const [originalInput, setOriginalInput] = useState('');
+  const [suggestionStyle, setSuggestionStyle] = useState<ResponseStyle>('Strategica');
+  const [isStyleModalOpen, setIsStyleModalOpen] = useState(false);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [chatHistory]);
-
-  const handleStartChat = () => {
-    if (!situation.trim() || !goal.trim()) {
-      addToast('Per favore, definisci sia la situazione che il tuo obiettivo.', 'error');
-      return;
-    }
-    soundService.playClick();
-    const initialMessage: ChatMessage = {
-      id: `coach-${Date.now()}`,
-      role: 'coach',
-      content: `Ok, iniziamo. L'interlocutore risponderà in modo ${personaStyle}. Qual è il tuo primo messaggio?`
-    };
-    setChatHistory([initialMessage]);
-    setIsChatting(true);
-  };
+  }, [chatMessages, isLoading, currentStrategicResponse]);
 
   const handleSendMessage = async () => {
-    if (!userInput.trim()) return;
+    if (!userInput.trim() || conversationState !== 'idle') return;
+    soundService.playClick();
+
+    const newUserMessage: ChatMessage = { id: Date.now().toString(), role: 'user', content: userInput };
+    setChatMessages(prev => [...prev, newUserMessage]);
+    setUserInput('');
+    setOriginalInput(userInput); // Save the very first message for context
+    setConversationState('analyzing');
+    setIsLoading(true);
+    setCurrentStrategicResponse(null);
+
+    try {
+        const response = await getStrategicResponse(userInput, suggestionStyle, [], context, objective);
+        setCurrentStrategicResponse(response);
+        setConversationState('suggesting');
+    } catch (error: any) {
+        console.error("Error getting strategic response:", error);
+        if (error.message.includes('API key')) {
+            onApiKeyError(error.message);
+        } else {
+            addToast(error.message || "Errore durante l'analisi.", 'error');
+        }
+        setConversationState('idle');
+    } finally {
+        setIsLoading(false);
+    }
+  };
+
+  const handleSelectSuggestion = async (chosenResponse: string) => {
     soundService.playClick();
     
-    const newUserMessage: ChatMessage = {
-      id: `user-${Date.now()}`,
-      role: 'user',
-      content: userInput,
-    };
-
-    const newHistory = [...chatHistory, newUserMessage];
-    setChatHistory(newHistory);
-    setUserInput('');
+    const userResponseMessage: ChatMessage = { id: (Date.now() + 1).toString(), role: 'user', content: chosenResponse, feedback: 'Scelto dal coach' };
+    setChatMessages(prev => [...prev, userResponseMessage]);
+    setCurrentStrategicResponse(null);
+    setConversationState('waiting_for_persona');
     setIsLoading(true);
-
+    
     try {
-      const { personaResponse, coachFeedback } = await continueStrategicChat(newHistory, situation, goal, personaStyle);
-      
-      const personaMessage: ChatMessage = {
-        id: `persona-${Date.now()}`,
-        role: 'persona',
-        content: personaResponse,
-        feedback: coachFeedback,
-      };
-      
-      setChatHistory(prev => [...prev, personaMessage]);
-
+        const result = await continueWithPersona(originalInput, chosenResponse, [], context, objective);
+        const personaMessage: ChatMessage = { id: (Date.now() + 2).toString(), role: 'persona', content: result.personaResponse };
+        setChatMessages(prev => [...prev, personaMessage]);
+        setCurrentStrategicResponse(result);
+        setConversationState('suggesting');
     } catch (error: any) {
-      console.error(error);
-      if (error.message.includes('API key') || error.message.includes('API_KEY')) {
-        onApiKeyError(error.message);
-      } else {
-        addToast(error.message || 'Si è verificato un errore.', 'error');
-        setUserInput(newUserMessage.content); 
-        setChatHistory(chatHistory);
-      }
+        console.error("Error continuing conversation:", error);
+         if (error.message.includes('API key')) {
+            onApiKeyError(error.message);
+        } else {
+            addToast(error.message || "Errore nella simulazione.", 'error');
+            setConversationState('idle'); // or back to suggesting
+        }
     } finally {
-      setIsLoading(false);
+        setIsLoading(false);
     }
   };
-  
-  const handleGetSuggestion = async () => {
-    if (!isPro) {
-      addToast('Questa funzionalità è riservata agli utenti PRO. Effettua l\'upgrade per sbloccarla.', 'info');
-      return;
-    }
-    soundService.playClick();
-    setIsSuggesting(true);
-    try {
-      const suggestion = await generateChatSuggestion(chatHistory, situation, goal);
-      setUserInput(suggestion);
-    } catch (error: any) {
-       console.error(error);
-      if (error.message.includes('API key') || error.message.includes('API_KEY')) {
-        onApiKeyError(error.message);
-      } else {
-        addToast(error.message || 'Impossibile generare il suggerimento.', 'error');
-      }
-    } finally {
-      setIsSuggesting(false);
-    }
-  };
-  
-  const handleReset = () => {
-    soundService.playClick();
-    setIsChatting(false);
-    setChatHistory([]);
-    setSituation('');
-    setGoal('');
-  };
-  
-  if (!isChatting) {
-    return (
-      <div style={styles.setupContainer}>
-        <div style={styles.setupCard}>
-          <h1 style={styles.setupTitle}>Chat Trainer Strategico</h1>
-          <p style={styles.setupDescription}>Simula una conversazione difficile. Definisci il contesto e allenati a rispondere in tempo reale con il feedback dell'AI.</p>
-          
-          <div style={styles.inputGroup}>
-            <label style={styles.label} htmlFor="situation">1. Qual è la situazione?</label>
-            <textarea id="situation" value={situation} onChange={(e) => setSituation(e.target.value)} style={styles.textarea} rows={3} placeholder="Es: 'Devo comunicare al mio team una decisione impopolare che so non piacerà.'" />
-          </div>
-          
-          <div style={styles.inputGroup}>
-            <label style={styles.label} htmlFor="goal">2. Qual è il tuo obiettivo comunicativo?</label>
-            <textarea id="goal" value={goal} onChange={(e) => setGoal(e.target.value)} style={styles.textarea} rows={2} placeholder="Es: 'Comunicare la notizia con empatia, mantenendo la fiducia del team.'" />
-          </div>
 
-          <div style={styles.inputGroup}>
-            <label style={styles.label}>3. Che stile avrà il tuo interlocutore?</label>
-            <div style={styles.personaOptions}>
-              {(['Empatica', 'Diretta', 'Strategica'] as ResponseStyle[]).map(style => (
-                <button key={style} onClick={() => setPersonaStyle(style)} style={{...styles.personaButton, ...(personaStyle === style ? styles.personaButtonSelected : {})}}>{style}</button>
-              ))}
-            </div>
-          </div>
-          
-          <button onClick={handleStartChat} style={{...styles.startButton, ...(!situation.trim() || !goal.trim() ? styles.buttonDisabled : {})}} disabled={!situation.trim() || !goal.trim()}>Inizia la Simulazione</button>
-        </div>
-      </div>
-    );
-  }
+  const isInitialState = chatMessages.length === 0;
 
   return (
-    <div style={styles.chatContainer}>
-      <header style={styles.chatHeader}>
-        <div>
-          <p style={styles.contextLabel}><strong>Situazione:</strong> {situation}</p>
-          <p style={styles.contextLabel}><strong>Obiettivo:</strong> {goal}</p>
-        </div>
-        <button onClick={handleReset} style={styles.resetButton}><CloseIcon/> Termina</button>
-      </header>
+    <div style={styles.container}>
+        <header style={styles.header}>
+            <video src={chatTrainerHeaderVideo} style={styles.headerVideo} autoPlay muted loop playsInline />
+            <div style={styles.headerOverlay} />
+            <div style={styles.headerContent}>
+                <h1 style={styles.title}>Chat Trainer Strategico</h1>
+                <p style={styles.subtitle}>Incolla un messaggio, definisci il contesto e il tuo obiettivo. L'AI ti fornirà un'analisi e bozze di risposta strategiche.</p>
+            </div>
+        </header>
 
-      <main style={styles.chatArea}>
-        {chatHistory.map(msg => (
-          <div key={msg.id} style={{...styles.messageRow, justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start'}}>
-            <div style={{...styles.messageBubble, ...(styles[`bubble_${msg.role}` as keyof typeof styles] || {}) }}>
-              <p style={styles.messageContent}>{msg.content}</p>
-              {msg.role === 'persona' && msg.feedback && (
-                <div style={styles.feedbackBox}>
-                  <strong>Coach AI:</strong> {msg.feedback}
+        <div style={styles.chatContainer}>
+            <div style={styles.chatWindow}>
+                {isInitialState && (
+                    <div style={styles.initialMessage}>
+                        <LightbulbIcon style={{width: 48, height: 48, color: COLORS.secondary}} />
+                        <p>Incolla qui un'email, un messaggio o una qualsiasi comunicazione a cui vuoi rispondere in modo strategico.</p>
+                    </div>
+                )}
+                {chatMessages.map(msg => (
+                    <div key={msg.id} style={{...styles.messageBubble, ...(msg.role === 'user' ? styles.userBubble : styles.personaBubble)}}>
+                        {msg.content}
+                    </div>
+                ))}
+                {isLoading && (
+                    <div style={{...styles.messageBubble, ...styles.personaBubble}}>
+                        <Spinner color={COLORS.primary} />
+                    </div>
+                )}
+                {currentStrategicResponse && conversationState === 'suggesting' && (
+                    <CoachMessage
+                        analysis={currentStrategicResponse.analysis}
+                        suggestions={currentStrategicResponse.suggestions}
+                        onSelectSuggestion={handleSelectSuggestion}
+                    />
+                )}
+                <div ref={chatEndRef} />
+            </div>
+
+            <div style={styles.inputArea}>
+                 {isInitialState && (
+                    <div style={styles.initialInputsContainer}>
+                        <textarea
+                            style={{...styles.smallTextarea}}
+                            value={context}
+                            onChange={(e) => setContext(e.target.value)}
+                            placeholder="Contesto (opzionale): Es. Sto parlando con un cliente scontento..."
+                            rows={2}
+                            disabled={isLoading || conversationState !== 'idle'}
+                        />
+                        <textarea
+                            style={{...styles.smallTextarea}}
+                            value={objective}
+                            onChange={(e) => setObjective(e.target.value)}
+                            placeholder="Obiettivo (opzionale): Es. Voglio calmarlo e fissare una chiamata..."
+                            rows={2}
+                            disabled={isLoading || conversationState !== 'idle'}
+                        />
+                    </div>
+                )}
+                <div style={styles.mainInputWrapper}>
+                    <textarea
+                        style={styles.textarea}
+                        value={userInput}
+                        onChange={(e) => setUserInput(e.target.value)}
+                        placeholder={isInitialState ? "Incolla qui il messaggio da analizzare..." : "Scrivi qui per rispondere..."}
+                        rows={isInitialState ? 3 : 2}
+                        onKeyPress={(e) => { if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); }}}
+                        disabled={isLoading || conversationState !== 'idle'}
+                    />
+                    <button 
+                        onClick={handleSendMessage} 
+                        style={styles.sendButton} 
+                        disabled={isLoading || !userInput.trim() || conversationState !== 'idle'}
+                    >
+                        <SendIcon/>
+                    </button>
                 </div>
-              )}
             </div>
-          </div>
-        ))}
-        {isLoading && (
-          <div style={{...styles.messageRow, justifyContent: 'flex-start'}}>
-            <div style={{...styles.messageBubble, ...styles.bubble_persona}}>
-              <Spinner size={20} color={COLORS.textPrimary} />
-            </div>
-          </div>
-        )}
-        <div ref={chatEndRef} />
-      </main>
-      
-      <footer style={styles.chatFooter}>
-        <button onClick={handleGetSuggestion} style={{...styles.suggestButton, ...(!isPro ? styles.suggestButtonDisabled : {})}} disabled={isLoading || isSuggesting || !isPro} title={isPro ? "Suggerisci una risposta" : "Funzionalità PRO"}>
-          {isSuggesting ? <Spinner size={20} /> : <LightbulbIcon />}
-        </button>
-        <textarea
-          value={userInput}
-          onChange={e => setUserInput(e.target.value)}
-          onKeyDown={e => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault();
-              handleSendMessage();
-            }
-          }}
-          style={styles.chatInput}
-          placeholder="Scrivi la tua risposta..."
-          rows={1}
-          disabled={isLoading}
+        </div>
+        <SuggestionStyleModal
+            isOpen={isStyleModalOpen}
+            onClose={() => setIsStyleModalOpen(false)}
+            onSelectStyle={setSuggestionStyle}
+            currentStyle={suggestionStyle}
         />
-        <button onClick={handleSendMessage} style={{...styles.sendButton, ...(!userInput.trim() ? styles.buttonDisabled : {})}} disabled={isLoading || !userInput.trim()}>
-          <SendIcon />
-        </button>
-      </footer>
     </div>
   );
 };
 
-const styles: { [key: string]: React.CSSProperties } = {
-  // Setup styles
-  setupContainer: { maxWidth: '700px', margin: '40px auto', padding: '20px' },
-  setupCard: { backgroundColor: COLORS.card, padding: '32px', borderRadius: '12px', boxShadow: '0 4px 15px rgba(0,0,0,0.05)' },
-  setupTitle: { fontSize: '24px', fontWeight: 'bold', color: COLORS.primary, textAlign: 'center', marginBottom: '12px' },
-  setupDescription: { fontSize: '16px', color: COLORS.textSecondary, textAlign: 'center', marginBottom: '32px', lineHeight: 1.6 },
-  inputGroup: { marginBottom: '24px' },
-  label: { display: 'block', fontSize: '16px', fontWeight: 600, color: COLORS.textPrimary, marginBottom: '8px' },
-  textarea: { width: '100%', padding: '12px', fontSize: '15px', borderRadius: '8px', border: `1px solid ${COLORS.divider}`, resize: 'vertical', boxSizing: 'border-box' },
-  personaOptions: { display: 'flex', gap: '12px', flexWrap: 'wrap' },
-  personaButton: { padding: '10px 16px', fontSize: '14px', border: `1px solid ${COLORS.divider}`, backgroundColor: 'transparent', borderRadius: '8px', cursor: 'pointer' },
-  personaButtonSelected: { backgroundColor: COLORS.secondary, color: 'white', borderColor: COLORS.secondary },
-  startButton: { width: '100%', padding: '16px', fontSize: '18px', fontWeight: 'bold', color: 'white', backgroundColor: COLORS.primary, border: 'none', borderRadius: '8px', cursor: 'pointer' },
 
-  // Chat styles
-  chatContainer: { display: 'flex', flexDirection: 'column', height: 'calc(100vh - 64px)' },
-  chatHeader: { padding: '12px 20px', borderBottom: `1px solid ${COLORS.divider}`, backgroundColor: COLORS.card, display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
-  contextLabel: { margin: 0, fontSize: '14px', color: COLORS.textSecondary },
-  contextText: { fontWeight: 500, color: COLORS.textPrimary },
-  resetButton: { background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', color: COLORS.textSecondary },
-  chatArea: { flex: 1, overflowY: 'auto', padding: '20px', backgroundColor: COLORS.base },
-  messageRow: { display: 'flex', marginBottom: '16px' },
-  messageBubble: { maxWidth: '75%', padding: '12px 16px', borderRadius: '18px', lineHeight: 1.5 },
-  messageContent: { margin: 0 },
-  bubble_user: { backgroundColor: COLORS.primary, color: 'white', alignSelf: 'flex-end', borderBottomRightRadius: '4px' },
-  bubble_persona: { backgroundColor: COLORS.card, color: COLORS.textPrimary, border: `1px solid ${COLORS.divider}`, borderBottomLeftRadius: '4px' },
-  bubble_coach: { width: '100%', backgroundColor: 'transparent', color: COLORS.textSecondary, textAlign: 'center', fontStyle: 'italic', fontSize: '14px', padding: '8px 0' },
-  feedbackBox: { marginTop: '12px', paddingTop: '12px', borderTop: `1px dashed ${COLORS.accentBeige}`, fontSize: '14px', color: COLORS.textAccent },
-  chatFooter: { display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 20px', borderTop: `1px solid ${COLORS.divider}`, backgroundColor: COLORS.card },
-  chatInput: { flex: 1, padding: '12px 16px', borderRadius: '22px', border: `1px solid ${COLORS.divider}`, resize: 'none', maxHeight: '100px', overflowY: 'auto' },
-  sendButton: { background: COLORS.secondary, border: 'none', borderRadius: '50%', width: '44px', height: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'white' },
-  suggestButton: { background: 'transparent', border: `1px solid ${COLORS.warning}`, borderRadius: '50%', width: '44px', height: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: COLORS.textAccent },
-  suggestButtonDisabled: { opacity: 0.5, cursor: 'not-allowed' },
-  buttonDisabled: { opacity: 0.5, cursor: 'not-allowed' },
+const styles: { [key: string]: React.CSSProperties } = {
+  container: { display: 'flex', flexDirection: 'column', height: 'calc(100vh - 64px)' },
+  header: { position: 'relative', textAlign: 'center', padding: '32px 20px', backgroundColor: COLORS.primary },
+  headerVideo: { position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 1, opacity: 0.2 },
+  headerOverlay: { position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(28, 62, 94, 0.7)', zIndex: 2 },
+  headerContent: { zIndex: 3, position: 'relative' },
+  title: { fontSize: '24px', fontWeight: 'bold', color: 'white', margin: '0 0 8px 0' },
+  subtitle: { fontSize: '15px', color: 'white', opacity: 0.9, maxWidth: '600px', margin: '0 auto' },
+  chatContainer: { flex: 1, display: 'flex', flexDirection: 'column', maxWidth: '800px', width: '100%', margin: '-40px auto 0', zIndex: 4, backgroundColor: COLORS.card, borderRadius: '12px 12px 0 0', overflow: 'hidden' },
+  chatWindow: { flex: 1, padding: '24px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '16px' },
+  messageBubble: { padding: '12px 16px', borderRadius: '18px', maxWidth: '80%', lineHeight: 1.5, wordBreak: 'break-word' },
+  userBubble: { backgroundColor: COLORS.secondary, color: 'white', alignSelf: 'flex-end', borderRadius: '18px 18px 4px 18px' },
+  personaBubble: { backgroundColor: COLORS.cardDark, color: COLORS.textPrimary, alignSelf: 'flex-start', borderRadius: '18px 18px 18px 4px' },
+  coachMessage: { backgroundColor: '#FFFBEA', border: `1px solid ${COLORS.warning}`, borderRadius: '12px', padding: '16px' },
+  coachHeader: { display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' },
+  coachTitle: { fontSize: '16px', fontWeight: 'bold', color: COLORS.textPrimary, margin: 0 },
+  analysisText: { fontSize: '15px', color: COLORS.textSecondary, margin: '0 0 16px 0', lineHeight: 1.6, borderLeft: `3px solid ${COLORS.warning}`, paddingLeft: '12px' },
+  suggestionsContainer: { display: 'flex', flexDirection: 'column', gap: '12px' },
+  suggestionItem: {
+    background: 'white',
+    border: `1px solid ${COLORS.divider}`,
+    borderRadius: '8px',
+    padding: '12px',
+    width: '100%',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: '12px',
+  },
+  suggestionContent: {
+    flex: 1,
+    textAlign: 'left',
+  },
+  suggestionType: { color: COLORS.secondary, fontWeight: 'bold', fontSize: '13px', marginBottom: '4px', display: 'block' },
+  suggestionText: { color: COLORS.textPrimary, fontStyle: 'italic', fontSize: '14px', margin: 0 },
+  selectButton: {
+    backgroundColor: COLORS.secondary,
+    color: 'white',
+    border: 'none',
+    borderRadius: '6px',
+    padding: '8px 16px',
+    cursor: 'pointer',
+    fontWeight: 'bold',
+    fontSize: '14px',
+    flexShrink: 0,
+    transition: 'background-color 0.2s ease',
+  },
+  inputArea: { display: 'flex', flexDirection: 'column', padding: '16px', borderTop: `1px solid ${COLORS.divider}`, backgroundColor: COLORS.card, gap: '12px' },
+  initialInputsContainer: { display: 'flex', gap: '12px', flexDirection: 'column' },
+  smallTextarea: { width: '100%', resize: 'none', padding: '10px', borderRadius: '8px', border: `1px solid ${COLORS.divider}`, fontSize: '14px', fontFamily: 'inherit', boxSizing: 'border-box' },
+  mainInputWrapper: { display: 'flex', gap: '12px', alignItems: 'flex-start' },
+  textarea: { flex: 1, resize: 'none', padding: '12px', borderRadius: '8px', border: `1px solid ${COLORS.divider}`, fontSize: '16px', fontFamily: 'inherit' },
+  sendButton: { backgroundColor: COLORS.secondary, color: 'white', border: 'none', borderRadius: '8px', width: '48px', height: '48px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  initialMessage: { textAlign: 'center', padding: '40px 20px', color: COLORS.textSecondary },
 };

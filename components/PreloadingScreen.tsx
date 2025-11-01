@@ -24,8 +24,8 @@ export const PreloadingScreen: React.FC<PreloadingScreenProps> = ({ onComplete }
     return (
         <div style={styles.container}>
             <img src={mainLogoUrl} alt="CES Coach Logo" style={styles.logo} />
-            <h1 style={styles.title}>Il tuo allenamento sta per iniziare, manca poco !</h1>
-            <p style={styles.subtitle}>Ottimizzazione dell'esperienza in corso.</p>
+            <h1 style={styles.title}>Il tuo allenamento sta per iniziare, sei pronto?</h1>
+            <p style={styles.subtitle}>Manca pochissimo!</p>
             <div style={styles.progressBarContainer}>
                 <div style={{ ...styles.progressBarFill, width: `${progress}%` }} />
             </div>

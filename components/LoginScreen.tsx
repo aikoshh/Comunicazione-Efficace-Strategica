@@ -4,7 +4,7 @@ import { mainLogoUrl } from '../assets';
 import { soundService } from '../services/soundService';
 import { Spinner } from './Loader';
 import { useToast } from '../hooks/useToast';
-import { login, register } from '../services/authService';
+import { login, register } from '../services/firebase';
 
 interface RegistrationData {
   firstName: string;
@@ -135,7 +135,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = () => {
 
     try {
         await login(email, password);
-        // On success, the auth listener in App.tsx will handle navigation
+        // On success, the auth listener in index.tsx will handle navigation
     } catch (err: any) {
         addToast("Credenziali non valide o utente non trovato.", 'error');
         setIsLoading(false);

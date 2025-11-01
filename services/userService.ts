@@ -1,5 +1,5 @@
 // services/userService.ts
-import { databaseService } from "./databaseService";
+import { databaseService } from "./firebase";
 import type { UserProfile } from "../types";
 
 // Note: For production apps, many of these operations should be secured via backend/cloud functions

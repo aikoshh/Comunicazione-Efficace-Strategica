@@ -42,7 +42,7 @@ const getDailyChallenge = (): Exercise => {
 };
 
 interface DailyChallengeScreenProps {
-  onComplete: (result: AnalysisResult, userResponse: string, exerciseId: string) => void;
+  onComplete: (result: AnalysisResult, userResponse: string, exercise: Exercise) => void;
   entitlements: Entitlements | null;
   analysisHistory: { [exerciseId: string]: AnalysisHistoryItem };
   onApiKeyError: (error: string) => void;
@@ -66,7 +66,7 @@ export const DailyChallengeScreen: React.FC<DailyChallengeScreenProps> = (props)
       <ExerciseScreen 
         exercise={dailyExercise}
         moduleColor={COLORS.primary}
-        onComplete={(result, userResponse, exerciseId, type) => props.onComplete(result as AnalysisResult, userResponse, exerciseId)}
+        onComplete={(result, userResponse, exercise, type) => props.onComplete(result as AnalysisResult, userResponse, exercise)}
         entitlements={props.entitlements}
         analysisHistory={props.analysisHistory}
         onApiKeyError={props.onApiKeyError}

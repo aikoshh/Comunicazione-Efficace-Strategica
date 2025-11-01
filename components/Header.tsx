@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { UserProfile, Module } from '../types';
 import { COLORS } from '../constants';
-import { LogOutIcon, AdminIcon, TargetIcon, BarChartIcon, CheckCircleIcon, SettingsIcon, CrownIcon, BackIcon, HomeIcon } from './Icons';
+import { LogOutIcon, AdminIcon, TargetIcon, BarChartIcon, CheckCircleIcon, SettingsIcon, CrownIcon, BackIcon, HomeIcon, WarningIcon } from './Icons';
 import { Logo } from './Logo';
 import { soundService } from '../services/soundService';
+import { subscribeToUnreadReportsCount } from '../services/firebase';
 
 type Screen = 'home' | 'paywall' | 'admin' | 'achievements' | 'competence_report' | 'levels';
 
@@ -14,10 +15,12 @@ interface HeaderProps {
     showBack: boolean;
     onBack: () => void;
     currentModule: Module | null;
+    onReportProblem: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ user, onLogout, onNavigate, showBack, onBack, currentModule }) => {
+export const Header: React.FC<HeaderProps> = ({ user, onLogout, onNavigate, showBack, onBack, currentModule, onReportProblem }) => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [unreadReportsCount, setUnreadReportsCount] = useState(0);
     const menuRef = useRef<HTMLDivElement>(null);
     const buttonRef = useRef<HTMLButtonElement>(null);
 
@@ -34,10 +37,19 @@ export const Header: React.FC<HeaderProps> = ({ user, onLogout, onNavigate, show
         };
 
         document.addEventListener('mousedown', handleClickOutside);
+        
+        let unsubscribe: (() => void) | undefined;
+        if (user.isAdmin) {
+            unsubscribe = subscribeToUnreadReportsCount(setUnreadReportsCount);
+        }
+        
         return () => {
             document.removeEventListener('mousedown', handleClickOutside);
+            if (unsubscribe) {
+                unsubscribe();
+            }
         };
-    }, []);
+    }, [user.isAdmin]);
 
     const handleNavigation = (screen: Screen) => {
         soundService.playClick();
@@ -57,18 +69,24 @@ export const Header: React.FC<HeaderProps> = ({ user, onLogout, onNavigate, show
         setIsMenuOpen(false);
     }
 
+    const handleReportProblem = () => {
+        soundService.playClick();
+        onReportProblem();
+        setIsMenuOpen(false);
+    }
+
     return (
         <header style={styles.header} className="responsive-header">
             <div style={styles.container}>
                 <div style={styles.leftSection}>
-                    <Logo style={{ height: '40px', width: 'auto', cursor: 'pointer' }} onClick={() => handleNavigation('home')} />
+                    <Logo style={{ height: '40px', width: 'auto', cursor: 'pointer' }} onClick={() => onNavigate('home')} />
                     {showBack ? (
                         <button onClick={onBack} style={styles.navButton}>
                             <BackIcon />
                             <span>Indietro</span>
                         </button>
                     ) : (
-                        <button onClick={() => handleNavigation('home')} style={{...styles.navButton, color: COLORS.secondary}}>
+                        <button onClick={() => onNavigate('home')} style={{...styles.navButton, color: COLORS.secondary}}>
                             <HomeIcon />
                         </button>
                     )}
@@ -103,10 +121,19 @@ export const Header: React.FC<HeaderProps> = ({ user, onLogout, onNavigate, show
                             <a onClick={() => handleNavigation('competence_report')} style={styles.dropdownItem}><BarChartIcon /> Report Competenze</a>
                             <a onClick={() => handleNavigation('levels')} style={styles.dropdownItem}><CheckCircleIcon /> Livelli</a>
                              <a onClick={() => handleNavigation('paywall')} style={styles.dropdownItemPro}><CrownIcon /> Passa a PRO</a>
-                            <div style={styles.dropdownDivider} />
                             {user.isAdmin && (
-                                <a onClick={() => handleNavigation('admin')} style={styles.dropdownItem}><AdminIcon /> Admin Panel</a>
+                                <>
+                                    <div style={styles.dropdownDivider} />
+                                    <a onClick={() => handleNavigation('admin')} style={styles.dropdownItem}>
+                                        <AdminIcon /> 
+                                        <span>Pannello Admin</span>
+                                        {unreadReportsCount > 0 && <span style={styles.notificationBadge}>{unreadReportsCount}</span>}
+                                    </a>
+                                </>
                             )}
+                            <div style={styles.dropdownDivider} />
+                            <a onClick={handleReportProblem} style={styles.dropdownItem}><WarningIcon /> Segnala un problema</a>
+                            <div style={styles.dropdownDivider} />
                             <a onClick={handleLogout} style={styles.dropdownItem}><LogOutIcon /> Esci</a>
                         </div>
                     )}
@@ -228,5 +255,18 @@ const styles: { [key: string]: React.CSSProperties } = {
         cursor: 'pointer',
         backgroundColor: '#FFFBEA',
         fontWeight: 'bold',
+    },
+    notificationBadge: {
+        backgroundColor: COLORS.error,
+        color: 'white',
+        borderRadius: '50%',
+        width: '20px',
+        height: '20px',
+        fontSize: '12px',
+        fontWeight: 'bold',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginLeft: 'auto'
     },
 };
