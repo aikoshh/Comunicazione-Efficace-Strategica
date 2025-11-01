@@ -1,5 +1,18 @@
 // services/firebase.ts
 
+// --- API KEY CONFIGURATION ---
+// In a browser environment without a build process, process.env is not defined.
+// We polyfill it to make the Gemini API key available throughout the app.
+import { FALLBACK_API_KEY } from '../config';
+
+// Polyfill process.env if it doesn't exist. This must be done before any service is initialized.
+if (typeof (window as any).process === 'undefined') {
+    (window as any).process = { env: {} };
+}
+// Set the API key from the config file.
+(process.env as any).API_KEY = FALLBACK_API_KEY;
+
+
 // --- SIDE-EFFECT IMPORTS FOR COMPONENT REGISTRATION ---
 // This is the most critical part for fixing "Component ... has not been registered yet"
 import 'firebase/auth';
