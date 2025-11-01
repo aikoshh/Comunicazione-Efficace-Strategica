@@ -1,6 +1,7 @@
 // services/geminiService.ts
 // FIX: Create full content for the Gemini service file.
 import { GoogleGenAI, Type } from "@google/genai";
+import { FALLBACK_API_KEY } from '../config';
 import {
   Exercise,
   AnalysisResult,
@@ -10,10 +11,10 @@ import {
   ResponseStyle,
   StrategicResponse,
   ContinuedStrategicResponse,
-} from './types';
+} from '../types';
 
 // The app will handle errors if the key is missing.
-const getGenAI = () => new GoogleGenAI({ apiKey: process.env.API_KEY as string });
+const getGenAI = () => new GoogleGenAI({ apiKey: (process.env.API_KEY || FALLBACK_API_KEY) as string });
 
 // Helper to safely parse JSON from Gemini response
 const parseJson = <T>(jsonString: string, typeName: string): T => {
