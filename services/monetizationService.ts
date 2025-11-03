@@ -31,34 +31,6 @@ export const getUserEntitlements = async (user: UserProfile | null): Promise<Ent
 };
 
 /**
- * Simulates purchasing a product and updates entitlements in the central database.
- */
-export const purchaseProduct = async (user: UserProfile | null, product: Product): Promise<Entitlements> => {
-    await simulateNetworkDelay(1500); // Longer delay for "purchase"
-    if (!user) throw new Error("Utente non autenticato. Impossibile completare l'acquisto.");
-    
-    console.log(`Simulating purchase for ${user.email}: ${product.name}`);
-
-    const currentEntitlements = await getUserEntitlements(user);
-    const newProductIDs = new Set(currentEntitlements.productIDs);
-    newProductIDs.add(product.id);
-
-    const updatedEntitlements: Entitlements = {
-        ...currentEntitlements,
-        productIDs: newProductIDs,
-        teamActive: product.type === 'subscription', // Enable team features if it's a sub
-    };
-    
-    const storable: StorableEntitlements = {
-        ...updatedEntitlements,
-        productIDs: Array.from(updatedEntitlements.productIDs),
-    };
-    await databaseService.saveUserEntitlements(user.uid, storable);
-
-    return updatedEntitlements;
-};
-
-/**
  * Simulates restoring purchases.
  */
 export const restorePurchases = async (user: UserProfile | null): Promise<Entitlements> => {

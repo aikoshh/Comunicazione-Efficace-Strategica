@@ -38,7 +38,7 @@ import { ReportProblemModal } from './components/ReportProblemModal';
 import { PreloadingScreen } from './components/PreloadingScreen';
 
 import { logout, databaseService } from './services/firebase';
-import { getUserEntitlements, purchaseProduct, restorePurchases, hasProAccess } from './services/monetizationService';
+import { getUserEntitlements, restorePurchases, hasProAccess } from './services/monetizationService';
 import { competenceService } from './services/competenceService';
 import { gamificationService } from './services/gamificationService';
 import { MODULES } from './constants';
@@ -206,17 +206,6 @@ const App: React.FC<AppProps> = ({ initialUser }) => {
     
     setCurrentScreen(historyItem.type === 'verbal' ? 'voice_report' : 'report');
   };
-  
-  const handlePurchase = async (product: Product) => {
-      if (!user) return;
-      try {
-          const newEntitlements = await purchaseProduct(user, product);
-          setEntitlements(newEntitlements);
-          addToast(`Acquisto di ${product.name} completato!`, 'success');
-      } catch(error: any) {
-          addToast(error.message || "Errore durante l'acquisto.", 'error');
-      }
-  };
 
   const handleRestore = async () => {
       if(!user) return;
@@ -345,7 +334,6 @@ const App: React.FC<AppProps> = ({ initialUser }) => {
                     nextExerciseLabel={label}
                     entitlements={entitlements}
                     onNavigateToPaywall={() => handleNavigate('paywall')}
-                    onPurchase={handlePurchase}
                     userResponse={lastAnalysis.userResponse}
                     isReview={lastAnalysis.isReview}
                 />
@@ -419,7 +407,7 @@ const App: React.FC<AppProps> = ({ initialUser }) => {
       case 'admin':
           return user.isAdmin ? <AdminScreen /> : <HomeScreen user={user} progress={progress} entitlements={entitlements} onSelectModule={handleSelectModule} onStartCheckup={() => handleNavigate('checkup')} onStartDailyChallenge={() => handleNavigate('daily_challenge')} onNavigateToReport={() => handleNavigate('competence_report')} onNavigate={handleNavigate} />;
       case 'paywall':
-          return <PaywallScreen entitlements={entitlements!} onPurchase={handlePurchase} onRestore={handleRestore} onBack={handleBack} />;
+          return <PaywallScreen entitlements={entitlements!} onRestore={handleRestore} onBack={handleBack} />;
       case 'competence_report':
           return progress && <CompetenceReportScreen userProgress={progress} onBack={handleBack} onSelectExercise={handleSelectExercise} />;
       case 'achievements':

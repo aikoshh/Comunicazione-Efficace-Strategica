@@ -7,23 +7,10 @@ import { Spinner } from './Loader';
 interface UpsellBannerProps {
   product: Product;
   score: number;
-  onUnlock: (product: Product) => Promise<void>;
   onDetails: (product: Product) => void;
 }
 
-export const UpsellBanner: React.FC<UpsellBannerProps> = ({ product, score, onUnlock, onDetails }) => {
-    const [isUnlocking, setIsUnlocking] = useState(false);
-
-    const handleUnlock = async () => {
-        soundService.playClick();
-        setIsUnlocking(true);
-        try {
-            await onUnlock(product);
-        } finally {
-            setIsUnlocking(false);
-        }
-    };
-
+export const UpsellBanner: React.FC<UpsellBannerProps> = ({ product, score, onDetails }) => {
     const handleDetails = () => {
         soundService.playClick();
         onDetails(product);
@@ -50,14 +37,8 @@ export const UpsellBanner: React.FC<UpsellBannerProps> = ({ product, score, onUn
                 </p>
             </div>
             <div style={styles.actions}>
-                <button onClick={handleDetails} style={styles.secondaryButton} className="upsell-button-secondary" disabled={isUnlocking}>Dettagli</button>
-                <button 
-                    onClick={handleUnlock} 
-                    style={{...styles.primaryButton, ...(isUnlocking ? styles.buttonDisabled : {})}} 
-                    className="upsell-button-primary" 
-                    disabled={isUnlocking}
-                >
-                    {isUnlocking ? <Spinner size={20} color="white"/> : `Sblocca (1 Anno) - ${product.price}`}
+                <button onClick={handleDetails} style={styles.primaryButton} className="upsell-button-primary">
+                    Scopri i Vantaggi PRO
                 </button>
             </div>
         </div>

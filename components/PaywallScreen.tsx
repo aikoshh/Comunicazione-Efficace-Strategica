@@ -2,14 +2,13 @@ import React, { useState } from 'react';
 import type { Product, Entitlements } from '../types';
 import { PRODUCTS } from '../products';
 import { COLORS } from '../constants';
-import { CheckCircleIcon, BarChartIcon, VoiceIcon, LightbulbIcon, CrownIcon } from './Icons';
+import { CheckCircleIcon, BarChartIcon, VoiceIcon, LightbulbIcon, CrownIcon, InfoIcon } from './Icons';
 import { soundService } from '../services/soundService';
 import { Spinner } from './Loader';
 import { risultatiProVideo, vantaggioRisultatiProVideo, feedbackParaverbaleVideo, librerieStrategicheVideo } from '../assets';
 
 interface PaywallScreenProps {
   entitlements: Entitlements;
-  onPurchase: (product: Product) => Promise<void>;
   onRestore: () => Promise<void>;
   onBack: () => void;
 }
@@ -54,14 +53,26 @@ const MediaDisplay: React.FC<{ src: string; alt: string; style: React.CSSPropert
 };
 
 
-export const PaywallScreen: React.FC<PaywallScreenProps> = ({ entitlements, onPurchase, onRestore, onBack }) => {
-    const [isLoading, setIsLoading] = useState<string | null>(null); // Stores product ID being purchased
+export const PaywallScreen: React.FC<PaywallScreenProps> = ({ entitlements, onRestore, onBack }) => {
+    const [isLoading, setIsLoading] = useState<string | null>(null);
+    const [isPurchaseInitiated, setIsPurchaseInitiated] = useState(false);
 
-    const handlePurchase = async (product: Product) => {
+    const handlePurchase = (product: Product & { paymentLink?: string }) => {
         soundService.playClick();
-        setIsLoading(product.id);
-        await onPurchase(product);
-        setIsLoading(null);
+    
+        // NEW: Check for placeholder link to provide a better user experience.
+        if (!product.paymentLink || product.paymentLink.includes('INSERISCI_QUI_IL_TUO_LINK_REALE')) {
+            alert(
+                "Errore di Configurazione Pagamento.\n\n" +
+                "Il link di pagamento non è stato ancora impostato nel file 'products.ts'.\n\n" +
+                "Per favore, crea un link di pagamento dal tuo pannello Stripe e sostituisci il placeholder nel codice."
+            );
+            console.error("Link di pagamento non configurato o placeholder non sostituito.");
+            return;
+        }
+        
+        setIsPurchaseInitiated(true);
+        window.open(product.paymentLink, '_blank');
     };
     
     const handleRestore = async () => {
@@ -83,6 +94,18 @@ export const PaywallScreen: React.FC<PaywallScreenProps> = ({ entitlements, onPu
             </header>
 
             <main>
+                {isPurchaseInitiated && (
+                    <div style={styles.postPurchaseMessage}>
+                        <InfoIcon style={{color: COLORS.primary, width: 32, height: 32, flexShrink: 0}}/>
+                        <div>
+                            <h3 style={styles.postPurchaseTitle}>Attivazione in Corso!</h3>
+                            <p style={styles.postPurchaseText}>
+                                Hai aperto la pagina di pagamento. Una volta completato, il tuo pacchetto PRO verrà attivato manualmente entro 24 ore.
+                                Se riscontri problemi, contatta il supporto a <strong>cfs@centrocfs.it</strong>.
+                            </p>
+                        </div>
+                    </div>
+                )}
                 <section style={styles.featuresSection}>
                     {proFeatures.map((feature, index) => {
                         const FeatureIcon = feature.icon;
@@ -169,6 +192,26 @@ const styles: { [key: string]: React.CSSProperties } = {
         margin: '0 auto 12px'
     },
     subtitle: { fontSize: '18px', color: COLORS.textSecondary, lineHeight: 1.6, maxWidth: '600px', margin: '0 auto' },
+    postPurchaseMessage: {
+        backgroundColor: '#E3F2FD',
+        border: `1px solid ${COLORS.primary}`,
+        borderRadius: '12px',
+        padding: '20px',
+        marginBottom: '40px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '16px'
+    },
+    postPurchaseTitle: {
+        margin: '0 0 8px 0',
+        color: COLORS.primary,
+        fontSize: '18px'
+    },
+    postPurchaseText: {
+        margin: 0,
+        color: COLORS.textSecondary,
+        lineHeight: 1.6
+    },
     featuresSection: {
         display: 'grid',
         gridTemplateColumns: '1fr',

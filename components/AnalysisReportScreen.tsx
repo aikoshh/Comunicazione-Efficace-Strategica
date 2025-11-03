@@ -17,7 +17,6 @@ interface AnalysisReportScreenProps {
   nextExerciseLabel: string;
   entitlements: Entitlements | null;
   onNavigateToPaywall: () => void;
-  onPurchase: (product: Product) => Promise<void>;
   userResponse: string;
   isReview?: boolean;
 }
@@ -76,7 +75,7 @@ const DetailedRubric: React.FC<{ rubric: DetailedRubricScore[] }> = ({ rubric })
 
 
 export const AnalysisReportScreen: React.FC<AnalysisReportScreenProps> = ({
-  result, exercise, onRetry, onNextExercise, nextExerciseLabel, entitlements, onNavigateToPaywall, onPurchase, userResponse, isReview
+  result, exercise, onRetry, onNextExercise, nextExerciseLabel, entitlements, onNavigateToPaywall, userResponse, isReview
 }) => {
   const isPro = hasProAccess(entitlements);
   const [printHtml, setPrintHtml] = useState<string | null>(null);
@@ -159,7 +158,7 @@ export const AnalysisReportScreen: React.FC<AnalysisReportScreenProps> = ({
       </div>
 
        {!isPro && (
-          <UpsellBanner product={PRODUCTS[0]} score={result.score} onUnlock={onPurchase} onDetails={onNavigateToPaywall}/>
+          <UpsellBanner product={PRODUCTS[0]} score={result.score} onDetails={onNavigateToPaywall}/>
        )}
 
       <div style={styles.buttonContainer}>

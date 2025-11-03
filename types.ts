@@ -167,6 +167,7 @@ export interface Product {
     description: string;
     benefits: string[];
     category: string;
+    paymentLink?: string;
 }
 
 // --- UI & MISC ---

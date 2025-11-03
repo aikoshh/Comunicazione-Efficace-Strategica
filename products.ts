@@ -17,5 +17,7 @@ export const PRODUCTS: Product[] = [
         "Esportazione di tutti i report di analisi in formato PDF",
     ],
     category: 'Bundle', // Using 'Bundle' as it represents the full package
+    // Il link di pagamento è stato aggiornato con quello fornito.
+    paymentLink: 'https://buy.stripe.com/test_fZucMXakP7tQd1g8gob3q01'
   },
 ];

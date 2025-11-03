@@ -12,7 +12,7 @@ import { getFirestore, doc, getDoc, setDoc, collection, getDocs, onSnapshot, wri
 
 // --- LOCAL IMPORTS ---
 import { firebaseConfig } from '../firebaseConfig';
-import type { UserProfile, UserProgress, StorableEntitlements, ProblemReport, ReportStatus } from "../types";
+import type { UserProfile, UserProgress, StorableEntitlements, ProblemReport, ReportStatus, Product } from "../types";
 
 // --- SYNCHRONOUS INITIALIZATION ---
 let app: FirebaseApp;
