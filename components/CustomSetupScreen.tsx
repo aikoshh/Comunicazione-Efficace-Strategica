@@ -17,10 +17,10 @@ interface CustomSetupScreenProps {
 
 export const CustomSetupScreen: React.FC<CustomSetupScreenProps> = ({ module, onStart, onBack, onApiKeyError }) => {
     const [personalizationData, setPersonalizationData] = useState<PersonalizationData>({
-        professione: '',
-        livelloCarriera: '',
-        eta: '',
-        contestoComunicativo: '',
+        areaDiVita: '',
+        ruoloContesto: '',
+        interlocutore: '',
+        obiettivoConversazione: '',
         sfidaPrincipale: '',
     });
     const [isGenerating, setIsGenerating] = useState(false);
@@ -36,7 +36,7 @@ export const CustomSetupScreen: React.FC<CustomSetupScreenProps> = ({ module, on
         
         for (const key in personalizationData) {
             if (!personalizationData[key as keyof PersonalizationData]) {
-                addToast('Per favore, completa tutti i campi del profilo.', 'error');
+                addToast('Per favore, completa tutti i campi per creare il tuo scenario.', 'error');
                 return;
             }
         }
@@ -100,60 +100,42 @@ export const CustomSetupScreen: React.FC<CustomSetupScreenProps> = ({ module, on
                     <h1 style={styles.title}>{module.title}</h1>
                 </div>
                 <p style={styles.description}>
-                    Crea un esercizio su misura per te. Compila il tuo profilo e lascia che l'AI generi lo scenario perfetto per le tue esigenze.
+                    Crea un esercizio su misura per te. Descrivi la situazione e lascia che l'AI generi lo scenario perfetto per le tue esigenze.
                 </p>
             </header>
             <form onSubmit={handleCreateAndStart} style={styles.setupForm}>
-                <h2 style={styles.formTitle}>1. Definisci il Tuo Profilo</h2>
+                <h2 style={styles.formTitle}>Definisci il Tuo Scenario</h2>
 
                 <div style={styles.inputGrid}>
-                    <div style={styles.inputGroup}>
-                        <label style={styles.label} htmlFor="professione">Professione</label>
-                        <input id="professione" type="text" style={styles.input} className="form-input" value={personalizationData.professione} onChange={(e) => handleInputChange('professione', e.target.value)} placeholder="Es: Project Manager, Sviluppatore" />
-                    </div>
-
-                    <div style={styles.inputGroup}>
-                        <label style={styles.label} htmlFor="livelloCarriera">Livello di Carriera</label>
-                        <select id="livelloCarriera" style={styles.select} className="form-select" value={personalizationData.livelloCarriera} onChange={(e) => handleInputChange('livelloCarriera', e.target.value)}>
-                            <option value="">Seleziona...</option>
-                            <option value="Studente/Neolaureato">Studente/Neolaureato</option>
-                            <option value="Junior/Entry-level">Junior/Entry-level</option>
-                            <option value="Mid-level/Specialist">Mid-level/Specialist</option>
-                            <option value="Senior/Expert">Senior/Expert</option>
-                            <option value="Manager/Team Leader">Manager/Team Leader</option>
-                            <option value="Director/Executive">Director/Executive</option>
-                            <option value="Imprenditore/Libero Professionista">Imprenditore/Libero Professionista</option>
+                    <div style={{...styles.inputGroup, gridColumn: '1 / -1'}}>
+                        <label style={styles.label} htmlFor="areaDiVita">1. Scegli un'area della tua vita</label>
+                        <select id="areaDiVita" style={styles.select} className="form-select" value={personalizationData.areaDiVita} onChange={(e) => handleInputChange('areaDiVita', e.target.value)}>
+                            <option value="">Seleziona un'area...</option>
+                            <option value="Lavoro">Lavoro (colleghi, capo, clienti)</option>
+                            <option value="Relazioni Personali">Relazioni Personali (partner, famiglia, amici)</option>
+                            <option value="Crescita Personale">Crescita Personale (gestione di sé, nuove abitudini)</option>
                         </select>
                     </div>
 
                     <div style={styles.inputGroup}>
-                        <label style={styles.label} htmlFor="eta">Fascia d'età</label>
-                        <select id="eta" style={styles.select} className="form-select" value={personalizationData.eta} onChange={(e) => handleInputChange('eta', e.target.value)}>
-                            <option value="">Seleziona...</option>
-                            <option value="<25 anni">&lt;25 anni</option>
-                            <option value="25-35 anni">25-35 anni</option>
-                            <option value="36-50 anni">36-50 anni</option>
-                            <option value=">50 anni">&gt;50 anni</option>
-                        </select>
+                        <label style={styles.label} htmlFor="ruoloContesto">2. Il tuo ruolo nel contesto</label>
+                        <input id="ruoloContesto" type="text" style={styles.input} className="form-input" value={personalizationData.ruoloContesto} onChange={(e) => handleInputChange('ruoloContesto', e.target.value)} placeholder="Es: Manager, Genitore, Amico/a" />
                     </div>
 
                     <div style={styles.inputGroup}>
-                        <label style={styles.label} htmlFor="contestoComunicativo">Contesto Comunicativo Tipico</label>
-                        <select id="contestoComunicativo" style={styles.select} className="form-select" value={personalizationData.contestoComunicativo} onChange={(e) => handleInputChange('contestoComunicativo', e.target.value)}>
-                             <option value="">Seleziona...</option>
-                             <option value="Meeting con il team interno">Meeting con il team interno</option>
-                             <option value="Conversazioni 1-to-1 con colleghi o manager">Conversazioni 1-to-1</option>
-                             <option value="Interazioni con clienti o fornitori">Interazioni con clienti/fornitori</option>
-                             <option value="Presentazioni o public speaking">Presentazioni/Public Speaking</option>
-                             <option value="Negoziazioni o gestione conflitti">Negoziazioni/Gestione Conflitti</option>
-                             <option value="Comunicazione in ambito familiare/personale">Ambito familiare/personale</option>
-                        </select>
+                        <label style={styles.label} htmlFor="interlocutore">3. Con chi devi comunicare?</label>
+                        <input id="interlocutore" type="text" style={styles.input} className="form-input" value={personalizationData.interlocutore} onChange={(e) => handleInputChange('interlocutore', e.target.value)} placeholder="Es: Un cliente scontento, Mio figlio" />
                     </div>
-                </div>
 
-                <div style={{...styles.inputGroup, gridColumn: '1 / -1'}}>
-                    <label style={styles.label} htmlFor="sfidaPrincipale">Qual è la tua sfida di comunicazione più grande?</label>
-                    <input id="sfidaPrincipale" type="text" style={styles.input} className="form-input" value={personalizationData.sfidaPrincipale} onChange={(e) => handleInputChange('sfidaPrincipale', e.target.value)} placeholder="Es: 'Dire di no senza sentirmi in colpa', 'Gestire le obiezioni dei clienti'" />
+                    <div style={{...styles.inputGroup, gridColumn: '1 / -1'}}>
+                        <label style={styles.label} htmlFor="obiettivoConversazione">4. Qual è il tuo obiettivo principale?</label>
+                        <input id="obiettivoConversazione" type="text" style={styles.input} className="form-input" value={personalizationData.obiettivoConversazione} onChange={(e) => handleInputChange('obiettivoConversazione', e.target.value)} placeholder="Es: Calmare la situazione e trovare un accordo" />
+                    </div>
+
+                    <div style={{...styles.inputGroup, gridColumn: '1 / -1'}}>
+                        <label style={styles.label} htmlFor="sfidaPrincipale">5. Qual è la tua sfida più grande in questa situazione?</label>
+                        <input id="sfidaPrincipale" type="text" style={styles.input} className="form-input" value={personalizationData.sfidaPrincipale} onChange={(e) => handleInputChange('sfidaPrincipale', e.target.value)} placeholder="Es: Paura di ferire i suoi sentimenti, gestire la sua rabbia" />
+                    </div>
                 </div>
                 
                 <div style={{ paddingBottom: '8px', borderBottom: `2px solid ${COLORS.secondary}` }}></div>
@@ -224,7 +206,8 @@ const styles: { [key: string]: React.CSSProperties } = {
       backgroundColor: 'white', 
       color: COLORS.textPrimary, 
       outline: 'none', 
-      transition: 'border-color 0.2s, box-shadow 0.2s' 
+      transition: 'border-color 0.2s, box-shadow 0.2s',
+      boxSizing: 'border-box'
   },
   select: {
       width: '100%', 
@@ -242,6 +225,7 @@ const styles: { [key: string]: React.CSSProperties } = {
       backgroundRepeat: 'no-repeat',
       backgroundPosition: 'right 0.75rem center',
       backgroundSize: '16px 12px',
+      boxSizing: 'border-box'
   },
   startButton: { 
       display: 'flex', 

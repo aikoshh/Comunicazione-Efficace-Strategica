@@ -75,8 +75,9 @@ export interface DetailedRubricScore {
 }
 
 export interface AreaForImprovement {
+    userQuote: string;
     suggestion: string;
-    example: string;
+    rewrittenExample: string;
 }
 
 export interface AnalysisResult {
@@ -184,10 +185,10 @@ export interface ToastContextType {
 }
 
 export interface PersonalizationData {
-    professione: string;
-    livelloCarriera: string;
-    eta: string;
-    contestoComunicativo: string;
+    areaDiVita: 'Lavoro' | 'Relazioni Personali' | 'Crescita Personale' | '';
+    ruoloContesto: string;
+    interlocutore: string;
+    obiettivoConversazione: string;
     sfidaPrincipale: string;
 }
 

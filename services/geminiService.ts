@@ -56,11 +56,12 @@ export const analyzeWrittenResponse = async (exercise: Exercise, userResponse: s
                 items: {
                     type: Type.OBJECT,
                     properties: {
-                        suggestion: { type: Type.STRING, description: "Suggerimento per migliorare." },
-                        example: { type: Type.STRING, description: "Esempio pratico di come applicare il suggerimento." }
+                        userQuote: { type: Type.STRING, description: "La frase specifica della risposta dell'utente da migliorare." },
+                        suggestion: { type: Type.STRING, description: "Spiegazione del perché e come migliorare la frase citata." },
+                        rewrittenExample: { type: Type.STRING, description: "La versione riscritta e migliorata della frase." }
                     }
                 },
-                description: "Array di 2-3 aree di miglioramento con suggerimenti ed esempi."
+                description: "Array di 2-3 aree di miglioramento contestuali."
             },
             suggestedResponse: {
                 type: Type.OBJECT,
@@ -79,7 +80,13 @@ export const analyzeWrittenResponse = async (exercise: Exercise, userResponse: s
         Compito: "${exercise.task}"
         Risposta dell'utente: "${userResponse}"
         
-        Fornisci un'analisi dettagliata in formato JSON. Valuta la risposta in base a chiarezza, assertività, empatia e orientamento alla soluzione.
+        Fornisci un'analisi dettagliata in formato JSON.
+        1.  **Punti di Forza**: Identifica 2-3 aspetti positivi della risposta. Sii specifico.
+        2.  **Aree di Miglioramento**: Fornisci 2-3 suggerimenti CONTESTUALI. Per ciascuno:
+            -   **userQuote**: CITA ESATTAMENTE una frase o una parte della risposta dell'utente che può essere migliorata.
+            -   **suggestion**: Spiega PERCHÉ quella frase può essere resa più efficace (es. "Questa frase suona accusatoria, prova a focalizzarti sul comportamento e non sulla persona").
+            -   **rewrittenExample**: Fornisci la versione RISCRITTA di quella specifica frase.
+        3.  **Valutazione**: Valuta la risposta in base a chiarezza, assertività, empatia e orientamento alla soluzione.
         Il feedback deve essere costruttivo, incoraggiante e specifico.
         ${isPro ? "Includi anche la 'detailedRubric' con 5 criteri: Chiarezza, Tono, Soluzione, Assertività, Struttura." : ""}
         Tutto il testo deve essere in italiano.
@@ -173,20 +180,20 @@ export const generateCustomExercise = async (data: PersonalizationData): Promise
     const responseSchema = {
         type: Type.OBJECT,
         properties: {
-            scenario: { type: Type.STRING, description: "Lo scenario dettagliato (2-3 frasi)." },
-            task: { type: Type.STRING, description: "Il compito specifico per l'utente (1 frase)." }
+            scenario: { type: Type.STRING, description: "Lo scenario dettagliato e realistico (2-4 frasi)." },
+            task: { type: Type.STRING, description: "Il compito specifico e chiaro per l'utente (1 frase)." }
         }
     };
     
     const prompt = `
         Crea un esercizio di comunicazione personalizzato basato sui seguenti dati utente.
-        - Professione: ${data.professione}
-        - Livello Carriera: ${data.livelloCarriera}
-        - Età: ${data.eta}
-        - Contesto Tipico: ${data.contestoComunicativo}
-        - Sfida Principale: ${data.sfidaPrincipale}
+        - Area di vita su cui lavorare: ${data.areaDiVita}
+        - Ruolo dell'utente in questo contesto: ${data.ruoloContesto}
+        - Persona con cui deve comunicare: ${data.interlocutore}
+        - Obiettivo dell'utente per la conversazione: ${data.obiettivoConversazione}
+        - La sua sfida più grande in questa situazione: ${data.sfidaPrincipale}
         
-        Genera uno scenario realistico e un compito specifico che aiuti l'utente a praticare la sua sfida principale nel suo contesto lavorativo.
+        Genera uno scenario realistico e un compito specifico che aiuti l'utente a praticare la sua sfida principale nel suo contesto.
         Lo scenario deve essere una situazione plausibile, il compito deve essere una richiesta chiara di cosa dire o scrivere.
         Fornisci la risposta in formato JSON. Tutto il testo in italiano.
     `;

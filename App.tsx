@@ -68,6 +68,22 @@ const App: React.FC<AppProps> = ({ initialUser }) => {
 
   const { addToast } = useToast();
 
+  // State persistence: Save state to localStorage
+  useEffect(() => {
+    if (user) {
+      // Whitelist of screens that are safe to persist and return to.
+      const safeScreens = ['home', 'module', 'admin', 'paywall', 'competence_report', 'achievements', 'levels', 'daily_challenge', 'chat_trainer'];
+      if (safeScreens.includes(currentScreen)) {
+        const stateToSave = {
+          userId: user.uid,
+          currentScreen,
+          selectedModuleId: selectedModule?.id,
+        };
+        localStorage.setItem('ces_coach_app_state', JSON.stringify(stateToSave));
+      }
+    }
+  }, [user, currentScreen, selectedModule]);
+
   useEffect(() => {
     setUser(initialUser);
     if (initialUser) {
@@ -80,6 +96,32 @@ const App: React.FC<AppProps> = ({ initialUser }) => {
           ]);
           setProgress(userProgress || gamificationService.getInitialProgress());
           setEntitlements(userEntitlements);
+          
+          // State persistence: Try to restore state after data is loaded
+          try {
+            const savedStateString = localStorage.getItem('ces_coach_app_state');
+            if (savedStateString) {
+              const savedState = JSON.parse(savedStateString);
+              if (savedState && savedState.userId === initialUser.uid && savedState.currentScreen) {
+                if (savedState.currentScreen === 'module' && savedState.selectedModuleId) {
+                  const moduleToRestore = MODULES.find(m => m.id === savedState.selectedModuleId);
+                  if (moduleToRestore) {
+                    setSelectedModule(moduleToRestore);
+                    setCurrentScreen('module');
+                  }
+                } else {
+                  // For other safe screens that don't depend on a module
+                  const safeScreens = ['home', 'admin', 'paywall', 'competence_report', 'achievements', 'levels', 'daily_challenge', 'chat_trainer'];
+                  if (safeScreens.includes(savedState.currentScreen)) {
+                    setCurrentScreen(savedState.currentScreen);
+                  }
+                }
+              }
+            }
+          } catch (e) {
+            console.warn("Failed to restore app state:", e);
+            localStorage.removeItem('ces_coach_app_state');
+          }
         } catch (error) {
           console.error("Failed to fetch user data:", error);
           addToast("Impossibile caricare i dati utente.", 'error');
@@ -95,6 +137,7 @@ const App: React.FC<AppProps> = ({ initialUser }) => {
 
   const handleLogout = async () => {
     await logout();
+    localStorage.removeItem('ces_coach_app_state');
     setUser(null);
     setProgress(undefined);
     setEntitlements(null);
@@ -140,6 +183,11 @@ const App: React.FC<AppProps> = ({ initialUser }) => {
   const handleSelectExercise = (exercise: Exercise) => {
     setSelectedExercise(exercise);
     setCurrentScreen('exercise');
+  };
+
+  const handleRetryExercise = (exercise: Exercise) => {
+    setLastAnalysis(null); // Pulisce l'analisi precedente
+    handleSelectExercise(exercise); // Torna alla schermata dell'esercizio
   };
   
   const handleReviewExercise = (exerciseId: string) => {
@@ -274,13 +322,13 @@ const App: React.FC<AppProps> = ({ initialUser }) => {
   }
   
   const renderScreen = () => {
-    if (lastAnalysis) {
+    if (lastAnalysis && (currentScreen === 'report' || currentScreen === 'voice_report')) {
         const { label, action } = findNextExercise();
         if (lastAnalysis.type === 'verbal') {
             return <VoiceAnalysisReportScreen 
                         result={lastAnalysis.result as VoiceAnalysisResult}
                         exercise={lastAnalysis.exercise}
-                        onRetry={() => handleSelectExercise(lastAnalysis.exercise)}
+                        onRetry={() => handleRetryExercise(lastAnalysis.exercise)}
                         onNextExercise={action}
                         nextExerciseLabel={label}
                         entitlements={entitlements}
@@ -292,7 +340,7 @@ const App: React.FC<AppProps> = ({ initialUser }) => {
         return <AnalysisReportScreen 
                     result={lastAnalysis.result as AnalysisResult}
                     exercise={lastAnalysis.exercise}
-                    onRetry={() => handleSelectExercise(lastAnalysis.exercise)}
+                    onRetry={() => handleRetryExercise(lastAnalysis.exercise)}
                     onNextExercise={action}
                     nextExerciseLabel={label}
                     entitlements={entitlements}

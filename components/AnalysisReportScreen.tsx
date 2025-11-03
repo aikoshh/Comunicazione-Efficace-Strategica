@@ -101,7 +101,7 @@ export const AnalysisReportScreen: React.FC<AnalysisReportScreenProps> = ({
   };
   
   return (
-    <div style={styles.container}>
+    <div style={styles.container} className="report-screen-mobile-padding">
       <div id="print-area" style={styles.card}>
         <div style={styles.header}>
             <h1 style={styles.title}>Report di Analisi</h1>
@@ -115,15 +115,33 @@ export const AnalysisReportScreen: React.FC<AnalysisReportScreenProps> = ({
         
         <ScoreCircle score={result.score} />
         
-        <div style={styles.feedbackGrid}>
-            <div style={styles.feedbackCard}>
-                <h2 style={styles.sectionTitle}><CheckCircleIcon style={{color: COLORS.success}}/> Punti di Forza</h2>
-                <ul>{result.strengths.map((s, i) => <li key={i}>{s}</li>)}</ul>
-            </div>
-            <div style={styles.feedbackCard}>
-                <h2 style={styles.sectionTitle}><XCircleIcon style={{color: COLORS.error}}/> Aree di Miglioramento</h2>
-                <ul>{result.areasForImprovement.map((a, i) => <li key={i}><strong>{a.suggestion}:</strong> "{a.example}"</li>)}</ul>
-            </div>
+        <div style={styles.section}>
+            <h2 style={styles.sectionTitle}><CheckCircleIcon style={{color: COLORS.success}}/> Punti di Forza</h2>
+            <ul style={styles.list}>
+              {result.strengths.map((s, i) => <li key={i} style={styles.listItem}>{s}</li>)}
+            </ul>
+        </div>
+        
+        <div style={styles.section}>
+          <h2 style={styles.sectionTitle}><XCircleIcon style={{color: COLORS.error}}/> Aree di Miglioramento</h2>
+          <div style={styles.improvementsGrid}>
+            {result.areasForImprovement.map((area, index) => (
+              <div key={index} style={styles.improvementCard}>
+                <div style={styles.improvementQuote}>
+                  <span style={styles.improvementLabel}>La Tua Frase:</span>
+                  <p>"{area.userQuote}"</p>
+                </div>
+                <div style={styles.improvementSuggestion}>
+                  <span style={styles.improvementLabel}>Suggerimento del Coach:</span>
+                  <p>{area.suggestion}</p>
+                </div>
+                 <div style={styles.improvementRewrite}>
+                  <span style={styles.improvementLabel}>Alternativa Proposta:</span>
+                  <p>"{area.rewrittenExample}"</p>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
         
         <div style={styles.section}>
@@ -223,17 +241,6 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontSize: '36px',
     fontWeight: 'bold',
   },
-  feedbackGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-    gap: '24px',
-    marginBottom: '32px'
-  },
-  feedbackCard: {
-    backgroundColor: COLORS.cardDark,
-    padding: '20px',
-    borderRadius: '12px',
-  },
   section: {
       marginBottom: '32px',
   },
@@ -244,6 +251,50 @@ const styles: { [key: string]: React.CSSProperties } = {
     display: 'flex',
     alignItems: 'center',
     gap: '12px',
+  },
+  list: {
+      listStyle: 'none',
+      padding: 0,
+      margin: 0,
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '12px'
+  },
+  listItem: {
+      backgroundColor: COLORS.cardDark,
+      padding: '12px 16px',
+      borderRadius: '8px',
+      borderLeft: `3px solid ${COLORS.success}`
+  },
+  improvementsGrid: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '16px'
+  },
+  improvementCard: {
+      backgroundColor: COLORS.cardDark,
+      borderRadius: '8px',
+      borderLeft: `4px solid ${COLORS.error}`,
+      padding: '16px'
+  },
+  improvementLabel: {
+      fontSize: '13px',
+      fontWeight: 'bold',
+      color: COLORS.textSecondary,
+      textTransform: 'uppercase',
+      display: 'block',
+      marginBottom: '4px'
+  },
+  improvementQuote: {
+      marginBottom: '12px'
+  },
+  improvementSuggestion: {
+      marginBottom: '12px'
+  },
+  improvementRewrite: {
+      backgroundColor: 'rgba(46, 125, 50, 0.1)',
+      padding: '12px',
+      borderRadius: '6px'
   },
   rubricContainer: {
     display: 'grid',
