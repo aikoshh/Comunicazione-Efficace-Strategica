@@ -18,6 +18,6 @@ export const PRODUCTS: Product[] = [
     ],
     category: 'Bundle', // Using 'Bundle' as it represents the full package
     // Il link di pagamento è stato aggiornato con quello fornito.
-    paymentLink: 'https://buy.stripe.com/test_fZucMXakP7tQd1g8gob3q01'
+    paymentLink: 'https://buy.stripe.com/00w3coaFxbgWgnC9LG1wY00'
   },
 ];
