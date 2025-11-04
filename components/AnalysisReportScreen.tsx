@@ -9,6 +9,7 @@ import { UpsellBanner } from './UpsellBanner';
 import { PRODUCTS } from '../products';
 import { printService } from '../services/printService';
 import { PrintPreviewModal } from './PrintPreviewModal';
+import { mainLogoUrl } from '../assets';
 
 interface AnalysisReportScreenProps {
   result: AnalysisResult;
@@ -175,6 +176,9 @@ export const AnalysisReportScreen: React.FC<AnalysisReportScreenProps> = ({
             </>
           )}
       </div>
+      <div style={styles.logoContainer}>
+        <img src={mainLogoUrl} alt="CES Coach Logo" style={styles.footerLogo} />
+      </div>
       <PrintPreviewModal isOpen={isPrintModalOpen} onClose={() => setIsPrintModalOpen(false)} htmlContent={printHtml} onPrint={() => printService.triggerPrint(printHtml!)} />
     </div>
   );
@@ -183,7 +187,7 @@ export const AnalysisReportScreen: React.FC<AnalysisReportScreenProps> = ({
 const styles: { [key: string]: React.CSSProperties } = {
   container: {
     backgroundColor: COLORS.base,
-    padding: '40px 20px 120px',
+    padding: '40px 20px',
   },
   card: {
     backgroundColor: COLORS.card,
@@ -361,5 +365,15 @@ const styles: { [key: string]: React.CSSProperties } = {
     display: 'flex',
     alignItems: 'center',
     gap: '8px'
+  },
+  logoContainer: {
+    textAlign: 'center',
+    paddingTop: '40px',
+    paddingBottom: '40px'
+  },
+  footerLogo: {
+    width: '150px',
+    height: 'auto',
+    opacity: 0.7
   }
 };
