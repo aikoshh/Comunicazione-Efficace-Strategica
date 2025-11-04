@@ -91,7 +91,7 @@ export async function register(email: string, password: string, firstName: strin
     isAdmin: false,
     enabled: true,
     createdAt: serverTimestamp(),
-    expiryDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    expiryDate: null,
   };
   await setDoc(userDocRef, newUserProfileData);
   return user;
