@@ -6,7 +6,7 @@ export const PRODUCTS: Product[] = [
     type: 'non-consumable',
     name: 'CES Coach PRO',
     price: '€9,90',
-    description: 'Sblocca tutte le funzionalità PRO per 365 giorni. Richiede un abbonamento attivo all\'app.',
+    description: 'Sblocca tutte le funzionalità PRO per 365 giorni.',
     benefits: [
         'Valutazione dettagliata PRO con 5 rubriche di analisi (Chiarezza, Tono, Soluzione, Assertività, Struttura)',
         'Analisi paraverbale completa con AI per tono, ritmo, pause e velocità',
