@@ -5,7 +5,7 @@ export const PRODUCTS: Product[] = [
     id: 'ces.pro.monthly',
     type: 'non-consumable',
     name: 'CES Coach PRO',
-    price: '€9,90',
+    price: '€4,90',
     description: 'Sblocca tutte le funzionalità PRO per 365 giorni.',
     benefits: [
         'Valutazione dettagliata PRO con 5 rubriche di analisi (Chiarezza, Tono, Soluzione, Assertività, Struttura)',
