@@ -6,6 +6,7 @@ import { useSpeech } from '../hooks/useSpeech';
 import { CheckCircleIcon, XCircleIcon, RetryIcon, HomeIcon, LightbulbIcon, TargetIcon, SpeakerIcon, SpeakerOffIcon, NextIcon } from './Icons';
 import { soundService } from '../services/soundService';
 import { hasProAccess } from '../services/monetizationService';
+import { mainLogoUrl } from '../assets';
 
 interface VoiceAnalysisReportScreenProps {
   result: VoiceAnalysisResult;
@@ -280,6 +281,9 @@ export const VoiceAnalysisReportScreen: React.FC<VoiceAnalysisReportScreenProps>
           )}
         </div>
       </div>
+      <div style={styles.logoContainer}>
+        <img src={mainLogoUrl} alt="CES Coach Logo" style={styles.footerLogo} />
+      </div>
     </div>
   );
 };
@@ -288,10 +292,11 @@ const styles: { [key: string]: React.CSSProperties } = {
     container: {
         backgroundColor: COLORS.base,
         minHeight: 'calc(100vh - 64px)',
-        padding: '40px 20px 120px',
+        padding: '40px 20px 0',
         display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'flex-start',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: '40px',
     },
     card: {
         backgroundColor: COLORS.card,
@@ -401,4 +406,13 @@ const styles: { [key: string]: React.CSSProperties } = {
     buttonContainer: { display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '16px', marginTop: '32px', borderTop: `1px solid ${COLORS.divider}`, paddingTop: '32px' },
     secondaryButton: { padding: '12px 24px', fontSize: '16px', border: `1px solid ${COLORS.secondary}`, backgroundColor: 'transparent', color: COLORS.secondary, borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 500, transition: 'all 0.2s ease' },
     primaryButton: { padding: '12px 24px', fontSize: '16px', fontWeight: 'bold', border: 'none', backgroundColor: COLORS.secondary, color: 'white', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.2s ease' },
+    logoContainer: {
+        textAlign: 'center',
+        paddingBottom: '40px'
+    },
+    footerLogo: {
+        width: '150px',
+        height: 'auto',
+        opacity: 0.7
+    }
 };
