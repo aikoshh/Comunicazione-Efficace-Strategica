@@ -1,3 +1,5 @@
+// components/PreloadingScreen.tsx
+
 import React, { useState, useEffect } from 'react';
 import { preloadResources } from '../services/preloadingService';
 import { ALL_RESOURCES_TO_PRELOAD, mainLogoUrl } from '../assets';
@@ -25,7 +27,7 @@ export const PreloadingScreen: React.FC<PreloadingScreenProps> = ({ onComplete }
         <div style={styles.container}>
             <img src={mainLogoUrl} alt="CES Coach Logo" style={styles.logo} />
             <h1 style={styles.title}>Il tuo allenamento sta per iniziare, sei pronto?</h1>
-            <p style={styles.subtitle}>Manca pochissimo!</p>
+            <p style={styles.subtitle}>Ottimizzazione dell'esperienza in corso...</p>
             <div style={styles.progressBarContainer}>
                 <div style={{ ...styles.progressBarFill, width: `${progress}%` }} />
             </div>
