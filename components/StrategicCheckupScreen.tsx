@@ -100,19 +100,18 @@ export const StrategicCheckupScreen: React.FC<StrategicCheckupScreenProps> = ({ 
             rows={6}
           />
         </div>
+        <footer style={styles.footer}>
+            <button onClick={handleNext} style={styles.primaryButton} disabled={!currentResponse.trim()}>
+                {isLastStep ? 'Genera Profilo' : 'Prossima Domanda'} <SendIcon/>
+            </button>
+        </footer>
       </div>
-      
-      <footer style={styles.footer}>
-          <button onClick={handleNext} style={styles.primaryButton} disabled={!currentResponse.trim()}>
-              {isLastStep ? 'Genera Profilo' : 'Prossima Domanda'} <SendIcon/>
-          </button>
-      </footer>
     </div>
   );
 };
 
 const styles: { [key: string]: React.CSSProperties } = {
-  container: { maxWidth: '800px', margin: '0 auto', padding: '40px 20px 100px' },
+  container: { maxWidth: '800px', margin: '0 auto', padding: '40px 20px' },
   content: {
     backgroundColor: COLORS.card, padding: '24px', borderRadius: '12px',
     position: 'relative', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', border: `1px solid ${COLORS.divider}`
@@ -138,10 +137,17 @@ const styles: { [key: string]: React.CSSProperties } = {
     border: `1px solid ${COLORS.divider}`, resize: 'vertical', fontFamily: 'inherit', backgroundColor: 'white'
   },
   footer: {
-    position: 'fixed', bottom: 0, left: 0, right: 0, backgroundColor: COLORS.card,
-    padding: '16px 24px', borderTop: `1px solid ${COLORS.divider}`, display: 'flex',
-    justifyContent: 'flex-end', alignItems: 'center', boxShadow: '0 -2px 10px rgba(0,0,0,0.05)',
-    zIndex: 50,
+    padding: '16px 24px',
+    marginTop: '24px',
+    marginRight: '-24px',
+    marginLeft: '-24px',
+    marginBottom: '-24px',
+    borderTop: `1px solid ${COLORS.divider}`,
+    display: 'flex',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    backgroundColor: COLORS.card,
+    borderRadius: '0 0 12px 12px',
   },
   primaryButton: {
     display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 20px', fontSize: '16px',
