@@ -1,3 +1,4 @@
+// components/AnalysisReportScreen.tsx
 import React, { useEffect, useState } from 'react';
 import { AnalysisResult, Exercise, Entitlements, Product, DetailedRubricScore } from '../types';
 import { COLORS } from '../constants';
@@ -182,7 +183,7 @@ export const AnalysisReportScreen: React.FC<AnalysisReportScreenProps> = ({
 const styles: { [key: string]: React.CSSProperties } = {
   container: {
     backgroundColor: COLORS.base,
-    padding: '40px 20px',
+    padding: '40px 20px 120px',
   },
   card: {
     backgroundColor: COLORS.card,
