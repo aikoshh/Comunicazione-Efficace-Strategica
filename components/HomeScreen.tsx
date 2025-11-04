@@ -27,11 +27,26 @@ const ModuleCard: React.FC<ModuleCardProps> = ({ module, onSelect, isProUser }) 
 
   const handleCardClick = () => {
     soundService.playClick();
+    // Se il modulo è personalizzato (es. Allenamento Personalizzato) ed è bloccato, non fare nulla.
+    if (isLocked && module.isCustom) {
+      return;
+    }
+    // Altrimenti, procedi con la selezione.
     onSelect(module);
   };
 
+  const cardStyle: React.CSSProperties = {
+    ...styles.moduleCard,
+    ...(isLocked ? styles.moduleCardLocked : {}),
+  };
+
+  // Se il modulo è personalizzato e bloccato, cambia il cursore per indicare che non è cliccabile.
+  if (isLocked && module.isCustom) {
+    cardStyle.cursor = 'default';
+  }
+
   return (
-    <div style={{...styles.moduleCard, ...(isLocked ? styles.moduleCardLocked : {})}} onClick={handleCardClick}>
+    <div style={cardStyle} onClick={handleCardClick}>
       <div style={styles.cardImageContainer}>
         {isHeaderVideo ? (
           <video src={module.headerImage} style={styles.cardImage} autoPlay muted loop playsInline />
@@ -89,7 +104,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         <div style={styles.headerOverlay} />
         <div style={styles.headerContent}>
           <h1 style={styles.mainTitle}>Benvenuto in CES Coach</h1>
-          <p style={styles.mainSubtitle}>Il tuo percorso per padroneggiare la Comunicazione Efficace e Strategica inizia ora.</p>
+          <p style={styles.mainSubtitle}>Inizia subito il tuo allenamento!</p>
         </div>
       </header>
       

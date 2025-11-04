@@ -1,3 +1,4 @@
+// components/LoginScreen.tsx
 import React, { useState, useMemo } from 'react';
 import { COLORS } from '../constants';
 import { mainLogoUrl } from '../assets';
@@ -175,7 +176,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = () => {
         {view === 'login' ? (
            <>
             <h1 style={styles.title}>Benvenuto in<br /><strong>CES Coach</strong></h1>
-            <p style={styles.loginSubtitle}>il primo coach basato sull'AI che ti permette di rendere la tua comunicazione efficace e strategica in poco tempo!</p>
+            <p style={styles.loginSubtitle}>Il tuo allenamento personalizzato, per rendere rapidamente la tua Comunicazione Efficace e Strategica!</p>
             <form onSubmit={handleLoginSubmit} style={styles.form}>
               <div style={styles.inputGroup}>
                 <label htmlFor="email" style={styles.label}>Email</label>

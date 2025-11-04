@@ -1,6 +1,7 @@
 // components/LevelsScreen.tsx
 import React from 'react';
 import { COLORS } from '../constants';
+import { mainLogoUrl } from '../assets';
 
 interface LevelsScreenProps {
 }
@@ -54,6 +55,9 @@ export const LevelsScreen: React.FC<LevelsScreenProps> = () => {
           </div>
         ))}
       </main>
+      <div style={styles.logoContainer}>
+        <img src={mainLogoUrl} alt="CES Coach Logo" style={styles.footerLogo} />
+      </div>
     </div>
   );
 };
@@ -117,4 +121,13 @@ const styles: { [key: string]: React.CSSProperties } = {
     lineHeight: 1.6,
     margin: 0,
   },
+  logoContainer: {
+    textAlign: 'center',
+    paddingTop: '40px',
+  },
+  footerLogo: {
+    width: '150px',
+    height: 'auto',
+    opacity: 0.7
+  }
 };

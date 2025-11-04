@@ -5,6 +5,7 @@ import { hasProAccess } from '../services/monetizationService';
 import { CheckCircleIcon, LockIcon } from './Icons';
 import { soundService } from '../services/soundService';
 import { ExercisePreviewModal } from './ExercisePreviewModal';
+import { mainLogoUrl } from '../assets';
 
 interface ModuleScreenProps {
   module: Module;
@@ -91,6 +92,10 @@ export const ModuleScreen: React.FC<ModuleScreenProps> = ({
         )}
       </main>
 
+      <div style={styles.logoContainer}>
+        <img src={mainLogoUrl} alt="CES Coach Logo" style={styles.footerLogo} />
+      </div>
+
       {previewingExercise && (
         <ExercisePreviewModal
             exercise={previewingExercise}
@@ -113,7 +118,7 @@ const styles: { [key: string]: React.CSSProperties } = {
   moduleIcon: { width: '40px', height: '40px' },
   title: { fontSize: '32px', fontWeight: 'bold', margin: 0 },
   description: { fontSize: '18px', maxWidth: '600px', margin: '0 auto', opacity: 0.9 },
-  mainContent: { maxWidth: '800px', margin: '-60px auto 40px', backgroundColor: COLORS.card, borderRadius: '12px', padding: '32px', boxShadow: '0 8px 30px rgba(0,0,0,0.12)', position: 'relative', zIndex: 4 },
+  mainContent: { maxWidth: '800px', margin: '-60px auto 0', backgroundColor: COLORS.card, borderRadius: '12px', padding: '32px', boxShadow: '0 8px 30px rgba(0,0,0,0.12)', position: 'relative', zIndex: 4 },
   exerciseList: { display: 'flex', flexDirection: 'column', gap: '16px' },
   exerciseItem: { display: 'flex', alignItems: 'center', gap: '16px', padding: '16px', backgroundColor: COLORS.cardDark, borderRadius: '8px', cursor: 'pointer', border: `1px solid ${COLORS.divider}` },
   exerciseNumber: { width: '40px', height: '40px', borderRadius: '50%', backgroundColor: COLORS.primary, color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', flexShrink: 0 },
@@ -125,4 +130,14 @@ const styles: { [key: string]: React.CSSProperties } = {
   proLockOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(28, 62, 94, 0.9)', borderRadius: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'white', textAlign: 'center', padding: '20px' },
   proLockTitle: { fontSize: '24px', fontWeight: 'bold', margin: '16px 0 8px 0' },
   proLockText: { fontSize: '16px', lineHeight: 1.6, maxWidth: '400px', margin: 0 },
+  logoContainer: {
+    textAlign: 'center',
+    paddingTop: '40px',
+    paddingBottom: '40px',
+  },
+  footerLogo: {
+    width: '150px',
+    height: 'auto',
+    opacity: 0.7
+  }
 };

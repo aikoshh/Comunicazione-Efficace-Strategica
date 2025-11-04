@@ -7,6 +7,7 @@ import { generateCommunicatorProfile } from '../services/geminiService';
 import { FullScreenLoader } from './Loader';
 import { useToast } from '../hooks/useToast';
 import { soundService } from '../services/soundService';
+import { mainLogoUrl } from '../assets';
 
 interface StrategicCheckupScreenProps {
   onComplete: (profile: CommunicatorProfile) => void;
@@ -106,6 +107,9 @@ export const StrategicCheckupScreen: React.FC<StrategicCheckupScreenProps> = ({ 
             </button>
         </footer>
       </div>
+      <div style={styles.logoContainer}>
+        <img src={mainLogoUrl} alt="CES Coach Logo" style={styles.footerLogo} />
+      </div>
     </div>
   );
 };
@@ -153,5 +157,14 @@ const styles: { [key: string]: React.CSSProperties } = {
     display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 20px', fontSize: '16px',
     fontWeight: 'bold', border: 'none', backgroundColor: COLORS.secondary, color: 'white',
     borderRadius: '8px', cursor: 'pointer'
+  },
+  logoContainer: {
+    textAlign: 'center',
+    paddingTop: '40px',
+  },
+  footerLogo: {
+    width: '150px',
+    height: 'auto',
+    opacity: 0.7
   }
 };

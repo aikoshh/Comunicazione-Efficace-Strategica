@@ -6,6 +6,7 @@ import { soundService } from '../services/soundService';
 import { generateCustomExercise } from '../services/geminiService';
 import { FullScreenLoader } from './Loader';
 import { useToast } from '../hooks/useToast';
+import { mainLogoUrl } from '../assets';
 
 interface CustomSetupScreenProps {
   module: Module;
@@ -143,6 +144,9 @@ export const CustomSetupScreen: React.FC<CustomSetupScreenProps> = ({ module, on
                     Crea e Inizia Allenamento <NextIcon/>
                 </button>
             </form>
+            <div style={styles.logoContainer}>
+                <img src={mainLogoUrl} alt="CES Coach Logo" style={styles.footerLogo} />
+            </div>
         </div>
     );
 };
@@ -252,4 +256,13 @@ const styles: { [key: string]: React.CSSProperties } = {
       color: '#666', 
       boxShadow: 'none' 
   },
+  logoContainer: {
+    textAlign: 'center',
+    paddingTop: '40px',
+  },
+  footerLogo: {
+    width: '150px',
+    height: 'auto',
+    opacity: 0.7
+  }
 };

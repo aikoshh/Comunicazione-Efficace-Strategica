@@ -12,6 +12,7 @@ import { useSpeech } from '../hooks/useSpeech';
 import { QuestionLibraryModal } from './QuestionLibraryModal';
 import { PreparationChecklistModal } from './PreparationChecklistModal';
 import { soundService } from '../services/soundService';
+import { mainLogoUrl } from '../assets';
 
 interface ExerciseScreenProps {
   exercise: Exercise;
@@ -176,6 +177,9 @@ export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({
         </footer>
       </div>
 
+      <div style={styles.logoContainer}>
+        <img src={mainLogoUrl} alt="CES Coach Logo" style={styles.footerLogo} />
+      </div>
       
       {isPro && <QuestionLibraryModal isOpen={isQuestionModalOpen} onClose={() => setIsQuestionModalOpen(false)} />}
       {isPro && <PreparationChecklistModal isOpen={isChecklistModalOpen} onClose={() => setIsChecklistModalOpen(false)} />}
@@ -259,5 +263,14 @@ const styles: { [key: string]: React.CSSProperties } = {
     color: COLORS.textAccent,
     borderRadius: '8px',
     cursor: 'pointer'
+  },
+  logoContainer: {
+    textAlign: 'center',
+    paddingTop: '40px',
+  },
+  footerLogo: {
+    width: '150px',
+    height: 'auto',
+    opacity: 0.7
   }
 };

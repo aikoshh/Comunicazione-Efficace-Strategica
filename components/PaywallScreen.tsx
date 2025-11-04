@@ -6,6 +6,7 @@ import { CheckCircleIcon, BarChartIcon, VoiceIcon, LightbulbIcon, CrownIcon, Inf
 import { soundService } from '../services/soundService';
 import { Spinner } from './Loader';
 import { risultatiProVideo, vantaggioRisultatiProVideo, feedbackParaverbaleVideo, librerieStrategicheVideo } from '../assets';
+import { mainLogoUrl } from '../assets';
 
 interface PaywallScreenProps {
   entitlements: Entitlements;
@@ -177,6 +178,9 @@ export const PaywallScreen: React.FC<PaywallScreenProps> = ({ entitlements, onRe
                     </p>
                 </footer>
             </main>
+            <div style={styles.logoContainer}>
+                <img src={mainLogoUrl} alt="CES Coach Logo" style={styles.footerLogo} />
+            </div>
         </div>
     );
 };
@@ -346,4 +350,13 @@ const styles: { [key: string]: React.CSSProperties } = {
     footer: { textAlign: 'center', marginTop: '48px', borderTop: `1px solid ${COLORS.divider}`, paddingTop: '32px' },
     restoreButton: { padding: '12px 24px', fontSize: '16px', border: `1px solid ${COLORS.secondary}`, backgroundColor: 'transparent', color: COLORS.secondary, borderRadius: '8px', cursor: 'pointer', fontWeight: 500, transition: 'all 0.2s ease', minHeight: '48px' },
     disclosure: { fontSize: '12px', color: COLORS.textSecondary, marginTop: '24px', lineHeight: 1.6, maxWidth: '500px', margin: '24px auto 0' },
+    logoContainer: {
+        textAlign: 'center',
+        paddingTop: '40px',
+    },
+    footerLogo: {
+        width: '150px',
+        height: 'auto',
+        opacity: 0.7
+    }
 };

@@ -3,6 +3,7 @@ import type { CommunicatorProfile } from '../types';
 import { COLORS } from '../constants';
 import { CheckCircleIcon, TargetIcon } from './Icons';
 import { soundService } from '../services/soundService';
+import { mainLogoUrl } from '../assets';
 
 interface CommunicatorProfileScreenProps {
   profile?: CommunicatorProfile;
@@ -64,6 +65,9 @@ export const CommunicatorProfileScreen: React.FC<CommunicatorProfileScreenProps>
                 Ora sei pronto per iniziare il tuo percorso di allenamento. Usa questo profilo come guida per scegliere i tuoi primi moduli.
             </p>
             <button onClick={handleContinueClick} style={styles.button}>Inizia Allenamento</button>
+        </div>
+        <div style={styles.logoContainer}>
+            <img src={mainLogoUrl} alt="CES Coach Logo" style={styles.footerLogo} />
         </div>
       </div>
     </div>
@@ -161,4 +165,13 @@ const styles: { [key: string]: React.CSSProperties } = {
     cursor: 'pointer',
     transition: 'transform 0.2s ease, filter 0.2s ease'
   },
+  logoContainer: {
+    textAlign: 'center',
+    paddingTop: '40px',
+  },
+  footerLogo: {
+    width: '150px',
+    height: 'auto',
+    opacity: 0.7
+  }
 };

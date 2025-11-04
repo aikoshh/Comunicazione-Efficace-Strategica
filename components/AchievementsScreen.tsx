@@ -3,6 +3,7 @@ import React from 'react';
 import type { UserProgress, Achievement } from '../types';
 import { COLORS } from '../constants';
 import { ACHIEVEMENTS } from '../services/gamificationService';
+import { mainLogoUrl } from '../assets';
 
 interface AchievementsScreenProps {
   progress: UserProgress;
@@ -23,6 +24,9 @@ export const AchievementsScreen: React.FC<AchievementsScreenProps> = ({ progress
             </div>
           );
         })}
+      </div>
+      <div style={styles.logoContainer}>
+        <img src={mainLogoUrl} alt="CES Coach Logo" style={styles.footerLogo} />
       </div>
     </div>
   );
@@ -77,4 +81,13 @@ const styles: { [key: string]: React.CSSProperties } = {
         lineHeight: 1.5,
         margin: 0,
     },
+    logoContainer: {
+        textAlign: 'center',
+        paddingTop: '40px',
+    },
+    footerLogo: {
+        width: '150px',
+        height: 'auto',
+        opacity: 0.7
+    }
 };

@@ -4,6 +4,7 @@ import type { UserProgress, CompetenceKey, Exercise } from '../types';
 import { COLORS, MODULES } from '../constants';
 import { EXERCISE_TO_COMPETENCE_MAP } from '../services/competenceService';
 import { BackIcon, CheckCircleIcon, TargetIcon, LightbulbIcon } from './Icons';
+import { mainLogoUrl } from '../assets';
 
 interface CompetenceReportScreenProps {
   userProgress: UserProgress;
@@ -98,6 +99,9 @@ export const CompetenceReportScreen: React.FC<CompetenceReportScreenProps> = ({ 
           );
         })}
       </main>
+      <div style={styles.logoContainer}>
+        <img src={mainLogoUrl} alt="CES Coach Logo" style={styles.footerLogo} />
+      </div>
     </div>
   );
 };
@@ -135,4 +139,13 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontSize: '14px', color: COLORS.textPrimary, fontWeight: 500,
     transition: 'background-color 0.2s',
   },
+  logoContainer: {
+    textAlign: 'center',
+    paddingTop: '40px',
+  },
+  footerLogo: {
+    width: '150px',
+    height: 'auto',
+    opacity: 0.7
+  }
 };

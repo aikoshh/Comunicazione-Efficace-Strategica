@@ -14,7 +14,7 @@ import { Spinner } from './Loader';
 import { SendIcon, LightbulbIcon } from './Icons';
 import { soundService } from '../services/soundService';
 import { SuggestionStyleModal } from './SuggestionStyleModal';
-import { chatTrainerHeaderVideo } from '../assets';
+import { chatTrainerHeaderVideo, mainLogoUrl } from '../assets';
 
 interface StrategicChatTrainerScreenProps {
   user: UserProfile;
@@ -215,6 +215,9 @@ export const StrategicChatTrainerScreen: React.FC<StrategicChatTrainerScreenProp
                 <div ref={chatEndRef} />
             </div>
         </div>
+        <div style={styles.logoContainer}>
+            <img src={mainLogoUrl} alt="CES Coach Logo" style={styles.footerLogo} />
+        </div>
         <SuggestionStyleModal
             isOpen={isStyleModalOpen}
             onClose={() => setIsStyleModalOpen(false)}
@@ -280,4 +283,14 @@ const styles: { [key: string]: React.CSSProperties } = {
   textarea: { flex: 1, resize: 'none', padding: '12px', borderRadius: '8px', border: `1px solid ${COLORS.divider}`, fontSize: '16px', fontFamily: 'inherit' },
   sendButton: { backgroundColor: COLORS.secondary, color: 'white', border: 'none', borderRadius: '8px', width: '48px', height: '48px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   initialMessage: { textAlign: 'center', padding: '40px 20px', color: COLORS.textSecondary },
+  logoContainer: {
+    textAlign: 'center',
+    padding: '40px 0',
+    backgroundColor: COLORS.base,
+  },
+  footerLogo: {
+    width: '150px',
+    height: 'auto',
+    opacity: 0.7
+  }
 };

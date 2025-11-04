@@ -1,10 +1,15 @@
 
+
 import React from 'react';
 import { COLORS } from '../constants';
+import { mainLogoUrl } from '../assets';
 
 export const Footer: React.FC = () => {
   return (
     <footer style={styles.footer}>
+      <div style={styles.logoContainer}>
+        <img src={mainLogoUrl} alt="CES Coach Logo" style={styles.footerLogo} />
+      </div>
       <div style={styles.footerLinks}>
         <a href="https://www.centroclinicaformazionestrategica.it/CES-APP/pdf/privacy_policy.pdf" target="_blank" rel="noopener noreferrer" title="Leggi la Privacy Policy" style={styles.footerLink}>Privacy Policy</a>
         <span style={styles.footerSeparator}>|</span>
@@ -30,6 +35,14 @@ const styles: { [key: string]: React.CSSProperties } = {
     backgroundColor: COLORS.base,
     flexShrink: 0,
   },
+  logoContainer: {
+    marginBottom: '24px',
+  },
+  footerLogo: {
+    width: '150px',
+    height: 'auto',
+    opacity: 0.7,
+  },
   footerLinks: {
     marginBottom: '16px',
   },
@@ -52,4 +65,3 @@ const styles: { [key: string]: React.CSSProperties } = {
     lineHeight: '1.6',
   }
 };
-      
