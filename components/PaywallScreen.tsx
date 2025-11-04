@@ -174,7 +174,7 @@ export const PaywallScreen: React.FC<PaywallScreenProps> = ({ entitlements, onRe
                          {isLoading === 'restore' ? <Spinner size={20} /> : 'Ripristina Acquisti'}
                     </button>
                     <p style={styles.disclosure}>
-                        L'attivazione PRO è un acquisto con validità annuale, mentre l'accesso all'App richiede un abbonamento mensile attivo.
+                        L'attivazione PRO è un acquisto una tantum con validità di 365 giorni. L'accesso alle funzionalità base dell'app è gratuito.
                     </p>
                 </footer>
             </main>
