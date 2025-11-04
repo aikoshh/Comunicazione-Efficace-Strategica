@@ -1,3 +1,4 @@
+// components/VoiceAnalysisReportScreen.tsx
 import React, { useEffect, useState } from 'react';
 import { VoiceAnalysisResult, Exercise, Entitlements } from '../types';
 import { COLORS, VOICE_RUBRIC_CRITERIA } from '../constants';
@@ -287,7 +288,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     container: {
         backgroundColor: COLORS.base,
         minHeight: 'calc(100vh - 64px)',
-        padding: '40px 20px',
+        padding: '40px 20px 120px',
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'flex-start',
