@@ -151,31 +151,31 @@ export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({
             />
           )}
         </div>
+        <footer style={styles.footer}>
+          {exerciseType === ExerciseType.VERBAL ? (
+            <>
+              <button onClick={handleToggleListening} style={isListening ? styles.stopButton : styles.recordButton} disabled={!isSupported}>
+                <MicIcon />
+                <span>{isListening ? 'Ferma Registrazione' : 'Avvia Registrazione'}</span>
+              </button>
+              <button onClick={handleComplete} style={styles.primaryButton} disabled={isListening || !transcript.trim()}>
+                Analizza Risposta <SendIcon />
+              </button>
+            </>
+          ) : (
+            <>
+              <button onClick={handleSuggestResponse} style={styles.secondaryButton} disabled={isLoading || isSuggesting}>
+                  {isSuggesting ? <Spinner size={20} /> : <LightbulbIcon />}
+                  <span>{isSuggesting ? 'Genero...' : 'Suggerisci Risposta'}</span>
+              </button>
+              <button onClick={handleComplete} style={styles.primaryButton} disabled={!userResponse.trim() || isLoading || isSuggesting}>
+                Invia per Analisi <SendIcon />
+              </button>
+            </>
+          )}
+        </footer>
       </div>
 
-      <footer style={styles.footer}>
-        {exerciseType === ExerciseType.VERBAL ? (
-          <>
-            <button onClick={handleToggleListening} style={isListening ? styles.stopButton : styles.recordButton} disabled={!isSupported}>
-              <MicIcon />
-              <span>{isListening ? 'Ferma Registrazione' : 'Avvia Registrazione'}</span>
-            </button>
-            <button onClick={handleComplete} style={styles.primaryButton} disabled={isListening || !transcript.trim()}>
-              Analizza Risposta <SendIcon />
-            </button>
-          </>
-        ) : (
-          <>
-            <button onClick={handleSuggestResponse} style={styles.secondaryButton} disabled={isLoading || isSuggesting}>
-                {isSuggesting ? <Spinner size={20} /> : <LightbulbIcon />}
-                <span>{isSuggesting ? 'Genero...' : 'Suggerisci Risposta'}</span>
-            </button>
-            <button onClick={handleComplete} style={styles.primaryButton} disabled={!userResponse.trim() || isLoading || isSuggesting}>
-              Invia per Analisi <SendIcon />
-            </button>
-          </>
-        )}
-      </footer>
       
       {isPro && <QuestionLibraryModal isOpen={isQuestionModalOpen} onClose={() => setIsQuestionModalOpen(false)} />}
       {isPro && <PreparationChecklistModal isOpen={isChecklistModalOpen} onClose={() => setIsChecklistModalOpen(false)} />}
@@ -187,7 +187,7 @@ const styles: { [key: string]: React.CSSProperties } = {
   container: {
     maxWidth: '800px',
     margin: '0 auto',
-    padding: '40px 20px 120px', // Extra padding at bottom for footer
+    padding: '40px 20px',
   },
   content: {
     backgroundColor: COLORS.card,
@@ -212,10 +212,16 @@ const styles: { [key: string]: React.CSSProperties } = {
     backgroundColor: 'white', boxSizing: 'border-box'
   },
   footer: {
-    position: 'fixed', bottom: 0, left: 0, right: 0, backgroundColor: COLORS.card,
-    padding: '16px 24px', borderTop: `1px solid ${COLORS.divider}`,
-    display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '16px',
-    boxShadow: '0 -2px 10px rgba(0,0,0,0.05)', zIndex: 50,
+    marginTop: '32px',
+    padding: '16px 32px',
+    margin: '32px -32px -32px -32px',
+    borderTop: `1px solid ${COLORS.divider}`,
+    display: 'flex',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    gap: '16px',
+    backgroundColor: COLORS.card,
+    borderRadius: '0 0 12px 12px',
   },
   primaryButton: {
     display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 20px', fontSize: '16px',
