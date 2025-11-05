@@ -161,8 +161,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         <ProgressOverview user={user} progress={progress} />
         
         <WarmUpCard />
-
-        <CoachingUpsellCard product={COACHING_PRODUCT} />
         
         {progress && (
           <ProgressAnalytics 
@@ -215,6 +213,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             ))}
           </div>
         </section>
+
+        <CoachingUpsellCard product={COACHING_PRODUCT} />
       </main>
     </div>
   );
