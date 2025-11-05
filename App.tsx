@@ -12,6 +12,7 @@ import {
   AnalysisHistoryItem,
   Product,
   ExerciseType,
+  StorableEntitlements,
 } from './types';
 import { LoginScreen } from './components/LoginScreen';
 import { HomeScreen } from './components/HomeScreen';
@@ -38,8 +39,8 @@ import { ReportProblemModal } from './components/ReportProblemModal';
 import { PreloadingScreen } from './components/PreloadingScreen';
 import { ObjectiveOnboardingModal } from './components/ObjectiveOnboardingModal';
 
-import { logout, databaseService } from './services/firebase';
-import { getUserEntitlements, restorePurchases, hasProAccess } from './services/monetizationService';
+import { logout, databaseService, subscribeToEntitlements } from './services/firebase';
+import { restorePurchases, hasProAccess } from './services/monetizationService';
 import { competenceService } from './services/competenceService';
 import { gamificationService } from './services/gamificationService';
 import { MODULES } from './constants';
@@ -91,24 +92,36 @@ const App: React.FC<AppProps> = ({ initialUser }) => {
   useEffect(() => {
     setUser(initialUser);
     if (initialUser) {
-      const fetchData = async () => {
         setIsLoading(true);
-        try {
-          const [userProgress, userEntitlements] = await Promise.all([
-            databaseService.getUserProgress(initialUser.uid),
-            getUserEntitlements(initialUser),
-          ]);
-          const finalProgress = userProgress || gamificationService.getInitialProgress();
-          setProgress(finalProgress);
-          setEntitlements(userEntitlements);
-          
-          if (!finalProgress.mainObjective) {
-            setIsObjectiveModalOpen(true);
-            setIsChangingObjective(false);
-          }
-          
-          // State persistence: Try to restore state after data is loaded
-          try {
+
+        // Fetch one-time data like user progress
+        databaseService.getUserProgress(initialUser.uid)
+            .then(userProgress => {
+                const finalProgress = userProgress || gamificationService.getInitialProgress();
+                setProgress(finalProgress);
+                if (!finalProgress.mainObjective) {
+                    setIsObjectiveModalOpen(true);
+                    setIsChangingObjective(false);
+                }
+            })
+            .catch(error => {
+                console.error("Failed to fetch user progress:", error);
+                addToast("Impossibile caricare i progressi.", 'error');
+            });
+
+        // Set up real-time listener for entitlements
+        const unsubscribe = subscribeToEntitlements(initialUser.uid, (storableEntitlements: StorableEntitlements | null) => {
+            const productIDs = new Set(storableEntitlements?.productIDs || []);
+            setEntitlements({
+                productIDs,
+                teamSeats: storableEntitlements?.teamSeats || 0,
+                teamActive: storableEntitlements?.teamActive || false
+            });
+            setIsLoading(false); // Consider app loaded once entitlements are checked
+        });
+        
+        // Restore app state after initial data might be loaded
+         try {
             const savedStateString = localStorage.getItem('ces_coach_app_state');
             if (savedStateString) {
               const savedState = JSON.parse(savedStateString);
@@ -120,7 +133,6 @@ const App: React.FC<AppProps> = ({ initialUser }) => {
                     setCurrentScreen('module');
                   }
                 } else {
-                  // For other safe screens that don't depend on a module
                   const safeScreens = ['home', 'admin', 'paywall', 'competence_report', 'achievements', 'levels', 'daily_challenge', 'chat_trainer'];
                   if (safeScreens.includes(savedState.currentScreen)) {
                     setCurrentScreen(savedState.currentScreen);
@@ -132,18 +144,15 @@ const App: React.FC<AppProps> = ({ initialUser }) => {
             console.warn("Failed to restore app state:", e);
             localStorage.removeItem('ces_coach_app_state');
           }
-        } catch (error) {
-          console.error("Failed to fetch user data:", error);
-          addToast("Impossibile caricare i dati utente.", 'error');
-        } finally {
-          setIsLoading(false);
-        }
-      };
-      fetchData();
+
+
+        // Cleanup subscription on unmount
+        return () => unsubscribe();
     } else {
-      setIsLoading(false);
+        setIsLoading(false);
     }
-  }, [initialUser, addToast]);
+}, [initialUser, addToast]);
+
 
   const handleLogout = async () => {
     await logout();
@@ -438,7 +447,7 @@ const App: React.FC<AppProps> = ({ initialUser }) => {
       case 'admin':
           return user.isAdmin ? <AdminScreen /> : <HomeScreen user={user} progress={progress} entitlements={entitlements} onSelectModule={handleSelectModule} onStartCheckup={() => handleNavigate('checkup')} onStartDailyChallenge={() => handleNavigate('daily_challenge')} onNavigateToReport={() => handleNavigate('competence_report')} onNavigate={handleNavigate} onChangeObjective={handleChangeObjectiveRequest}/>;
       case 'paywall':
-          return <PaywallScreen entitlements={entitlements!} onRestore={handleRestore} onBack={handleBack} />;
+          return <PaywallScreen user={user} entitlements={entitlements!} onRestore={handleRestore} onBack={handleBack} />;
       case 'competence_report':
           return progress && <CompetenceReportScreen userProgress={progress} onBack={handleBack} onSelectExercise={handleSelectExercise} />;
       case 'achievements':
