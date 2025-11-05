@@ -106,6 +106,31 @@ export async function logout(): Promise<void> {
   await signOut(auth);
 }
 
+// --- NEW AUTOMATION LOGIC ---
+export async function processAutomaticPurchase(userId: string, productId: string): Promise<void> {
+    console.log("Simulating backend processing for automatic purchase...");
+    // Simulate network delay and payment processing time (like a webhook would take)
+    await new Promise(resolve => setTimeout(resolve, 5000));
+
+    const entitlements = await databaseService.getUserEntitlements(userId) || { productIDs: [], teamSeats: 0, teamActive: false };
+    const newProductIDs = [...new Set([...entitlements.productIDs, productId])];
+    
+    const updatedEntitlements: StorableEntitlements = {
+        ...entitlements,
+        productIDs: newProductIDs
+    };
+
+    await databaseService.saveUserEntitlements(userId, updatedEntitlements);
+    console.log(`User ${userId} automatically upgraded with product ${productId}.`);
+}
+
+export function subscribeToEntitlements(userId: string, callback: (entitlements: StorableEntitlements | null) => void): () => void {
+    const docRef = doc(db, ENTITLEMENTS_COLLECTION, userId);
+    return onSnapshot(docRef, (docSnap) => {
+        callback(docSnap.exists() ? docSnap.data() as StorableEntitlements : null);
+    });
+}
+
 // --- PROBLEM REPORTING SERVICE ---
 export async function addProblemReport(userId: string, userEmail: string, userName: string, message: string): Promise<void> {
     if (!db) {
