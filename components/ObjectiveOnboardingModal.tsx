@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
 import { COLORS, MAIN_OBJECTIVES } from '../constants';
-import { TargetIcon } from './Icons';
+import { TargetIcon, CloseIcon } from './Icons';
 import { soundService } from '../services/soundService';
 
 interface ObjectiveOnboardingModalProps {
   onSetObjective: (objective: string) => Promise<void>;
+  onClose: () => void;
+  allowClose: boolean;
 }
 
-export const ObjectiveOnboardingModal: React.FC<ObjectiveOnboardingModalProps> = ({ onSetObjective }) => {
+export const ObjectiveOnboardingModal: React.FC<ObjectiveOnboardingModalProps> = ({ onSetObjective, onClose, allowClose }) => {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSelect = async (objective: string) => {
@@ -22,9 +24,19 @@ export const ObjectiveOnboardingModal: React.FC<ObjectiveOnboardingModalProps> =
     }
   };
 
+  const handleClose = () => {
+    soundService.playClick();
+    onClose();
+  };
+
   return (
     <div style={styles.overlay}>
       <div style={styles.modal} role="dialog" aria-modal="true" aria-labelledby="objective-title">
+        {allowClose && (
+            <button onClick={handleClose} style={styles.closeButton} aria-label="Chiudi modale">
+              <CloseIcon />
+            </button>
+        )}
         <header style={styles.header}>
           <TargetIcon style={styles.headerIcon} />
           <h1 id="objective-title" style={styles.title}>Qual è la tua sfida principale?</h1>
@@ -65,7 +77,19 @@ const styles: { [key: string]: React.CSSProperties } = {
     boxShadow: '0 10px 40px rgba(0,0,0,0.2)',
     animation: 'popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) both',
     display: 'flex', flexDirection: 'column',
-    textAlign: 'center'
+    textAlign: 'center',
+    position: 'relative',
+  },
+  closeButton: {
+    position: 'absolute',
+    top: '16px',
+    right: '16px',
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    padding: '4px',
+    color: COLORS.textSecondary,
+    zIndex: 1,
   },
   header: {
     padding: '32px 24px 24px',

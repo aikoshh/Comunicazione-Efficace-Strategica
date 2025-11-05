@@ -67,6 +67,7 @@ const App: React.FC<AppProps> = ({ initialUser }) => {
   const [apiKeyErrorMessage, setApiKeyErrorMessage] = useState('');
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [isObjectiveModalOpen, setIsObjectiveModalOpen] = useState(false);
+  const [isChangingObjective, setIsChangingObjective] = useState(false);
 
 
   const { addToast } = useToast();
@@ -103,6 +104,7 @@ const App: React.FC<AppProps> = ({ initialUser }) => {
           
           if (!finalProgress.mainObjective) {
             setIsObjectiveModalOpen(true);
+            setIsChangingObjective(false);
           }
           
           // State persistence: Try to restore state after data is loaded
@@ -299,6 +301,15 @@ const App: React.FC<AppProps> = ({ initialUser }) => {
     await databaseService.saveUserProgress(user.uid, updatedProgress);
     addToast('Obiettivo impostato! La tua dashboard è ora personalizzata.', 'success');
   }, [user, progress, addToast]);
+
+  const handleChangeObjectiveRequest = () => {
+    setIsObjectiveModalOpen(true);
+    setIsChangingObjective(true);
+  };
+
+  const handleCloseObjectiveModal = () => {
+    setIsObjectiveModalOpen(false);
+  };
   
   const findNextExercise = (): { label: string; action: () => void } => {
     if (!selectedModule || !selectedExercise || selectedModule.isCustom) {
@@ -368,6 +379,7 @@ const App: React.FC<AppProps> = ({ initialUser }) => {
                   onStartDailyChallenge={() => handleNavigate('daily_challenge')}
                   onNavigateToReport={() => handleNavigate('competence_report')}
                   onNavigate={handleNavigate}
+                  onChangeObjective={handleChangeObjectiveRequest}
                 />;
       case 'module':
         return selectedModule && <ModuleScreen 
@@ -424,7 +436,7 @@ const App: React.FC<AppProps> = ({ initialUser }) => {
                       onBack={handleBack}
                   />;
       case 'admin':
-          return user.isAdmin ? <AdminScreen /> : <HomeScreen user={user} progress={progress} entitlements={entitlements} onSelectModule={handleSelectModule} onStartCheckup={() => handleNavigate('checkup')} onStartDailyChallenge={() => handleNavigate('daily_challenge')} onNavigateToReport={() => handleNavigate('competence_report')} onNavigate={handleNavigate} />;
+          return user.isAdmin ? <AdminScreen /> : <HomeScreen user={user} progress={progress} entitlements={entitlements} onSelectModule={handleSelectModule} onStartCheckup={() => handleNavigate('checkup')} onStartDailyChallenge={() => handleNavigate('daily_challenge')} onNavigateToReport={() => handleNavigate('competence_report')} onNavigate={handleNavigate} onChangeObjective={handleChangeObjectiveRequest}/>;
       case 'paywall':
           return <PaywallScreen entitlements={entitlements!} onRestore={handleRestore} onBack={handleBack} />;
       case 'competence_report':
@@ -443,6 +455,7 @@ const App: React.FC<AppProps> = ({ initialUser }) => {
                   onStartDailyChallenge={() => handleNavigate('daily_challenge')}
                   onNavigateToReport={() => handleNavigate('competence_report')}
                   onNavigate={handleNavigate}
+                  onChangeObjective={handleChangeObjectiveRequest}
                 />;
     }
   };
@@ -452,7 +465,13 @@ const App: React.FC<AppProps> = ({ initialUser }) => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#F8F7F4' }}>
-        {isObjectiveModalOpen && <ObjectiveOnboardingModal onSetObjective={handleSetObjective} />}
+        {isObjectiveModalOpen && (
+          <ObjectiveOnboardingModal 
+            onSetObjective={handleSetObjective} 
+            onClose={handleCloseObjectiveModal}
+            allowClose={isChangingObjective}
+          />
+        )}
         {showHeaderAndFooter && (
             <Header 
                 user={user} 

@@ -247,7 +247,7 @@ export const BADGES: Achievement[] = [
 export const MAIN_OBJECTIVES = [
   "Gestire il mio team in modo più efficace",
   "Negoziare con clienti difficili",
-  "Migliorare le mie relazioni personali",
+  "Migliorare le mie relazioni interpersonali",
   "Parlare in pubblico con più sicurezza"
 ];
 

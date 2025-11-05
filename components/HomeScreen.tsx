@@ -12,7 +12,7 @@ import { ProgressOverview } from './ProgressOverview';
 import { ProgressAnalytics } from './ProgressAnalytics';
 import { WarmUpCard } from './WarmUpCard';
 import { soundService } from '../services/soundService';
-import { LockIcon, CrownIcon } from './Icons';
+import { LockIcon, CrownIcon, EditIcon } from './Icons';
 import { homeScreenHeaderVideo, checkupMedia, dailyChallengeMedia } from '../assets';
 
 // Props for ModuleCard component
@@ -88,6 +88,7 @@ interface HomeScreenProps {
   onNavigateToReport: () => void;
   onStartDailyChallenge: () => void;
   onNavigate: (screen: string) => void;
+  onChangeObjective: () => void;
 }
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({
@@ -98,6 +99,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   onStartCheckup,
   onNavigateToReport,
   onStartDailyChallenge,
+  onChangeObjective,
 }) => {
     const isPro = hasProAccess(entitlements);
 
@@ -114,8 +116,15 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             const otherMods = MODULES.filter(m => !recommendedIds.includes(m.id));
             const objectiveAction = objective.split(' ')[0].toLowerCase().replace('\'', '');
             
+            let generatedSubtitle = `Oggi ci alleniamo per ${objectiveAction} ${objective.split(' ').slice(1).join(' ')}`;
+
+            // Change from first person ("mio", "mie") to second person ("tuo", "tue") for a more personal coaching tone.
+            generatedSubtitle = generatedSubtitle
+                .replace(' il mio ', ' il tuo ')
+                .replace(' le mie ', ' le tue ');
+
             return {
-                subtitle: `Oggi ci alleniamo per ${objectiveAction} ${objective.split(' ').slice(1).join(' ')}`,
+                subtitle: generatedSubtitle,
                 recommendedModules: recModules,
                 otherModules: otherMods,
             };
@@ -137,7 +146,15 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             {welcomeWord} in<br />
             CES Coach
           </h1>
-          <p style={styles.mainSubtitle}>{subtitle}</p>
+          <div style={styles.subtitleContainer}>
+            <p style={styles.mainSubtitle}>{subtitle}</p>
+            {progress?.mainObjective && (
+                <button onClick={onChangeObjective} style={styles.changeObjectiveButton}>
+                    <EditIcon width={16} height={16}/>
+                    Cambia
+                </button>
+            )}
+          </div>
         </div>
       </header>
       
@@ -243,16 +260,37 @@ const styles: { [key: string]: React.CSSProperties } = {
     textShadow: '0 2px 4px rgba(0,0,0,0.5)',
     lineHeight: 1.2,
   },
+  subtitleContainer: {
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: '12px',
+    flexWrap: 'wrap'
+  },
   mainSubtitle: {
     fontSize: 'clamp(1rem, 2.5vw, 1.25rem)',
     maxWidth: '600px',
-    margin: '0 auto',
+    margin: 0,
     opacity: 0.9,
     textShadow: '0 1px 3px rgba(0,0,0,0.5)'
   },
+  changeObjectiveButton: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    background: 'rgba(255, 255, 255, 0.2)',
+    border: '1px solid rgba(255, 255, 255, 0.4)',
+    color: 'white',
+    padding: '6px 12px',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    fontSize: '14px',
+    fontWeight: 500,
+    flexShrink: 0,
+  },
   mainContent: {
     maxWidth: '1200px',
-    margin: '-80px auto 40px',
+    margin: '-60px auto 40px',
     padding: '0 24px',
     position: 'relative',
     zIndex: 4,
