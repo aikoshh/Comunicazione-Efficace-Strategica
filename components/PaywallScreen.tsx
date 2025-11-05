@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import type { Product, Entitlements } from '../types';
+import type { Product, Entitlements, UserProfile } from '../types';
 import { PRODUCTS } from '../products';
 import { COLORS } from '../constants';
 import { CheckCircleIcon, BarChartIcon, VoiceIcon, LightbulbIcon, CrownIcon, InfoIcon } from './Icons';
@@ -7,8 +7,11 @@ import { soundService } from '../services/soundService';
 import { Spinner } from './Loader';
 import { risultatiProVideo, vantaggioRisultatiProVideo, feedbackParaverbaleVideo, librerieStrategicheVideo } from '../assets';
 import { mainLogoUrl } from '../assets';
+import { processAutomaticPurchase } from '../services/firebase';
+import { useToast } from '../hooks/useToast';
 
 interface PaywallScreenProps {
+  user: UserProfile;
   entitlements: Entitlements;
   onRestore: () => Promise<void>;
   onBack: () => void;
@@ -54,26 +57,34 @@ const MediaDisplay: React.FC<{ src: string; alt: string; style: React.CSSPropert
 };
 
 
-export const PaywallScreen: React.FC<PaywallScreenProps> = ({ entitlements, onRestore, onBack }) => {
+export const PaywallScreen: React.FC<PaywallScreenProps> = ({ user, entitlements, onRestore, onBack }) => {
     const [isLoading, setIsLoading] = useState<string | null>(null);
-    const [isPurchaseInitiated, setIsPurchaseInitiated] = useState(false);
+    const { addToast } = useToast();
 
-    const handlePurchase = (product: Product & { paymentLink?: string }) => {
+    const handlePurchase = async (product: Product & { paymentLink?: string }) => {
         soundService.playClick();
     
-        // NEW: Check for placeholder link to provide a better user experience.
         if (!product.paymentLink || product.paymentLink.includes('INSERISCI_QUI_IL_TUO_LINK_REALE')) {
-            alert(
-                "Errore di Configurazione Pagamento.\n\n" +
-                "Il link di pagamento non è stato ancora impostato nel file 'products.ts'.\n\n" +
-                "Per favore, crea un link di pagamento dal tuo pannello Stripe e sostituisci il placeholder nel codice."
-            );
-            console.error("Link di pagamento non configurato o placeholder non sostituito.");
+            alert("Errore di Configurazione Pagamento: link non impostato.");
             return;
         }
         
-        setIsPurchaseInitiated(true);
+        // Open Stripe checkout in a new tab
         window.open(product.paymentLink, '_blank');
+
+        setIsLoading(product.id);
+        addToast("Processando il tuo acquisto... L'app si aggiornerà automaticamente al completamento.", 'info');
+
+        try {
+            // Simulate the backend webhook process
+            await processAutomaticPurchase(user.uid, product.id);
+            // The real-time listener in App.tsx will handle the UI update.
+            addToast("Acquisto completato! Funzionalità PRO sbloccate.", 'success');
+        } catch (error) {
+            addToast("Si è verificato un errore durante l'attivazione. Riprova o contatta il supporto.", 'error');
+        } finally {
+            setIsLoading(null);
+        }
     };
     
     const handleRestore = async () => {
@@ -95,18 +106,6 @@ export const PaywallScreen: React.FC<PaywallScreenProps> = ({ entitlements, onRe
             </header>
 
             <main>
-                {isPurchaseInitiated && (
-                    <div style={styles.postPurchaseMessage}>
-                        <InfoIcon style={{color: COLORS.primary, width: 32, height: 32, flexShrink: 0}}/>
-                        <div>
-                            <h3 style={styles.postPurchaseTitle}>Attivazione in Corso!</h3>
-                            <p style={styles.postPurchaseText}>
-                                Hai aperto la pagina di pagamento. Una volta completato, il tuo pacchetto PRO verrà attivato manualmente entro 24 ore.
-                                Se riscontri problemi, contatta il supporto a <strong>cfs@centrocfs.it</strong>.
-                            </p>
-                        </div>
-                    </div>
-                )}
                 <section style={styles.featuresSection}>
                     {proFeatures.map((feature, index) => {
                         const FeatureIcon = feature.icon;
