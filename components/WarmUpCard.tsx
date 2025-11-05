@@ -4,6 +4,8 @@ import { COLORS, WARMUP_QUESTIONS } from '../constants';
 import { LightbulbIcon } from './Icons';
 import { soundService } from '../services/soundService';
 
+const PASTEL_COLORS = ['#E3F2FD', '#E8F5E9', '#FFF8E1'];
+
 export const WarmUpCard: React.FC = () => {
     const [questionIndex, setQuestionIndex] = useState(() => Math.floor(Math.random() * WARMUP_QUESTIONS.length));
     const [selectedAnswerIndex, setSelectedAnswerIndex] = useState<number | null>(null);
@@ -46,18 +48,22 @@ export const WarmUpCard: React.FC = () => {
     };
 
     const getButtonStyle = (index: number): React.CSSProperties => {
-        // Before answering, all buttons have the same style.
+        const baseStyle = {
+            ...styles.optionButton,
+            backgroundColor: PASTEL_COLORS[index % PASTEL_COLORS.length],
+        };
+
         if (!isAnswered) {
-            return styles.optionButton;
+            return baseStyle;
         }
-        // After answering, apply different styles based on correctness.
+        
         if (index === currentQuestionData.correctAnswerIndex) {
-            return { ...styles.optionButton, ...styles.correctAnswer };
+            return { ...baseStyle, ...styles.correctAnswer };
         }
         if (index === selectedAnswerIndex) {
-            return { ...styles.optionButton, ...styles.incorrectAnswer };
+            return { ...baseStyle, ...styles.incorrectAnswer };
         }
-        return { ...styles.optionButton, ...styles.disabledAnswer };
+        return { ...baseStyle, ...styles.disabledAnswer };
     };
 
     return (
@@ -123,7 +129,6 @@ const styles: { [key: string]: React.CSSProperties } = {
         padding: '14px',
         fontSize: '15px',
         textAlign: 'left',
-        backgroundColor: COLORS.cardDark,
         border: `1px solid ${COLORS.divider}`,
         borderRadius: '8px',
         cursor: 'pointer',
