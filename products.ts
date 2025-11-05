@@ -37,5 +37,5 @@ export const COACHING_PRODUCT: Product = {
     ],
     category: 'Coaching',
     // IMPORTANTE: Sostituire con il link di pagamento Stripe reale per questo prodotto.
-    paymentLink: 'https://buy.stripe.com/8x2eV69Bt3OugnC9LG1wY01'
+    paymentLink: 'https://buy.stripe.com/6oUdR2aFx98O7R68HC1wY02'
 };
