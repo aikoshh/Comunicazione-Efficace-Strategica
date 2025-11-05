@@ -166,6 +166,7 @@ export interface Product {
     type: 'non-consumable' | 'subscription';
     name: string;
     price: string;
+    discountedFrom?: string;
     description: string;
     benefits: string[];
     category: string;

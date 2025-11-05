@@ -14,6 +14,8 @@ import { WarmUpCard } from './WarmUpCard';
 import { soundService } from '../services/soundService';
 import { LockIcon, CrownIcon, EditIcon } from './Icons';
 import { homeScreenHeaderVideo, checkupMedia, dailyChallengeMedia } from '../assets';
+import { CoachingUpsellCard } from './CoachingUpsellCard';
+import { COACHING_PRODUCT } from '../products';
 
 // Props for ModuleCard component
 interface ModuleCardProps {
@@ -99,12 +101,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   onStartCheckup,
   onNavigateToReport,
   onStartDailyChallenge,
-  onChangeObjective,
+  onChangeObjective
 }) => {
     const isPro = hasProAccess(entitlements);
 
     const firstName = user.firstName.trim().toLowerCase();
-    // Heuristic for Italian names to determine gender. Not perfect but a good approximation.
     const isLikelyFemale = firstName.endsWith('a') && !['andrea', 'luca', 'nicola', 'elia', 'mattia'].includes(firstName);
     const welcomeWord = isLikelyFemale ? "Benvenuta" : "Benvenuto";
 
@@ -114,17 +115,23 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             const recommendedIds = OBJECTIVE_MODULE_MAP[objective] || [];
             const recModules = MODULES.filter(m => recommendedIds.includes(m.id));
             const otherMods = MODULES.filter(m => !recommendedIds.includes(m.id));
-            const objectiveAction = objective.split(' ')[0].toLowerCase().replace('\'', '');
             
-            let generatedSubtitle = `Oggi ci alleniamo per ${objectiveAction} ${objective.split(' ').slice(1).join(' ')}`;
+            const personalObjective = objective
+                .replace('le mie', 'le tue')
+                .replace('il mio', 'il tuo');
 
-            // Change from first person ("mio", "mie") to second person ("tuo", "tue") for a more personal coaching tone.
-            generatedSubtitle = generatedSubtitle
-                .replace(' il mio ', ' il tuo ')
-                .replace(' le mie ', ' le tue ');
-
+            const generatedSubtitle = `Oggi ci alleniamo per ${personalObjective.charAt(0).toLowerCase() + personalObjective.slice(1)}`;
+            
             return {
-                subtitle: generatedSubtitle,
+                subtitle: (
+                    <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                        {generatedSubtitle}
+                        <button onClick={onChangeObjective} style={styles.changeObjectiveButton} title="Cambia obiettivo">
+                            <EditIcon width={14} height={14}/>
+                            <span>Cambia Obiettivo</span>
+                        </button>
+                    </span>
+                ),
                 recommendedModules: recModules,
                 otherModules: otherMods,
             };
@@ -134,7 +141,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             recommendedModules: [],
             otherModules: MODULES,
         };
-    }, [progress?.mainObjective]);
+    }, [progress?.mainObjective, onChangeObjective]);
     
   return (
     <div style={styles.container}>
@@ -146,22 +153,16 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             {welcomeWord} in<br />
             CES Coach
           </h1>
-          <div style={styles.subtitleContainer}>
-            <p style={styles.mainSubtitle}>{subtitle}</p>
-            {progress?.mainObjective && (
-                <button onClick={onChangeObjective} style={styles.changeObjectiveButton}>
-                    <EditIcon width={16} height={16}/>
-                    Cambia
-                </button>
-            )}
-          </div>
+          <p style={styles.mainSubtitle}>{subtitle}</p>
         </div>
       </header>
       
-      <main style={styles.mainContent}>
+      <main style={{...styles.mainContent, marginTop: '-60px'}}>
         <ProgressOverview user={user} progress={progress} />
         
         <WarmUpCard />
+
+        <CoachingUpsellCard product={COACHING_PRODUCT} />
         
         {progress && (
           <ProgressAnalytics 
@@ -260,37 +261,29 @@ const styles: { [key: string]: React.CSSProperties } = {
     textShadow: '0 2px 4px rgba(0,0,0,0.5)',
     lineHeight: 1.2,
   },
-  subtitleContainer: {
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: '12px',
-    flexWrap: 'wrap'
-  },
   mainSubtitle: {
     fontSize: 'clamp(1rem, 2.5vw, 1.25rem)',
     maxWidth: '600px',
-    margin: 0,
+    margin: '0 auto',
     opacity: 0.9,
-    textShadow: '0 1px 3px rgba(0,0,0,0.5)'
+    textShadow: '0 1px 3px rgba(0,0,0,0.5)',
   },
   changeObjectiveButton: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '6px',
-    background: 'rgba(255, 255, 255, 0.2)',
-    border: '1px solid rgba(255, 255, 255, 0.4)',
-    color: 'white',
-    padding: '6px 12px',
-    borderRadius: '8px',
-    cursor: 'pointer',
-    fontSize: '14px',
-    fontWeight: 500,
-    flexShrink: 0,
+      background: 'rgba(255,255,255,0.15)',
+      border: '1px solid rgba(255,255,255,0.3)',
+      borderRadius: '20px',
+      padding: '6px 12px',
+      color: 'white',
+      cursor: 'pointer',
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: '6px',
+      fontSize: '14px',
+      transition: 'background-color 0.2s ease',
   },
   mainContent: {
     maxWidth: '1200px',
-    margin: '-60px auto 40px',
+    margin: '-80px auto 40px',
     padding: '0 24px',
     position: 'relative',
     zIndex: 4,
@@ -316,14 +309,14 @@ const styles: { [key: string]: React.CSSProperties } = {
     boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
     border: `1px solid ${COLORS.divider}`,
     cursor: 'pointer',
-    transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+    transition: 'transform 0.3s cubic-bezier(0.25, 1, 0.5, 1), box-shadow 0.3s cubic-bezier(0.25, 1, 0.5, 1)',
   },
   moduleCardHover: {
-    transform: 'scale(1.03)',
-    boxShadow: '0 8px 25px rgba(0, 0, 0, 0.1)',
+    transform: 'translateY(-5px)',
+    boxShadow: '0 12px 28px rgba(0, 0, 0, 0.1)',
   },
   moduleCardLocked: {
-      cursor: 'pointer' // Or 'not-allowed' if we want to block it more obviously
+      cursor: 'pointer'
   },
   cardImageContainer: {
     position: 'relative',

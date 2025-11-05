@@ -1,3 +1,4 @@
+// components/ObjectiveOnboardingModal.tsx
 import React, { useState } from 'react';
 import { COLORS, MAIN_OBJECTIVES } from '../constants';
 import { TargetIcon, CloseIcon } from './Icons';
@@ -33,9 +34,9 @@ export const ObjectiveOnboardingModal: React.FC<ObjectiveOnboardingModalProps> =
     <div style={styles.overlay}>
       <div style={styles.modal} role="dialog" aria-modal="true" aria-labelledby="objective-title">
         {allowClose && (
-            <button onClick={handleClose} style={styles.closeButton} aria-label="Chiudi modale">
-              <CloseIcon />
-            </button>
+          <button onClick={handleClose} style={styles.closeButton} aria-label="Chiudi">
+            <CloseIcon />
+          </button>
         )}
         <header style={styles.header}>
           <TargetIcon style={styles.headerIcon} />

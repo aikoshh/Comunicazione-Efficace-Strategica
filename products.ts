@@ -21,3 +21,21 @@ export const PRODUCTS: Product[] = [
     paymentLink: 'https://buy.stripe.com/00w3coaFxbgWgnC9LG1wY00'
   },
 ];
+
+export const COACHING_PRODUCT: Product = {
+    id: 'ces.coaching.single',
+    type: 'non-consumable',
+    name: 'Sessione Live Coaching con Ivano Cincinnato',
+    price: '€79',
+    discountedFrom: '€149',
+    description: 'Una sessione individuale di 30 minuti con il Prof. Ivano Cincinnato per un allenamento guidato e personalizzato.',
+    benefits: [
+        "Analisi live della tua sfida comunicativa",
+        "Feedback diretto e personalizzato",
+        "Strategie pratiche da applicare subito",
+        "Registrazione della sessione (su richiesta)"
+    ],
+    category: 'Coaching',
+    // IMPORTANTE: Sostituire con il link di pagamento Stripe reale per questo prodotto.
+    paymentLink: 'https://buy.stripe.com/8x2eV69Bt3OugnC9LG1wY01'
+};

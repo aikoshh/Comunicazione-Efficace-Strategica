@@ -68,7 +68,6 @@ const App: React.FC<AppProps> = ({ initialUser }) => {
   const [apiKeyErrorMessage, setApiKeyErrorMessage] = useState('');
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [isObjectiveModalOpen, setIsObjectiveModalOpen] = useState(false);
-  const [isChangingObjective, setIsChangingObjective] = useState(false);
 
 
   const { addToast } = useToast();
@@ -101,7 +100,6 @@ const App: React.FC<AppProps> = ({ initialUser }) => {
                 setProgress(finalProgress);
                 if (!finalProgress.mainObjective) {
                     setIsObjectiveModalOpen(true);
-                    setIsChangingObjective(false);
                 }
             })
             .catch(error => {
@@ -310,16 +308,12 @@ const App: React.FC<AppProps> = ({ initialUser }) => {
     await databaseService.saveUserProgress(user.uid, updatedProgress);
     addToast('Obiettivo impostato! La tua dashboard è ora personalizzata.', 'success');
   }, [user, progress, addToast]);
-
-  const handleChangeObjectiveRequest = () => {
-    setIsObjectiveModalOpen(true);
-    setIsChangingObjective(true);
-  };
-
-  const handleCloseObjectiveModal = () => {
-    setIsObjectiveModalOpen(false);
-  };
   
+  // FIX: Add handler for changing the objective.
+  const handleChangeObjective = useCallback(() => {
+    setIsObjectiveModalOpen(true);
+  }, []);
+
   const findNextExercise = (): { label: string; action: () => void } => {
     if (!selectedModule || !selectedExercise || selectedModule.isCustom) {
         return { label: 'Torna alla Home', action: () => handleNavigate('home') };
@@ -379,124 +373,141 @@ const App: React.FC<AppProps> = ({ initialUser }) => {
 
     switch (currentScreen) {
       case 'home':
-        return <HomeScreen 
-                  user={user} 
-                  progress={progress} 
-                  entitlements={entitlements}
-                  onSelectModule={handleSelectModule} 
-                  onStartCheckup={() => handleNavigate('checkup')}
-                  onStartDailyChallenge={() => handleNavigate('daily_challenge')}
-                  onNavigateToReport={() => handleNavigate('competence_report')}
-                  onNavigate={handleNavigate}
-                  onChangeObjective={handleChangeObjectiveRequest}
-                />;
+        return (
+          <HomeScreen
+            user={user}
+            progress={progress}
+            entitlements={entitlements}
+            onSelectModule={handleSelectModule}
+            onStartCheckup={() => handleNavigate('checkup')}
+            onNavigateToReport={() => handleNavigate('competence_report')}
+            onStartDailyChallenge={() => handleNavigate('daily_challenge')}
+            onNavigate={handleNavigate}
+            onChangeObjective={handleChangeObjective}
+          />
+        );
       case 'module':
-        return selectedModule && <ModuleScreen 
-                                    module={selectedModule} 
-                                    moduleColor={selectedModule.color}
-                                    onSelectExercise={handleSelectExercise} 
-                                    onReviewExercise={handleReviewExercise}
-                                    completedExerciseIds={progress?.completedExerciseIds || []}
-                                    entitlements={entitlements}
-                                    analysisHistory={progress?.analysisHistory || {}}
-                                />;
+        if (!selectedModule) return <HomeScreen user={user} progress={progress} entitlements={entitlements} onSelectModule={handleSelectModule} onStartCheckup={() => handleNavigate('checkup')} onNavigateToReport={() => handleNavigate('competence_report')} onStartDailyChallenge={() => handleNavigate('daily_challenge')} onNavigate={handleNavigate} onChangeObjective={handleChangeObjective} />;
+        return (
+          <ModuleScreen
+            module={selectedModule}
+            moduleColor={selectedModule.color}
+            onSelectExercise={handleSelectExercise}
+            onReviewExercise={handleReviewExercise}
+            completedExerciseIds={progress?.completedExerciseIds || []}
+            entitlements={entitlements}
+            analysisHistory={progress?.analysisHistory || {}}
+          />
+        );
       case 'exercise':
-        return selectedExercise && selectedModule && 
-               <ExerciseScreen 
-                 exercise={selectedExercise} 
-                 moduleColor={selectedModule.color}
-                 onComplete={handleExerciseComplete}
-                 entitlements={entitlements}
-                 analysisHistory={progress?.analysisHistory || {}}
-                 onApiKeyError={handleApiKeyError}
-               />;
+        if (!selectedExercise) return <HomeScreen user={user} progress={progress} entitlements={entitlements} onSelectModule={handleSelectModule} onStartCheckup={() => handleNavigate('checkup')} onNavigateToReport={() => handleNavigate('competence_report')} onStartDailyChallenge={() => handleNavigate('daily_challenge')} onNavigate={handleNavigate} onChangeObjective={handleChangeObjective} />;
+        return (
+          <ExerciseScreen
+            exercise={selectedExercise}
+            moduleColor={selectedModule?.color || '#000'}
+            onComplete={handleExerciseComplete}
+            entitlements={entitlements}
+            analysisHistory={progress?.analysisHistory || {}}
+            onApiKeyError={handleApiKeyError}
+          />
+        );
       case 'custom_setup':
-          return selectedModule && <CustomSetupScreen 
-                                      module={selectedModule} 
-                                      onStart={(scenario, task) => {
-                                        const customExercise: Exercise = {
-                                            id: `custom-${Date.now()}`,
-                                            title: 'Esercizio Personalizzato',
-                                            scenario,
-                                            task,
-                                            difficulty: 'Medio',
-                                            competence: 'riformulazione',
-                                            exerciseType: ExerciseType.WRITTEN,
-                                        };
-                                        handleSelectExercise(customExercise);
-                                      }}
-                                      onBack={handleBack}
-                                      onApiKeyError={handleApiKeyError}
-                                  />;
-      case 'chat_trainer':
-          // FIX: Corrected a typo from 'entitlelezione nts' to 'entitlements'.
-          return <StrategicChatTrainerScreen user={user} isPro={hasProAccess(entitlements)} onApiKeyError={handleApiKeyError} />
+        const customModule = MODULES.find(m => m.id === 'm6');
+        if (!customModule) return null;
+        return <CustomSetupScreen 
+          module={customModule} 
+          onStart={(scenario, task) => {
+            const customExercise: Exercise = {
+              id: `custom_${Date.now()}`,
+              title: 'Esercizio Personalizzato',
+              scenario: scenario,
+              task: task,
+              difficulty: 'Medio',
+              competence: 'riformulazione',
+            };
+            handleSelectExercise(customExercise);
+          }}
+          onBack={handleBack}
+          onApiKeyError={handleApiKeyError}
+        />;
       case 'checkup':
-          return <StrategicCheckupScreen onComplete={handleCheckupComplete} entitlements={entitlements} onApiKeyError={handleApiKeyError} />;
+        return <StrategicCheckupScreen onComplete={handleCheckupComplete} entitlements={entitlements} onApiKeyError={handleApiKeyError} />;
       case 'profile_results':
-          return <CommunicatorProfileScreen profile={communicatorProfile!} onContinue={() => handleNavigate('home')} />;
-      case 'daily_challenge':
-          return <DailyChallengeScreen 
-                      userProgress={progress!}
-                      onComplete={(result, userResponse, exercise) => handleExerciseComplete(result, userResponse, exercise, 'written')} 
-                      entitlements={entitlements}
-                      analysisHistory={progress?.analysisHistory || {}}
-                      onApiKeyError={handleApiKeyError}
-                      onBack={handleBack}
-                  />;
+        return <CommunicatorProfileScreen profile={communicatorProfile || progress?.checkupProfile} onContinue={() => handleNavigate('home')} />;
       case 'admin':
-          return user.isAdmin ? <AdminScreen /> : <HomeScreen user={user} progress={progress} entitlements={entitlements} onSelectModule={handleSelectModule} onStartCheckup={() => handleNavigate('checkup')} onStartDailyChallenge={() => handleNavigate('daily_challenge')} onNavigateToReport={() => handleNavigate('competence_report')} onNavigate={handleNavigate} onChangeObjective={handleChangeObjectiveRequest}/>;
+        return user.isAdmin ? <AdminScreen /> : <HomeScreen user={user} progress={progress} entitlements={entitlements} onSelectModule={handleSelectModule} onStartCheckup={() => handleNavigate('checkup')} onNavigateToReport={() => handleNavigate('competence_report')} onStartDailyChallenge={() => handleNavigate('daily_challenge')} onNavigate={handleNavigate} onChangeObjective={handleChangeObjective} />;
       case 'paywall':
-          return <PaywallScreen user={user} entitlements={entitlements!} onRestore={handleRestore} onBack={handleBack} />;
+        return <PaywallScreen user={user} entitlements={entitlements!} onRestore={handleRestore} onBack={handleBack} />;
+      case 'daily_challenge':
+        return <DailyChallengeScreen 
+          userProgress={progress!}
+          onComplete={(result, userResponse, exercise) => handleExerciseComplete(result as AnalysisResult, userResponse, exercise, 'written')} 
+          entitlements={entitlements}
+          analysisHistory={progress?.analysisHistory || {}}
+          onApiKeyError={handleApiKeyError}
+          onBack={handleBack}
+        />;
       case 'competence_report':
-          return progress && <CompetenceReportScreen userProgress={progress} onBack={handleBack} onSelectExercise={handleSelectExercise} />;
+        return <CompetenceReportScreen 
+          userProgress={progress!} 
+          onBack={handleBack}
+          onSelectExercise={handleSelectExercise}
+        />;
       case 'achievements':
-          return progress && <AchievementsScreen progress={progress} />;
+        return <AchievementsScreen progress={progress!} />;
       case 'levels':
-          return <LevelsScreen />;
+        return <LevelsScreen />;
+      case 'chat_trainer':
+        return <StrategicChatTrainerScreen 
+          user={user} 
+          isPro={hasProAccess(entitlements)} 
+          onApiKeyError={handleApiKeyError}
+        />;
       default:
-        return <HomeScreen 
-                  user={user} 
-                  progress={progress} 
-                  entitlements={entitlements}
-                  onSelectModule={handleSelectModule} 
-                  onStartCheckup={() => handleNavigate('checkup')}
-                  onStartDailyChallenge={() => handleNavigate('daily_challenge')}
-                  onNavigateToReport={() => handleNavigate('competence_report')}
-                  onNavigate={handleNavigate}
-                  onChangeObjective={handleChangeObjectiveRequest}
-                />;
+        return (
+          <HomeScreen
+            user={user}
+            progress={progress}
+            entitlements={entitlements}
+            onSelectModule={handleSelectModule}
+            onStartCheckup={() => handleNavigate('checkup')}
+            onNavigateToReport={() => handleNavigate('competence_report')}
+            onStartDailyChallenge={() => handleNavigate('daily_challenge')}
+            onNavigate={handleNavigate}
+            onChangeObjective={handleChangeObjective}
+          />
+        );
     }
-  };
-  
-  const showHeaderAndFooter = !['login', 'preloading', 'api_error'].includes(currentScreen);
-  const showBack = currentScreen !== 'home';
+  }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#F8F7F4' }}>
-        {isObjectiveModalOpen && (
-          <ObjectiveOnboardingModal 
-            onSetObjective={handleSetObjective} 
-            onClose={handleCloseObjectiveModal}
-            allowClose={isChangingObjective}
-          />
-        )}
-        {showHeaderAndFooter && (
-            <Header 
-                user={user} 
-                onLogout={handleLogout} 
-                onNavigate={handleNavigate}
-                showBack={showBack}
-                onBack={handleBack}
-                currentModule={currentScreen === 'exercise' || currentScreen === 'module' ? selectedModule : null}
-                onReportProblem={() => setIsReportModalOpen(true)}
-            />
-        )}
-        <main style={{ flex: 1, paddingTop: showHeaderAndFooter ? '64px' : '0' }}>
-            {renderScreen()}
-        </main>
-        {showHeaderAndFooter && (currentScreen === 'home' || currentScreen === 'admin') && <Footer />}
-        <ReportProblemModal isOpen={isReportModalOpen} onClose={() => setIsReportModalOpen(false)} user={user} />
+    <div style={{ paddingTop: '64px' }}>
+      <Header
+        user={user}
+        onLogout={handleLogout}
+        onNavigate={handleNavigate}
+        showBack={currentScreen !== 'home'}
+        onBack={handleBack}
+        currentModule={selectedModule}
+        onReportProblem={() => setIsReportModalOpen(true)}
+        entitlements={entitlements}
+      />
+      
+      {isObjectiveModalOpen && (
+        <ObjectiveOnboardingModal
+          onSetObjective={handleSetObjective}
+          onClose={() => setIsObjectiveModalOpen(false)}
+          allowClose={!!progress?.mainObjective}
+        />
+      )}
+      
+      <main>
+        {renderScreen()}
+      </main>
+
+      {currentScreen === 'home' || currentScreen === 'admin' ? <Footer /> : null}
+
+      <ReportProblemModal isOpen={isReportModalOpen} onClose={() => setIsReportModalOpen(false)} user={user} />
     </div>
   );
 };

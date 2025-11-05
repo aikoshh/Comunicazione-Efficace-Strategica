@@ -1,31 +1,14 @@
 // components/WarmUpCard.tsx
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { COLORS, WARMUP_QUESTIONS } from '../constants';
 import { LightbulbIcon } from './Icons';
 import { soundService } from '../services/soundService';
-
-const PASTEL_COLORS = ['#E3F2FD', '#E8F5E9', '#FFF8E1'];
 
 export const WarmUpCard: React.FC = () => {
     const [questionIndex, setQuestionIndex] = useState(() => Math.floor(Math.random() * WARMUP_QUESTIONS.length));
     const [selectedAnswerIndex, setSelectedAnswerIndex] = useState<number | null>(null);
     const [isAnswered, setIsAnswered] = useState(false);
-
-    // Shuffle options and find new correct index for the current question
-    const currentQuestionData = useMemo(() => {
-        const originalQuestion = WARMUP_QUESTIONS[questionIndex];
-        const originalCorrectAnswer = originalQuestion.options[originalQuestion.correctAnswerIndex];
-
-        // Create a shallow copy and shuffle it
-        const shuffledOptions = [...originalQuestion.options].sort(() => Math.random() - 0.5);
-        const newCorrectIndex = shuffledOptions.indexOf(originalCorrectAnswer);
-
-        return {
-            ...originalQuestion,
-            options: shuffledOptions,
-            correctAnswerIndex: newCorrectIndex,
-        };
-    }, [questionIndex]);
+    const currentQuestion = WARMUP_QUESTIONS[questionIndex];
 
     const handleAnswerSelect = (index: number) => {
         if (isAnswered) return;
@@ -33,7 +16,7 @@ export const WarmUpCard: React.FC = () => {
         setIsAnswered(true);
         setSelectedAnswerIndex(index);
         
-        if (index === currentQuestionData.correctAnswerIndex) {
+        if (index === currentQuestion.correctAnswerIndex) {
             soundService.playSuccess();
         } else {
             soundService.playScoreSound(20); // Fail sound
@@ -48,16 +31,12 @@ export const WarmUpCard: React.FC = () => {
     };
 
     const getButtonStyle = (index: number): React.CSSProperties => {
-        const baseStyle = {
-            ...styles.optionButton,
-            backgroundColor: PASTEL_COLORS[index % PASTEL_COLORS.length],
-        };
-
+        const baseStyle = styles.optionButton;
         if (!isAnswered) {
             return baseStyle;
         }
         
-        if (index === currentQuestionData.correctAnswerIndex) {
+        if (index === currentQuestion.correctAnswerIndex) {
             return { ...baseStyle, ...styles.correctAnswer };
         }
         if (index === selectedAnswerIndex) {
@@ -69,9 +48,9 @@ export const WarmUpCard: React.FC = () => {
     return (
         <div style={styles.container}>
             <h3 style={styles.title}><LightbulbIcon /> Warm-Up da 1 Minuto</h3>
-            <p style={styles.questionText}>{currentQuestionData.question}</p>
+            <p style={styles.questionText}>{currentQuestion.question}</p>
             <div style={styles.optionsContainer}>
-                {currentQuestionData.options.map((option, index) => (
+                {currentQuestion.options.map((option, index) => (
                     <button
                         key={index}
                         style={getButtonStyle(index)}
@@ -84,7 +63,7 @@ export const WarmUpCard: React.FC = () => {
             </div>
             {isAnswered && (
                 <div style={styles.explanationContainer}>
-                    <p style={styles.explanationText}>{currentQuestionData.explanation}</p>
+                    <p style={styles.explanationText}>{currentQuestion.explanation}</p>
                     <button style={styles.nextButton} onClick={handleNextQuestion}>
                         Prossima Domanda
                     </button>
@@ -133,6 +112,7 @@ const styles: { [key: string]: React.CSSProperties } = {
         borderRadius: '8px',
         cursor: 'pointer',
         transition: 'all 0.2s ease',
+        backgroundColor: COLORS.cardDark,
         color: COLORS.textPrimary,
     },
     correctAnswer: {
@@ -154,9 +134,9 @@ const styles: { [key: string]: React.CSSProperties } = {
     explanationContainer: {
         marginTop: '20px',
         padding: '16px',
-        backgroundColor: '#FFF3E0', // Light pastel orange
+        backgroundColor: '#E3F2FD',
         borderRadius: '8px',
-        border: `1px solid ${COLORS.warning}`, // Orange border
+        border: `1px solid ${COLORS.secondary}`,
         animation: 'fadeIn 0.3s ease-out'
     },
     explanationText: {

@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { UserProfile, Module } from '../types';
+import { UserProfile, Module, Entitlements } from '../types';
 import { COLORS } from '../constants';
 import { LogOutIcon, AdminIcon, TargetIcon, BarChartIcon, CheckCircleIcon, SettingsIcon, CrownIcon, BackIcon, HomeIcon, WarningIcon } from './Icons';
 import { Logo } from './Logo';
 import { soundService } from '../services/soundService';
 import { subscribeToUnreadReportsCount } from '../services/firebase';
+import { hasProAccess } from '../services/monetizationService';
 
 type Screen = 'home' | 'paywall' | 'admin' | 'achievements' | 'competence_report' | 'levels';
 
@@ -16,13 +17,16 @@ interface HeaderProps {
     onBack: () => void;
     currentModule: Module | null;
     onReportProblem: () => void;
+    entitlements: Entitlements | null;
 }
 
-export const Header: React.FC<HeaderProps> = ({ user, onLogout, onNavigate, showBack, onBack, currentModule, onReportProblem }) => {
+export const Header: React.FC<HeaderProps> = ({ user, onLogout, onNavigate, showBack, onBack, currentModule, onReportProblem, entitlements }) => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [unreadReportsCount, setUnreadReportsCount] = useState(0);
     const menuRef = useRef<HTMLDivElement>(null);
     const buttonRef = useRef<HTMLButtonElement>(null);
+
+    const isPro = hasProAccess(entitlements);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -120,7 +124,16 @@ export const Header: React.FC<HeaderProps> = ({ user, onLogout, onNavigate, show
                             <a onClick={() => handleNavigation('achievements')} style={styles.dropdownItem}><TargetIcon /> Traguardi</a>
                             <a onClick={() => handleNavigation('competence_report')} style={styles.dropdownItem}><BarChartIcon /> Report Competenze</a>
                             <a onClick={() => handleNavigation('levels')} style={styles.dropdownItem}><CheckCircleIcon /> Livelli</a>
-                             <a onClick={() => handleNavigation('paywall')} style={styles.dropdownItemPro}><CrownIcon /> Passa a PRO</a>
+                             {isPro ? (
+                                <div style={styles.dropdownItemActive}>
+                                    <CheckCircleIcon style={{ color: COLORS.success }} />
+                                    <span>Versione PRO Attiva</span>
+                                </div>
+                            ) : (
+                                <a onClick={() => handleNavigation('paywall')} style={styles.dropdownItemPro}>
+                                    <CrownIcon /> Passa a PRO
+                                </a>
+                            )}
                             {user.isAdmin && (
                                 <>
                                     <div style={styles.dropdownDivider} />
@@ -255,6 +268,16 @@ const styles: { [key: string]: React.CSSProperties } = {
         cursor: 'pointer',
         backgroundColor: '#FFFBEA',
         fontWeight: 'bold',
+    },
+    dropdownItemActive: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '12px',
+        padding: '12px 16px',
+        fontSize: '15px',
+        color: COLORS.success,
+        fontWeight: 'bold',
+        backgroundColor: '#E8F5E9',
     },
     notificationBadge: {
         backgroundColor: COLORS.error,
