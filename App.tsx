@@ -36,6 +36,7 @@ import { FullScreenLoader } from './components/Loader';
 import { ApiKeyErrorScreen } from './components/ApiKeyErrorScreen';
 import { ReportProblemModal } from './components/ReportProblemModal';
 import { PreloadingScreen } from './components/PreloadingScreen';
+import { ObjectiveOnboardingModal } from './components/ObjectiveOnboardingModal';
 
 import { logout, databaseService } from './services/firebase';
 import { getUserEntitlements, restorePurchases, hasProAccess } from './services/monetizationService';
@@ -65,6 +66,8 @@ const App: React.FC<AppProps> = ({ initialUser }) => {
   const [isApiKeyError, setIsApiKeyError] = useState(false);
   const [apiKeyErrorMessage, setApiKeyErrorMessage] = useState('');
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [isObjectiveModalOpen, setIsObjectiveModalOpen] = useState(false);
+
 
   const { addToast } = useToast();
 
@@ -94,8 +97,13 @@ const App: React.FC<AppProps> = ({ initialUser }) => {
             databaseService.getUserProgress(initialUser.uid),
             getUserEntitlements(initialUser),
           ]);
-          setProgress(userProgress || gamificationService.getInitialProgress());
+          const finalProgress = userProgress || gamificationService.getInitialProgress();
+          setProgress(finalProgress);
           setEntitlements(userEntitlements);
+          
+          if (!finalProgress.mainObjective) {
+            setIsObjectiveModalOpen(true);
+          }
           
           // State persistence: Try to restore state after data is loaded
           try {
@@ -281,6 +289,16 @@ const App: React.FC<AppProps> = ({ initialUser }) => {
       setCommunicatorProfile(profile);
       setCurrentScreen('profile_results');
   }, [user, progress, addToast]);
+
+  const handleSetObjective = useCallback(async (objective: string) => {
+    if (!user || !progress) return;
+
+    const updatedProgress = { ...progress, mainObjective: objective };
+    setProgress(updatedProgress);
+    setIsObjectiveModalOpen(false);
+    await databaseService.saveUserProgress(user.uid, updatedProgress);
+    addToast('Obiettivo impostato! La tua dashboard è ora personalizzata.', 'success');
+  }, [user, progress, addToast]);
   
   const findNextExercise = (): { label: string; action: () => void } => {
     if (!selectedModule || !selectedExercise || selectedModule.isCustom) {
@@ -398,6 +416,7 @@ const App: React.FC<AppProps> = ({ initialUser }) => {
           return <CommunicatorProfileScreen profile={communicatorProfile!} onContinue={() => handleNavigate('home')} />;
       case 'daily_challenge':
           return <DailyChallengeScreen 
+                      userProgress={progress!}
                       onComplete={(result, userResponse, exercise) => handleExerciseComplete(result, userResponse, exercise, 'written')} 
                       entitlements={entitlements}
                       analysisHistory={progress?.analysisHistory || {}}
@@ -433,6 +452,7 @@ const App: React.FC<AppProps> = ({ initialUser }) => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#F8F7F4' }}>
+        {isObjectiveModalOpen && <ObjectiveOnboardingModal onSetObjective={handleSetObjective} />}
         {showHeaderAndFooter && (
             <Header 
                 user={user} 

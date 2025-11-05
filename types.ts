@@ -52,6 +52,7 @@ export interface Exercise {
   difficulty: 'Facile' | 'Medio' | 'Difficile';
   competence: CompetenceKey;
   exerciseType?: ExerciseType;
+  category?: 'team_management' | 'negotiation' | 'relationships' | 'public_speaking' | 'general';
 }
 
 export interface Module {
@@ -135,6 +136,7 @@ export interface UserProgress {
     [exerciseId: string]: AnalysisHistoryItem;
   };
   checkupProfile?: CommunicatorProfile;
+  mainObjective?: string;
   // Gamification
   xp: number;
   level: number;

@@ -241,3 +241,93 @@ export const BADGES: Achievement[] = [
   },
   // Add more badges here
 ];
+
+// --- HYPER-PERSONALIZATION CONSTANTS ---
+
+export const MAIN_OBJECTIVES = [
+  "Gestire il mio team in modo più efficace",
+  "Negoziare con clienti difficili",
+  "Migliorare le mie relazioni personali",
+  "Parlare in pubblico con più sicurezza"
+];
+
+export const OBJECTIVE_CATEGORY_MAP: { [key: string]: Exercise['category'] } = {
+  [MAIN_OBJECTIVES[0]]: 'team_management',
+  [MAIN_OBJECTIVES[1]]: 'negotiation',
+  [MAIN_OBJECTIVES[2]]: 'relationships',
+  [MAIN_OBJECTIVES[3]]: 'public_speaking',
+};
+
+export const OBJECTIVE_MODULE_MAP: { [key: string]: string[] } = {
+  [MAIN_OBJECTIVES[0]]: ['m1', 'm2'], // Feedback, Conversazioni Difficili
+  [MAIN_OBJECTIVES[1]]: ['m2', 'm3'], // Conversazioni Difficili, Domande
+  [MAIN_OBJECTIVES[2]]: ['m4', 'm2'], // Ascolto, Conversazioni Difficili
+  [MAIN_OBJECTIVES[3]]: ['m5'],       // Voce Strategica
+};
+
+
+export const DAILY_CHALLENGES: Exercise[] = [
+    {
+      id: 'daily-1', title: 'Negoziare una Scadenza',
+      scenario: 'Un cliente importante ti chiede di anticipare la consegna di un progetto di una settimana, ma sai che questo metterebbe a rischio la qualità e stresserebbe il team.',
+      task: 'Scrivi un\'email al cliente per negoziare una scadenza realistica, mantenendo un rapporto positivo e mostrando comprensione per la sua richiesta.',
+      difficulty: 'Medio', competence: 'assertivita', category: 'negotiation',
+    },
+    {
+      id: 'daily-2', title: 'Gestire un Feedback Inaspettato',
+      scenario: 'Durante una riunione, il tuo manager critica pubblicamente un aspetto del tuo lavoro su cui eri convinto di aver fatto bene. Ti senti sorpreso e un po\' demotivato.',
+      task: 'Come rispondi sul momento per gestire la situazione professionalmente e chiedere un chiarimento in privato?',
+      difficulty: 'Difficile', competence: 'gestione_conflitto', category: 'team_management',
+    },
+     {
+      id: 'daily-3', title: 'Presentare un\'Idea Innovativa',
+      scenario: 'Hai un\'idea per un nuovo processo che potrebbe far risparmiare tempo e denaro all\'azienda, ma sai che alcuni colleghi sono scettici verso i cambiamenti.',
+      task: 'Scrivi le prime frasi che useresti per introdurre la tua idea in una riunione di team, cercando di catturare l\'interesse e prevenire le obiezioni.',
+      difficulty: 'Medio', competence: 'riformulazione', category: 'team_management',
+    },
+    {
+      id: 'daily-4', title: 'Chiarire un Malinteso con un Amico',
+      scenario: 'Un amico sembra arrabbiato con te dopo una conversazione, ma non capisci il perché. Ti sta rispondendo a monosillabi.',
+      task: 'Scrivi un messaggio per aprire un dialogo, senza essere accusatorio, per capire cosa è successo.',
+      difficulty: 'Facile', competence: 'ascolto', category: 'relationships',
+    },
+    {
+      id: 'daily-5', title: 'Aprire un Discorso in Pubblico',
+      scenario: 'Devi tenere un breve discorso di 5 minuti di fronte a 30 persone. Sei un po\' nervoso.',
+      task: 'Scrivi una frase di apertura che catturi l\'attenzione del pubblico e ti aiuti a rompere il ghiaccio.',
+      difficulty: 'Facile', competence: 'assertivita', category: 'public_speaking',
+    }
+];
+
+export const WARMUP_QUESTIONS = [
+  {
+    question: 'Quale di queste 3 frasi è più efficace per calmare un collega arrabbiato?',
+    options: [
+      'Non hai motivo di essere arrabbiato.',
+      'Capisco che tu sia frustrato, cerchiamo di capire insieme.',
+      'Calmati, non è la fine del mondo.'
+    ],
+    correctAnswerIndex: 1,
+    explanation: 'La seconda opzione valida l\'emozione dell\'altro ("Capisco che tu sia frustrato") e propone una soluzione collaborativa, che è la strategia più efficace per de-escalare.'
+  },
+  {
+    question: 'Come riformuleresti la lamentela "Questo processo è troppo lento e complicato!" in una richiesta costruttiva?',
+    options: [
+      'Potete semplificare questo processo?',
+      'Il processo attuale ci rallenta. Possiamo esplorare modi per renderlo più agile?',
+      'Chi ha inventato questo processo assurdo?'
+    ],
+    correctAnswerIndex: 1,
+    explanation: 'La seconda opzione contestualizza il problema ("ci rallenta") e propone un\'azione positiva e collaborativa ("Possiamo esplorare modi..."), trasformando la critica in un\'opportunità.'
+  },
+  {
+    question: 'Qual è il modo migliore per dire "no" a una richiesta senza rovinare la relazione?',
+    options: [
+      'No, non posso assolutamente.',
+      'In questo momento non riesco a darti una mano perché sono focalizzato su [tua priorità], ma potrei aiutarti in [alternativa].',
+      'Forse, vediamo più tardi.'
+    ],
+    correctAnswerIndex: 1,
+    explanation: 'La seconda opzione usa la tecnica "No, perché, alternativa". Spiega la ragione del rifiuto in modo oggettivo e offre una soluzione alternativa, dimostrando collaborazione.'
+  }
+];

@@ -1,47 +1,34 @@
 // components/DailyChallengeScreen.tsx
-import React, { useState } from 'react';
-import { Exercise, AnalysisResult, Entitlements, AnalysisHistoryItem } from '../types';
+import React, { useState, useMemo } from 'react';
+import { Exercise, AnalysisResult, Entitlements, AnalysisHistoryItem, UserProgress } from '../types';
 import { ExerciseScreen } from './ExerciseScreen';
-import { dailyChallengeHeaderImage } from '../assets';
-import { COLORS } from '../constants';
+import { COLORS, DAILY_CHALLENGES, OBJECTIVE_CATEGORY_MAP } from '../constants';
 import { TargetIcon } from './Icons';
 
-// In a real app, this would come from a service that provides a new challenge each day.
-const getDailyChallenge = (): Exercise => {
+const getDailyChallenge = (objective?: string): Exercise => {
   const date = new Date();
-  const dayOfYear = Math.floor((date.getTime() - new Date(date.getFullYear(), 0, 0).getTime()) / 1000 / 60 / 60 / 24);
-  
-  const challenges: Exercise[] = [
-    {
-      id: 'daily-1',
-      title: 'Negoziare una Scadenza',
-      scenario: 'Un cliente importante ti chiede di anticipare la consegna di un progetto di una settimana, ma sai che questo metterebbe a rischio la qualità e stresserebbe il team.',
-      task: 'Scrivi un\'email al cliente per negoziare una scadenza realistica, mantenendo un rapporto positivo e mostrando comprensione per la sua richiesta.',
-      difficulty: 'Medio',
-      competence: 'assertivita',
-    },
-    {
-      id: 'daily-2',
-      title: 'Gestire un Feedback Inaspettato',
-      scenario: 'Durante una riunione, il tuo manager critica pubblicamente un aspetto del tuo lavoro su cui eri convinto di aver fatto bene. Ti senti sorpreso e un po\' demotivato.',
-      task: 'Come rispondi sul momento per gestire la situazione professionalmente e chiedere un chiarimento in privato?',
-      difficulty: 'Difficile',
-      competence: 'gestione_conflitto',
-    },
-     {
-      id: 'daily-3',
-      title: 'Presentare un\'Idea Innovativa',
-      scenario: 'Hai un\'idea per un nuovo processo che potrebbe far risparmiare tempo e denaro all\'azienda, ma sai che alcuni colleghi sono scettici verso i cambiamenti.',
-      task: 'Scrivi le prime frasi che useresti per introdurre la tua idea in una riunione di team, cercando di catturare l\'interesse e prevenire le obiezioni.',
-      difficulty: 'Medio',
-      competence: 'riformulazione',
-    },
-  ];
+  const dayOfYear = Math.floor((date.getTime() - new Date(date.getFullYear(), 0, 0).getTime()) / (1000 * 60 * 60 * 24));
 
-  return challenges[dayOfYear % challenges.length];
+  if (objective && OBJECTIVE_CATEGORY_MAP[objective]) {
+    const category = OBJECTIVE_CATEGORY_MAP[objective];
+    const categoryChallenges = DAILY_CHALLENGES.filter(c => c.category === category);
+    if (categoryChallenges.length > 0) {
+      return categoryChallenges[dayOfYear % categoryChallenges.length];
+    }
+  }
+  
+  // Fallback to general challenges or cycle through all if no specific ones are found
+  const generalChallenges = DAILY_CHALLENGES.filter(c => c.category === 'general' || !c.category);
+  if (generalChallenges.length > 0) {
+      return generalChallenges[dayOfYear % generalChallenges.length];
+  }
+
+  // Final fallback to cycle all challenges
+  return DAILY_CHALLENGES[dayOfYear % DAILY_CHALLENGES.length];
 };
 
 interface DailyChallengeScreenProps {
+  userProgress: UserProgress;
   onComplete: (result: AnalysisResult, userResponse: string, exercise: Exercise) => void;
   entitlements: Entitlements | null;
   analysisHistory: { [exerciseId: string]: AnalysisHistoryItem };
@@ -50,7 +37,7 @@ interface DailyChallengeScreenProps {
 }
 
 export const DailyChallengeScreen: React.FC<DailyChallengeScreenProps> = (props) => {
-  const [dailyExercise] = useState<Exercise>(getDailyChallenge());
+  const dailyExercise = useMemo(() => getDailyChallenge(props.userProgress.mainObjective), [props.userProgress.mainObjective]);
 
   return (
     <div style={{ paddingTop: '20px' }}>

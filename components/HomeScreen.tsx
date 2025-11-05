@@ -1,15 +1,16 @@
 // components/HomeScreen.tsx
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   UserProfile,
   UserProgress,
   Entitlements,
   Module,
 } from '../types';
-import { MODULES, COLORS } from '../constants';
+import { MODULES, COLORS, OBJECTIVE_MODULE_MAP } from '../constants';
 import { hasProAccess } from '../services/monetizationService';
 import { ProgressOverview } from './ProgressOverview';
-import { ProgressAnalytics } from './ProgressAnalytics'; // <-- Importato il componente del grafico
+import { ProgressAnalytics } from './ProgressAnalytics';
+import { WarmUpCard } from './WarmUpCard';
 import { soundService } from '../services/soundService';
 import { LockIcon, CrownIcon } from './Icons';
 import { homeScreenHeaderVideo, checkupMedia, dailyChallengeMedia } from '../assets';
@@ -22,31 +23,34 @@ interface ModuleCardProps {
 }
 
 const ModuleCard: React.FC<ModuleCardProps> = ({ module, onSelect, isProUser }) => {
+  const [isHovered, setIsHovered] = useState(false);
   const isLocked = module.isPro && !isProUser;
   const isHeaderVideo = module.headerImage && module.headerImage.toLowerCase().endsWith('.mp4');
+  const isClickable = !(isLocked && module.isCustom);
 
   const handleCardClick = () => {
+    if (!isClickable) return;
     soundService.playClick();
-    // Se il modulo è personalizzato (es. Allenamento Personalizzato) ed è bloccato, non fare nulla.
-    if (isLocked && module.isCustom) {
-      return;
-    }
-    // Altrimenti, procedi con la selezione.
     onSelect(module);
   };
 
   const cardStyle: React.CSSProperties = {
     ...styles.moduleCard,
     ...(isLocked ? styles.moduleCardLocked : {}),
+    ...(isHovered && isClickable ? styles.moduleCardHover : {}),
   };
 
-  // Se il modulo è personalizzato e bloccato, cambia il cursore per indicare che non è cliccabile.
-  if (isLocked && module.isCustom) {
+  if (!isClickable) {
     cardStyle.cursor = 'default';
   }
 
   return (
-    <div style={cardStyle} onClick={handleCardClick}>
+    <div
+      style={cardStyle}
+      onClick={handleCardClick}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
       <div style={styles.cardImageContainer}>
         {isHeaderVideo ? (
           <video src={module.headerImage} style={styles.cardImage} autoPlay muted loop playsInline />
@@ -96,6 +100,32 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   onStartDailyChallenge,
 }) => {
     const isPro = hasProAccess(entitlements);
+
+    const firstName = user.firstName.trim().toLowerCase();
+    // Heuristic for Italian names to determine gender. Not perfect but a good approximation.
+    const isLikelyFemale = firstName.endsWith('a') && !['andrea', 'luca', 'nicola', 'elia', 'mattia'].includes(firstName);
+    const welcomeWord = isLikelyFemale ? "Benvenuta" : "Benvenuto";
+
+    const { subtitle, recommendedModules, otherModules } = useMemo(() => {
+        const objective = progress?.mainObjective;
+        if (objective) {
+            const recommendedIds = OBJECTIVE_MODULE_MAP[objective] || [];
+            const recModules = MODULES.filter(m => recommendedIds.includes(m.id));
+            const otherMods = MODULES.filter(m => !recommendedIds.includes(m.id));
+            const objectiveAction = objective.split(' ')[0].toLowerCase().replace('\'', '');
+            
+            return {
+                subtitle: `Oggi ci alleniamo per ${objectiveAction} ${objective.split(' ').slice(1).join(' ')}`,
+                recommendedModules: recModules,
+                otherModules: otherMods,
+            };
+        }
+        return {
+            subtitle: 'Inizia subito il tuo allenamento!',
+            recommendedModules: [],
+            otherModules: MODULES,
+        };
+    }, [progress?.mainObjective]);
     
   return (
     <div style={styles.container}>
@@ -103,15 +133,19 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         <video src={homeScreenHeaderVideo} style={styles.headerVideo} autoPlay muted loop playsInline />
         <div style={styles.headerOverlay} />
         <div style={styles.headerContent}>
-          <h1 style={styles.mainTitle}>Benvenuto in CES Coach</h1>
-          <p style={styles.mainSubtitle}>Inizia subito il tuo allenamento!</p>
+          <h1 style={styles.mainTitle}>
+            {welcomeWord} in<br />
+            CES Coach
+          </h1>
+          <p style={styles.mainSubtitle}>{subtitle}</p>
         </div>
       </header>
       
       <main style={styles.mainContent}>
         <ProgressOverview user={user} progress={progress} />
         
-        {/* Reinserito il grafico delle competenze */}
+        <WarmUpCard />
+        
         {progress && (
           <ProgressAnalytics 
             userProgress={progress}
@@ -139,10 +173,21 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             </div>
         </section>
 
+        {recommendedModules.length > 0 && (
+             <section>
+              <h2 style={styles.sectionTitle}>Consigliati per Te</h2>
+              <div style={styles.modulesGrid}>
+                {recommendedModules.map(module => (
+                  <ModuleCard key={module.id} module={module} onSelect={onSelectModule} isProUser={isPro} />
+                ))}
+              </div>
+            </section>
+        )}
+
         <section>
-          <h2 style={styles.sectionTitle}>Moduli di Allenamento</h2>
+          <h2 style={styles.sectionTitle}>{recommendedModules.length > 0 ? "Altri Moduli" : "Moduli di Allenamento"}</h2>
           <div style={styles.modulesGrid}>
-            {MODULES.map(module => (
+            {otherModules.map(module => (
               <ModuleCard 
                 key={module.id} 
                 module={module} 
@@ -195,7 +240,8 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontSize: 'clamp(2rem, 5vw, 3rem)',
     fontWeight: 'bold',
     margin: '0 0 16px 0',
-    textShadow: '0 2px 4px rgba(0,0,0,0.5)'
+    textShadow: '0 2px 4px rgba(0,0,0,0.5)',
+    lineHeight: 1.2,
   },
   mainSubtitle: {
     fontSize: 'clamp(1rem, 2.5vw, 1.25rem)',
@@ -218,6 +264,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     marginBottom: '24px',
     borderBottom: `3px solid ${COLORS.secondary}`,
     paddingBottom: '8px',
+    marginTop: '48px',
   },
   modulesGrid: {
     display: 'grid',
@@ -232,6 +279,10 @@ const styles: { [key: string]: React.CSSProperties } = {
     border: `1px solid ${COLORS.divider}`,
     cursor: 'pointer',
     transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+  },
+  moduleCardHover: {
+    transform: 'scale(1.03)',
+    boxShadow: '0 8px 25px rgba(0, 0, 0, 0.1)',
   },
   moduleCardLocked: {
       cursor: 'pointer' // Or 'not-allowed' if we want to block it more obviously
