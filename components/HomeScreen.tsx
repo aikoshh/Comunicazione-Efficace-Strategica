@@ -5,14 +5,15 @@ import {
   UserProgress,
   Entitlements,
   Module,
+  Path,
 } from '../types';
-import { MODULES, COLORS, OBJECTIVE_MODULE_MAP } from '../constants';
+import { MODULES, COLORS, OBJECTIVE_MODULE_MAP, PATHS } from '../constants';
 import { hasProAccess } from '../services/monetizationService';
 import { ProgressOverview } from './ProgressOverview';
 import { ProgressAnalytics } from './ProgressAnalytics';
 import { WarmUpCard } from './WarmUpCard';
 import { soundService } from '../services/soundService';
-import { LockIcon, CrownIcon, EditIcon } from './Icons';
+import { LockIcon, CrownIcon, EditIcon, TargetIcon } from './Icons';
 import { homeScreenHeaderVideo, checkupMedia, dailyChallengeMedia } from '../assets';
 import { CoachingUpsellCard } from './CoachingUpsellCard';
 import { COACHING_PRODUCT } from '../products';
@@ -80,12 +81,46 @@ const ModuleCard: React.FC<ModuleCardProps> = ({ module, onSelect, isProUser }) 
   );
 };
 
+// NEW: PathCard component for guided paths
+const PathCard: React.FC<{ path: Path; onSelect: (path: Path) => void; isProUser: boolean; }> = ({ path, onSelect, isProUser }) => {
+    const isLocked = path.isPro && !isProUser;
+    
+    const handleClick = () => {
+        if (isLocked) {
+            // In a real app, you might navigate to a paywall here
+            // For now, we just don't select it.
+            return;
+        }
+        soundService.playClick();
+        onSelect(path);
+    };
+
+    return (
+        <div style={{ ...styles.pathCard, ...(isLocked ? styles.pathCardLocked : {}) }} onClick={handleClick}>
+            {isLocked && (
+                <div style={styles.pathLockOverlay}>
+                    <LockIcon style={{ color: COLORS.primary, width: 24, height: 24 }} />
+                </div>
+            )}
+            {path.isPro && <div style={styles.proBadge}><CrownIcon width={16} height={16}/> PRO</div>}
+            <div style={styles.pathIconContainer}>
+                <TargetIcon style={{ color: COLORS.secondary }} />
+            </div>
+            <div style={styles.pathContent}>
+                <h3 style={styles.pathTitle}>{path.title}</h3>
+                <p style={styles.pathDescription}>{path.description}</p>
+            </div>
+        </div>
+    );
+};
+
 
 interface HomeScreenProps {
   user: UserProfile;
   progress: UserProgress | undefined;
   entitlements: Entitlements | null;
   onSelectModule: (module: Module) => void;
+  onSelectPath: (path: Path) => void;
   onStartCheckup: () => void;
   onNavigateToReport: () => void;
   onStartDailyChallenge: () => void;
@@ -98,6 +133,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   progress,
   entitlements,
   onSelectModule,
+  onSelectPath,
   onStartCheckup,
   onNavigateToReport,
   onStartDailyChallenge,
@@ -157,7 +193,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         </div>
       </header>
       
-      <main style={{...styles.mainContent, marginTop: '-60px'}}>
+      <main style={{...styles.mainContent, marginTop: '-40px'}}>
         <ProgressOverview user={user} progress={progress} />
         
         <WarmUpCard />
@@ -186,6 +222,16 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                     <h2 style={styles.specialCardTitle}>Sfida del Giorno</h2>
                     <p style={styles.specialCardText}>Allenati con uno scenario nuovo ogni giorno e mantieni le tue abilità affinate.</p>
                  </div>
+            </div>
+        </section>
+
+        {/* NEW: Guided Paths Section */}
+        <section>
+            <h2 style={styles.sectionTitle}>Percorsi Guidati</h2>
+            <div style={styles.pathsGrid}>
+                {PATHS.map(path => (
+                    <PathCard key={path.id} path={path} onSelect={onSelectPath} isProUser={isPro} />
+                ))}
             </div>
         </section>
 
@@ -262,7 +308,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     lineHeight: 1.2,
   },
   mainSubtitle: {
-    fontSize: 'clamp(1rem, 2.5vw, 1.25rem)',
+    fontSize: 'clamp(0.9rem, 2.2vw, 1.1rem)',
     maxWidth: '600px',
     margin: '0 auto',
     opacity: 0.9,
@@ -283,7 +329,7 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
   mainContent: {
     maxWidth: '1200px',
-    margin: '-80px auto 40px',
+    margin: '-60px auto 40px',
     padding: '0 24px',
     position: 'relative',
     zIndex: 4,
@@ -301,6 +347,63 @@ const styles: { [key: string]: React.CSSProperties } = {
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
     gap: '24px',
+  },
+  pathsGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+    gap: '24px',
+  },
+  pathCard: {
+      backgroundColor: COLORS.card,
+      borderRadius: '12px',
+      padding: '24px',
+      border: `1px solid ${COLORS.divider}`,
+      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
+      display: 'flex',
+      gap: '20px',
+      alignItems: 'center',
+      cursor: 'pointer',
+      transition: 'transform 0.2s, box-shadow 0.2s',
+      position: 'relative',
+      overflow: 'hidden'
+  },
+  pathCardLocked: {
+      cursor: 'not-allowed',
+      backgroundColor: COLORS.cardDark
+  },
+  pathLockOverlay: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: 'rgba(248, 247, 244, 0.7)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 2,
+  },
+  pathIconContainer: {
+      backgroundColor: 'rgba(88, 166, 166, 0.1)',
+      borderRadius: '50%',
+      padding: '16px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexShrink: 0
+  },
+  pathContent: {},
+  pathTitle: {
+      fontSize: '18px',
+      fontWeight: 600,
+      color: COLORS.textPrimary,
+      margin: '0 0 8px 0',
+  },
+  pathDescription: {
+      fontSize: '14px',
+      color: COLORS.textSecondary,
+      lineHeight: 1.6,
+      margin: 0,
   },
   moduleCard: {
     backgroundColor: COLORS.card,
@@ -358,7 +461,8 @@ const styles: { [key: string]: React.CSSProperties } = {
       fontWeight: 'bold',
       display: 'flex',
       alignItems: 'center',
-      gap: '4px'
+      gap: '4px',
+      zIndex: 3
   },
   cardContent: {
     padding: '20px',

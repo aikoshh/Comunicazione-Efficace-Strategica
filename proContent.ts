@@ -45,6 +45,17 @@ export const QUESTION_LIBRARY: StrategicQuestionCategory[] = [
       { question: 'Qual è il primo, piccolo passo che puoi fare oggi?', description: 'Trasforma un grande problema in un\'azione gestibile e immediata.' },
     ],
   },
+  {
+    category: 'Domande Strategiche Dicotomiche',
+    description: 'Usale per guidare la conversazione, chiudere un loop di pensiero e portare l\'interlocutore a una scelta chiara tra due alternative.',
+    questions: [
+      { question: 'Da quello che capisco, la priorità è X. Preferisci che ci concentriamo prima su A o su B?', description: 'Restringe il campo e spinge a una decisione operativa.' },
+      { question: 'Quindi, il problema è più una questione di tempo o di budget?', description: 'Costringe a definire la natura del vincolo principale.' },
+      { question: 'Per procedere, abbiamo bisogno della tua approvazione. Possiamo considerarla confermata o hai bisogno di ulteriori dettagli?', description: 'Crea un bivio chiaro tra azione e ulteriore discussione, evitando lo stallo.' },
+      { question: 'Mi sembra che ci siano due strade: rinegoziare la scadenza o ridurre l\'ambito del progetto. Quale preferisci esplorare?', description: 'Presenta opzioni realistiche e sposta la responsabilità della scelta.' },
+      { question: 'Per questa fase, è più importante per te la velocità di esecuzione o la precisione assoluta?', description: 'Chiarisce le priorità e le aspettative su un compito specifico.' },
+    ],
+  },
 ];
 
 

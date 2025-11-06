@@ -1,15 +1,15 @@
+// components/PathScreen.tsx
 import React, { useState } from 'react';
-import { Module, Exercise, Entitlements, AnalysisHistoryItem } from '../types';
-import { COLORS } from '../constants';
+import { Path, Exercise, Entitlements, AnalysisHistoryItem } from '../types';
+import { COLORS, MODULES } from '../constants';
 import { hasProAccess } from '../services/monetizationService';
-import { CheckCircleIcon, LockIcon } from './Icons';
+import { CheckCircleIcon, LockIcon, TargetIcon } from './Icons';
 import { soundService } from '../services/soundService';
 import { ExercisePreviewModal } from './ExercisePreviewModal';
 import { mainLogoUrl } from '../assets';
 
-interface ModuleScreenProps {
-  module: Module;
-  moduleColor: string;
+interface PathScreenProps {
+  path: Path;
   onSelectExercise: (exercise: Exercise) => void;
   onReviewExercise: (exerciseId: string) => void;
   completedExerciseIds: string[];
@@ -17,9 +17,8 @@ interface ModuleScreenProps {
   analysisHistory: { [exerciseId: string]: AnalysisHistoryItem };
 }
 
-export const ModuleScreen: React.FC<ModuleScreenProps> = ({
-  module,
-  moduleColor,
+export const PathScreen: React.FC<PathScreenProps> = ({
+  path,
   onSelectExercise,
   onReviewExercise,
   completedExerciseIds,
@@ -29,9 +28,15 @@ export const ModuleScreen: React.FC<ModuleScreenProps> = ({
   const [previewingExercise, setPreviewingExercise] = useState<Exercise | null>(null);
   const isPro = hasProAccess(entitlements);
 
+  const allExercises = React.useMemo(() => MODULES.flatMap(m => m.exercises), []);
+  const pathExercises = React.useMemo(() => 
+      path.exerciseIds.map(id => allExercises.find(ex => ex.id === id)).filter((ex): ex is Exercise => !!ex),
+      [path.exerciseIds, allExercises]
+  );
+  
   const handleExerciseClick = (exercise: Exercise) => {
     soundService.playClick();
-    if (module.isPro && !isPro) {
+    if (path.isPro && !isPro) {
       return; 
     }
     setPreviewingExercise(exercise);
@@ -42,29 +47,21 @@ export const ModuleScreen: React.FC<ModuleScreenProps> = ({
     setPreviewingExercise(null);
   };
 
-  const isHeaderVideo = module.headerImage && module.headerImage.toLowerCase().endsWith('.mp4');
-
   return (
     <div style={styles.container}>
       <header style={styles.header}>
-        {isHeaderVideo ? (
-            <video src={module.headerImage} style={styles.headerImage} autoPlay muted loop playsInline />
-        ) : (
-            <img src={module.headerImage} alt={module.title} style={styles.headerImage} />
-        )}
-        <div style={styles.headerOverlay} />
         <div style={styles.headerContent}>
             <div style={styles.titleContainer}>
-                <module.icon style={styles.moduleIcon} />
-                <h1 style={styles.title}>{module.title}</h1>
+                <TargetIcon style={styles.moduleIcon} />
+                <h1 style={styles.title}>{path.title}</h1>
             </div>
-            <p style={styles.description}>{module.description}</p>
+            <p style={styles.description}>{path.description}</p>
         </div>
       </header>
       
       <main style={styles.mainContent}>
         <div style={styles.exerciseList}>
-          {module.exercises.map((exercise, index) => {
+          {pathExercises.map((exercise, index) => {
             const isCompleted = completedExerciseIds.includes(exercise.id);
             const canReview = !!analysisHistory[exercise.id];
 
@@ -83,11 +80,11 @@ export const ModuleScreen: React.FC<ModuleScreenProps> = ({
             );
           })}
         </div>
-        {module.isPro && !isPro && (
+        {path.isPro && !isPro && (
             <div style={styles.proLockOverlay}>
                 <LockIcon style={{width: 48, height: 48, color: 'white'}}/>
-                <h2 style={styles.proLockTitle}>Modulo PRO</h2>
-                <p style={styles.proLockText}>Sblocca questo modulo e tutte le funzionalità avanzate con CES Coach PRO.</p>
+                <h2 style={styles.proLockTitle}>Percorso PRO</h2>
+                <p style={styles.proLockText}>Sblocca questo percorso e tutte le funzionalità avanzate con CES Coach PRO.</p>
             </div>
         )}
       </main>
@@ -99,7 +96,7 @@ export const ModuleScreen: React.FC<ModuleScreenProps> = ({
       {previewingExercise && (
         <ExercisePreviewModal
             exercise={previewingExercise}
-            color={moduleColor}
+            color={COLORS.secondary}
             onClose={() => setPreviewingExercise(null)}
             onStart={handleStartExercise}
         />
@@ -110,9 +107,14 @@ export const ModuleScreen: React.FC<ModuleScreenProps> = ({
 
 const styles: { [key: string]: React.CSSProperties } = {
   container: { backgroundColor: COLORS.base, minHeight: '100vh' },
-  header: { position: 'relative', height: '300px', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' },
-  headerImage: { position: 'absolute', width: '100%', height: '100%', objectFit: 'cover', zIndex: 1 },
-  headerOverlay: { position: 'absolute', width: '100%', height: '100%', backgroundColor: 'rgba(28, 62, 94, 0.7)', zIndex: 2 },
+  header: { 
+      backgroundColor: COLORS.primary, 
+      color: 'white', 
+      display: 'flex', 
+      alignItems: 'center', 
+      justifyContent: 'center',
+      padding: '40px 20px'
+  },
   headerContent: { zIndex: 3, textAlign: 'center', padding: '20px' },
   titleContainer: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', marginBottom: '16px' },
   moduleIcon: { width: '40px', height: '40px' },

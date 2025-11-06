@@ -1,7 +1,6 @@
 // services/geminiService.ts
 // FIX: Create full content for the Gemini service file.
 import { GoogleGenAI, Type } from "@google/genai";
-import { FALLBACK_API_KEY } from '../config';
 import {
   Exercise,
   AnalysisResult,
@@ -11,10 +10,19 @@ import {
   ResponseStyle,
   StrategicResponse,
   ContinuedStrategicResponse,
+  ChatMessage,
 } from '../types';
 
 // The app will handle errors if the key is missing.
-const getGenAI = () => new GoogleGenAI({ apiKey: (process.env.API_KEY || FALLBACK_API_KEY) as string });
+const getGenAI = () => {
+    const apiKey = process.env.API_KEY;
+    if (!apiKey) {
+        // This provides a clearer error message if the API key is not set in the environment.
+        throw new Error("API key non trovata. Assicurati che sia configurata correttamente.");
+    }
+    return new GoogleGenAI({ apiKey });
+};
+
 
 // Helper to safely parse JSON from Gemini response
 const parseJson = <T>(jsonString: string, typeName: string): T => {
@@ -244,7 +252,7 @@ export const generateCommunicatorProfile = async (responses: { exerciseTitle: st
     return parseJson<CommunicatorProfile>(response.text, 'CommunicatorProfile');
 };
 
-export const getStrategicResponse = async (userInput: string, style: ResponseStyle, history: { user: string, assistant: string }[], context?: string, objective?: string): Promise<StrategicResponse> => {
+export const getStrategicResponse = async (userInput: string, style: ResponseStyle, history: ChatMessage[], context?: string, objective?: string): Promise<StrategicResponse> => {
     const ai = getGenAI();
     const responseSchema = {
         type: Type.OBJECT,
@@ -267,16 +275,16 @@ export const getStrategicResponse = async (userInput: string, style: ResponseSty
     const objectivePrompt = objective ? `Obiettivo dell'utente: "${objective}"` : '';
     
     const prompt = `
-        Sei un coach di comunicazione strategica. L'utente ha ricevuto un messaggio e ha bisogno del tuo aiuto per rispondere.
+        Sei un coach di comunicazione strategica esperto nei principi della CES. L'utente ha ricevuto un messaggio e ha bisogno del tuo aiuto per rispondere.
         ${contextPrompt}
         ${objectivePrompt}
         Messaggio ricevuto dall'utente: "${userInput}"
         
         Il tuo compito è:
-        1. Analizzare la situazione e gli obiettivi nascosti nel messaggio, tenendo conto del contesto e dell'obiettivo forniti.
-        2. Fornire 4 bozze di risposta alternative: una assertiva, una empatica, una chiarificatrice e una strategica.
-        3. Per la risposta 'strategica', prima fai una breve riformulazione di quanto detto dall'interlocutore, poi poni una domanda dicotomica che offra due possibili percorsi (es. "Da quello che capisco, la priorità è X. Vorresti che ci concentrassimo prima su A o su B?").
-        4. Mantieni uno stile professionale e orientato all'obiettivo.
+        1.  **Analisi CES**: Analizza la situazione, le parole chiave usate e gli obiettivi nascosti nel messaggio, tenendo conto del contesto e dell'obiettivo forniti.
+        2.  **Suggerimenti Multipli**: Fornisci 4 bozze di risposta alternative: una assertiva, una empatica, una chiarificatrice e una strategica.
+        3.  **IMPERATIVO per la risposta 'strategica'**: La risposta deve seguire questo schema: a) Inizia con una breve riformulazione di quanto detto dall'interlocutore per dimostrare ascolto. b) Prosegui ponendo una domanda dicotomica che offra un'illusione di alternativa (es. "Da quello che capisco, la priorità è X. Vorresti che ci concentrassimo prima su A o su B?").
+        4.  Mantieni uno stile professionale e orientato all'obiettivo.
         
         Fornisci l'output in JSON. Tutto in italiano.
     `;
@@ -296,7 +304,7 @@ export const getStrategicResponse = async (userInput: string, style: ResponseSty
 export const continueWithPersona = async (
     originalInput: string,
     chosenResponse: string,
-    history: { user: string, assistant: string }[],
+    history: ChatMessage[],
     context?: string,
     objective?: string
 ): Promise<ContinuedStrategicResponse> => {
@@ -324,15 +332,16 @@ export const continueWithPersona = async (
     const objectivePrompt = objective ? `Obiettivo iniziale dell'utente: "${objective}"` : '';
 
     const prompt = `
-        Sei un coach di comunicazione e simulatore di conversazioni.
+        Sei un coach di comunicazione e un simulatore di conversazioni esperto nei principi CES.
         ${contextPrompt}
         ${objectivePrompt}
         Contesto: un utente ha ricevuto questo messaggio: "${originalInput}"
         L'utente ha scelto di rispondere così: "${chosenResponse}"
 
         Il tuo compito è duplice:
-        1. Simula la risposta della persona che ha inviato il messaggio originale. Sii realistico e coerente con il tono iniziale e il contesto. Chiama questa risposta "personaResponse".
-        2. Dopo aver simulato la risposta, agisci di nuovo come coach: analizza la nuova situazione e fornisci 4 nuove bozze di risposta (assertiva, empatica, ecc.). Per la risposta 'strategica', prima fai una breve riformulazione, poi poni una domanda dicotomica (A o B) per guidare la conversazione.
+        1.  **Simula la Persona**: Agisci come l'interlocutore originale e scrivi la sua probabile risposta a "${chosenResponse}". Sii realistico e coerente con il tono iniziale e il contesto. Chiama questa risposta "personaResponse".
+        2.  **Agisci come Coach**: Dopo aver simulato la risposta, analizza la nuova situazione e fornisci 4 nuove bozze di risposta (assertiva, empatica, ecc.). 
+        3.  **IMPERATIVO per la risposta 'strategica'**: Come prima, la risposta strategica deve contenere una breve riformulazione e poi una domanda dicotomica (illusione di alternativa A o B) per guidare la conversazione.
 
         Fornisci l'output in JSON. Tutto in italiano.
     `;

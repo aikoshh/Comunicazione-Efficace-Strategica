@@ -1,8 +1,9 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { COLORS } from '../constants';
 import { QUESTION_LIBRARY } from '../proContent';
-import { CloseIcon, QuestionIcon } from './Icons';
+import { CloseIcon, QuestionIcon, CopyIcon, CheckCircleIcon } from './Icons';
 import { soundService } from '../services/soundService';
+import { useToast } from '../hooks/useToast';
 
 interface QuestionLibraryModalProps {
   isOpen: boolean;
@@ -11,6 +12,8 @@ interface QuestionLibraryModalProps {
 
 export const QuestionLibraryModal: React.FC<QuestionLibraryModalProps> = ({ isOpen, onClose }) => {
   const modalRef = useRef<HTMLDivElement>(null);
+  const [copiedQuestion, setCopiedQuestion] = useState<string | null>(null);
+  const { addToast } = useToast();
 
   useEffect(() => {
     if (isOpen) {
@@ -32,10 +35,33 @@ export const QuestionLibraryModal: React.FC<QuestionLibraryModalProps> = ({ isOp
   const handleClose = () => {
     soundService.playClick();
     onClose();
-  }
+  };
+  
+  const handleCopy = (questionText: string) => {
+    soundService.playClick();
+    navigator.clipboard.writeText(questionText).then(() => {
+      addToast('Domanda copiata!', 'success');
+      setCopiedQuestion(questionText);
+      setTimeout(() => setCopiedQuestion(null), 2000); // Reset after 2 seconds
+    }, (err) => {
+      addToast('Errore durante la copia.', 'error');
+      console.error('Could not copy text: ', err);
+    });
+  };
+
+  const hoverStyle = `
+    .question-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+    }
+    .copy-button:hover {
+      background-color: ${COLORS.card};
+    }
+  `;
 
   return (
     <div style={styles.overlay} onClick={handleClose}>
+      <style>{hoverStyle}</style>
       <div 
         style={styles.modal} 
         onClick={(e) => e.stopPropagation()}
@@ -58,9 +84,23 @@ export const QuestionLibraryModal: React.FC<QuestionLibraryModalProps> = ({ isOp
               <p style={styles.categoryDescription}>{category.description}</p>
               <div style={styles.questionList}>
                 {category.questions.map(q => (
-                  <div key={q.question} style={styles.questionItem}>
-                    <p style={styles.questionText}>"{q.question}"</p>
-                    <p style={styles.questionDescription}>{q.description}</p>
+                  <div key={q.question} style={styles.questionItem} className="question-card">
+                    <div style={styles.questionContent}>
+                        <p style={styles.questionText}>"{q.question}"</p>
+                        <p style={styles.questionDescription}>{q.description}</p>
+                    </div>
+                    <button 
+                        style={styles.copyButton} 
+                        className="copy-button"
+                        onClick={() => handleCopy(q.question)}
+                        title="Copia domanda"
+                    >
+                      {copiedQuestion === q.question ? (
+                        <CheckCircleIcon style={{color: COLORS.success}} />
+                      ) : (
+                        <CopyIcon />
+                      )}
+                    </button>
                   </div>
                 ))}
               </div>
@@ -129,25 +169,48 @@ const styles: { [key: string]: React.CSSProperties } = {
   questionList: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '12px',
+    gap: '16px',
     paddingLeft: '15px',
   },
   questionItem: {
     backgroundColor: COLORS.cardDark,
-    padding: '12px 16px',
-    borderRadius: '8px',
+    padding: '16px',
+    borderRadius: '12px',
+    borderLeft: `4px solid ${COLORS.secondary}`,
+    display: 'flex',
+    alignItems: 'center',
+    gap: '16px',
+    transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+    boxShadow: '0 4px 6px rgba(0,0,0,0.04)',
+  },
+  questionContent: {
+    flex: 1,
   },
   questionText: {
-    fontSize: '15px',
-    fontWeight: 500,
+    fontSize: '16px',
+    fontWeight: 600,
     color: COLORS.textPrimary,
-    margin: '0 0 6px 0',
+    margin: '0 0 8px 0',
     fontStyle: 'italic',
   },
   questionDescription: {
-    fontSize: '13px',
+    fontSize: '14px',
     color: COLORS.textSecondary,
     margin: 0,
-    lineHeight: 1.4,
+    lineHeight: 1.5,
+  },
+  copyButton: {
+    flexShrink: 0,
+    width: '40px',
+    height: '40px',
+    borderRadius: '50%',
+    border: `1px solid ${COLORS.divider}`,
+    background: 'transparent',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+    color: COLORS.textSecondary,
+    transition: 'background-color 0.2s ease, color 0.2s ease',
   }
 };

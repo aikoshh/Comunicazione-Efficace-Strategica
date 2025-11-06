@@ -1,6 +1,6 @@
 // constants.ts
 // FIX: Imported UserProgress to resolve type errors.
-import { Module, ExerciseType, VoiceAnalysisResult, Exercise, Achievement, Level, UserProgress } from './types';
+import { Module, ExerciseType, VoiceAnalysisResult, Exercise, Achievement, Level, UserProgress, Path } from './types';
 import {
   FlameIcon,
   CheckCircleIcon,
@@ -173,7 +173,7 @@ export const MODULES: Module[] = [
     id: 'm7',
     isCustom: true,
     title: 'Chat Trainer Strategico',
-    description: 'Allenati in tempo reale. Incolla un messaggio che hai ricevuto e ottieni suggerimenti strategici su come rispondere.',
+    description: 'Allenati in tempo reale con un simulatore di conversazioni. Incolla un messaggio e impara a rispondere in modo strategico.',
     icon: QuestionIcon,
     color: '#4A148C',
     headerImage: chatTrainerHeaderVideo,
@@ -181,6 +181,31 @@ export const MODULES: Module[] = [
     isPro: true,
   },
 ];
+
+// NEW: Added guided learning paths
+export const PATHS: Path[] = [
+    {
+        id: 'path1',
+        title: 'Padroneggiare il Feedback',
+        description: 'Un percorso essenziale per imparare a dare e ricevere feedback in modo costruttivo e professionale.',
+        exerciseIds: ['e7', 'e1', 'e2'],
+    },
+    {
+        id: 'path2',
+        title: 'Il Negoziatore Efficace',
+        description: 'Sviluppa le tue abilità di negoziazione, impara a gestire le obiezioni e a guidare la conversazione verso un accordo.',
+        exerciseIds: ['e10', 'e3', 'e6', 'e8'],
+        isPro: true,
+    },
+    {
+        id: 'path3',
+        title: 'Leader Comunicativo',
+        description: 'Impara a comunicare decisioni difficili, a motivare il team e a gestire i conflitti interni con sicurezza e assertività.',
+        exerciseIds: ['e12', 'e4', 'v1'],
+        isPro: true,
+    }
+];
+
 
 
 // --- GAMIFICATION CONSTANTS ---

@@ -112,7 +112,7 @@ export async function getProgressOverview(user: UserProfile, progress: UserProgr
   if (!progress || !progress.completedExerciseIds || progress.completedExerciseIds.length === 0) {
     return {
       header: {
-        welcome: `Ciao, ${user.firstName}!`,
+        welcome: `Ciao ${user.firstName}!`,
         score: 0,
         level: 'Inizia il tuo percorso',
       },
@@ -141,7 +141,7 @@ export async function getProgressOverview(user: UserProfile, progress: UserProgr
 
   return {
     header: {
-      welcome: `Ciao, ${user.firstName}!`,
+      welcome: `Ciao ${user.firstName}!`,
       score: finalScore,
       level: level,
     },

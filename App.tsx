@@ -13,6 +13,7 @@ import {
   Product,
   ExerciseType,
   StorableEntitlements,
+  Path,
 } from './types';
 import { LoginScreen } from './components/LoginScreen';
 import { HomeScreen } from './components/HomeScreen';
@@ -30,6 +31,7 @@ import { CompetenceReportScreen } from './components/CompetenceReportScreen';
 import { AchievementsScreen } from './components/AchievementsScreen';
 import { LevelsScreen } from './components/LevelsScreen';
 import { StrategicChatTrainerScreen } from './components/StrategicChatTrainerScreen';
+import { PathScreen } from './components/PathScreen';
 
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
@@ -57,6 +59,7 @@ const App: React.FC<AppProps> = ({ initialUser }) => {
   
   const [currentScreen, setCurrentScreen] = useState('home');
   const [selectedModule, setSelectedModule] = useState<Module | null>(null);
+  const [selectedPath, setSelectedPath] = useState<Path | null>(null);
   const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
   
   const [lastAnalysis, setLastAnalysis] = useState<{result: AnalysisResult | VoiceAnalysisResult, userResponse: string, exercise: Exercise, type: 'written' | 'verbal', isReview: boolean} | null>(null);
@@ -76,17 +79,18 @@ const App: React.FC<AppProps> = ({ initialUser }) => {
   useEffect(() => {
     if (user) {
       // Whitelist of screens that are safe to persist and return to.
-      const safeScreens = ['home', 'module', 'admin', 'paywall', 'competence_report', 'achievements', 'levels', 'daily_challenge', 'chat_trainer'];
+      const safeScreens = ['home', 'module', 'admin', 'paywall', 'competence_report', 'achievements', 'levels', 'daily_challenge', 'chat_trainer', 'path_screen'];
       if (safeScreens.includes(currentScreen)) {
         const stateToSave = {
           userId: user.uid,
           currentScreen,
           selectedModuleId: selectedModule?.id,
+          selectedPathId: selectedPath?.id,
         };
         localStorage.setItem('ces_coach_app_state', JSON.stringify(stateToSave));
       }
     }
-  }, [user, currentScreen, selectedModule]);
+  }, [user, currentScreen, selectedModule, selectedPath]);
 
   useEffect(() => {
     setUser(initialUser);
@@ -131,7 +135,7 @@ const App: React.FC<AppProps> = ({ initialUser }) => {
                     setCurrentScreen('module');
                   }
                 } else {
-                  const safeScreens = ['home', 'admin', 'paywall', 'competence_report', 'achievements', 'levels', 'daily_challenge', 'chat_trainer'];
+                  const safeScreens = ['home', 'admin', 'paywall', 'competence_report', 'achievements', 'levels', 'daily_challenge', 'chat_trainer', 'path_screen'];
                   if (safeScreens.includes(savedState.currentScreen)) {
                     setCurrentScreen(savedState.currentScreen);
                   }
@@ -172,10 +176,10 @@ const App: React.FC<AppProps> = ({ initialUser }) => {
         setLastAnalysis(null);
     }
     
-    if (currentScreen === 'module' || currentScreen === 'paywall' || currentScreen === 'competence_report' || currentScreen === 'achievements' || currentScreen === 'levels' || currentScreen === 'daily_challenge' || currentScreen === 'chat_trainer' || currentScreen === 'admin') {
+    if (['module', 'paywall', 'competence_report', 'achievements', 'levels', 'daily_challenge', 'chat_trainer', 'admin', 'path_screen'].includes(currentScreen)) {
         setCurrentScreen('home');
     } else if (currentScreen === 'exercise') {
-        setCurrentScreen(selectedModule?.isCustom ? 'home' : 'module');
+        setCurrentScreen(selectedModule?.isCustom ? 'home' : (selectedPath ? 'path_screen' : 'module'));
     } else if (currentScreen === 'custom_setup') {
         setCurrentScreen('home');
     } else if (currentScreen === 'report' || currentScreen === 'voice_report') {
@@ -186,6 +190,7 @@ const App: React.FC<AppProps> = ({ initialUser }) => {
   
   const handleSelectModule = (module: Module) => {
     setSelectedModule(module);
+    setSelectedPath(null);
     if (module.isCustom) {
       if (module.id === 'm6') {
         setCurrentScreen('custom_setup');
@@ -195,12 +200,24 @@ const App: React.FC<AppProps> = ({ initialUser }) => {
     } else {
       setCurrentScreen('module');
     }
+    window.scrollTo(0, 0);
+  };
+  
+  const handleSelectPath = (path: Path) => {
+      setSelectedPath(path);
+      setSelectedModule(null);
+      setCurrentScreen('path_screen');
+      window.scrollTo(0, 0);
+  }
+
+  const handleSelectExercise = (exercise: Exercise, sourceModule?: Module, sourcePath?: Path) => {
+    setSelectedExercise(exercise);
+    if (sourceModule) setSelectedModule(sourceModule);
+    if (sourcePath) setSelectedPath(sourcePath);
+    setCurrentScreen('exercise');
+    window.scrollTo(0, 0);
   };
 
-  const handleSelectExercise = (exercise: Exercise) => {
-    setSelectedExercise(exercise);
-    setCurrentScreen('exercise');
-  };
 
   const handleRetryExercise = (exercise: Exercise) => {
     setLastAnalysis(null); // Pulisce l'analisi precedente
@@ -269,8 +286,11 @@ const App: React.FC<AppProps> = ({ initialUser }) => {
         timestamp: new Date().toISOString(),
         result,
         userResponse,
-        type
+        type,
+        competence: exercise.competence,
+        score,
     };
+
     updatedProgress.analysisHistory = { ...updatedProgress.analysisHistory, [exerciseId]: newHistoryItem };
     
     const { newBadges } = gamificationService.processCompletion(progress, exerciseId, score, isRetake, '');
@@ -315,15 +335,30 @@ const App: React.FC<AppProps> = ({ initialUser }) => {
   }, []);
 
   const findNextExercise = (): { label: string; action: () => void } => {
-    if (!selectedModule || !selectedExercise || selectedModule.isCustom) {
-        return { label: 'Torna alla Home', action: () => handleNavigate('home') };
+    if (!selectedExercise) return { label: 'Torna alla Home', action: () => handleNavigate('home') };
+    
+    if (selectedPath) {
+        const currentIndex = selectedPath.exerciseIds.findIndex(id => id === selectedExercise.id);
+        if (currentIndex > -1 && currentIndex < selectedPath.exerciseIds.length - 1) {
+            const nextExerciseId = selectedPath.exerciseIds[currentIndex + 1];
+            const nextExercise = MODULES.flatMap(m => m.exercises).find(e => e.id === nextExerciseId);
+            if (nextExercise) {
+                return { label: 'Prossimo Esercizio', action: () => handleSelectExercise(nextExercise, undefined, selectedPath) };
+            }
+        }
+        return { label: `Torna a "${selectedPath.title}"`, action: () => setCurrentScreen('path_screen') };
     }
-    const currentModuleExercises = selectedModule.exercises;
-    const currentIndex = currentModuleExercises.findIndex(ex => ex.id === selectedExercise.id);
-    if (currentIndex > -1 && currentIndex < currentModuleExercises.length - 1) {
-        return { label: 'Prossimo Esercizio', action: () => handleSelectExercise(currentModuleExercises[currentIndex + 1]) };
+    
+    if (selectedModule && !selectedModule.isCustom) {
+        const currentModuleExercises = selectedModule.exercises;
+        const currentIndex = currentModuleExercises.findIndex(ex => ex.id === selectedExercise.id);
+        if (currentIndex > -1 && currentIndex < currentModuleExercises.length - 1) {
+            return { label: 'Prossimo Esercizio', action: () => handleSelectExercise(currentModuleExercises[currentIndex + 1], selectedModule) };
+        }
+        return { label: `Torna a "${selectedModule.title}"`, action: () => setCurrentScreen('module') };
     }
-    return { label: `Torna a "${selectedModule.title}"`, action: () => setCurrentScreen('module') };
+    
+    return { label: 'Torna alla Home', action: () => handleNavigate('home') };
   };
 
   if (isPreloading) {
@@ -379,6 +414,7 @@ const App: React.FC<AppProps> = ({ initialUser }) => {
             progress={progress}
             entitlements={entitlements}
             onSelectModule={handleSelectModule}
+            onSelectPath={handleSelectPath}
             onStartCheckup={() => handleNavigate('checkup')}
             onNavigateToReport={() => handleNavigate('competence_report')}
             onStartDailyChallenge={() => handleNavigate('daily_challenge')}
@@ -387,12 +423,25 @@ const App: React.FC<AppProps> = ({ initialUser }) => {
           />
         );
       case 'module':
-        if (!selectedModule) return <HomeScreen user={user} progress={progress} entitlements={entitlements} onSelectModule={handleSelectModule} onStartCheckup={() => handleNavigate('checkup')} onNavigateToReport={() => handleNavigate('competence_report')} onStartDailyChallenge={() => handleNavigate('daily_challenge')} onNavigate={handleNavigate} onChangeObjective={handleChangeObjective} />;
+        if (!selectedModule) return <HomeScreen user={user} progress={progress} entitlements={entitlements} onSelectModule={handleSelectModule} onSelectPath={handleSelectPath} onStartCheckup={() => handleNavigate('checkup')} onNavigateToReport={() => handleNavigate('competence_report')} onStartDailyChallenge={() => handleNavigate('daily_challenge')} onNavigate={handleNavigate} onChangeObjective={handleChangeObjective} />;
         return (
           <ModuleScreen
             module={selectedModule}
+            // FIX: The ModuleScreen component requires a moduleColor prop. Pass the color from the selectedModule.
             moduleColor={selectedModule.color}
-            onSelectExercise={handleSelectExercise}
+            onSelectExercise={(exercise) => handleSelectExercise(exercise, selectedModule)}
+            onReviewExercise={handleReviewExercise}
+            completedExerciseIds={progress?.completedExerciseIds || []}
+            entitlements={entitlements}
+            analysisHistory={progress?.analysisHistory || {}}
+          />
+        );
+      case 'path_screen':
+        if (!selectedPath) return <HomeScreen user={user} progress={progress} entitlements={entitlements} onSelectModule={handleSelectModule} onSelectPath={handleSelectPath} onStartCheckup={() => handleNavigate('checkup')} onNavigateToReport={() => handleNavigate('competence_report')} onStartDailyChallenge={() => handleNavigate('daily_challenge')} onNavigate={handleNavigate} onChangeObjective={handleChangeObjective} />;
+        return (
+          <PathScreen
+            path={selectedPath}
+            onSelectExercise={(exercise) => handleSelectExercise(exercise, undefined, selectedPath)}
             onReviewExercise={handleReviewExercise}
             completedExerciseIds={progress?.completedExerciseIds || []}
             entitlements={entitlements}
@@ -400,7 +449,7 @@ const App: React.FC<AppProps> = ({ initialUser }) => {
           />
         );
       case 'exercise':
-        if (!selectedExercise) return <HomeScreen user={user} progress={progress} entitlements={entitlements} onSelectModule={handleSelectModule} onStartCheckup={() => handleNavigate('checkup')} onNavigateToReport={() => handleNavigate('competence_report')} onStartDailyChallenge={() => handleNavigate('daily_challenge')} onNavigate={handleNavigate} onChangeObjective={handleChangeObjective} />;
+        if (!selectedExercise) return <HomeScreen user={user} progress={progress} entitlements={entitlements} onSelectModule={handleSelectModule} onSelectPath={handleSelectPath} onStartCheckup={() => handleNavigate('checkup')} onNavigateToReport={() => handleNavigate('competence_report')} onStartDailyChallenge={() => handleNavigate('daily_challenge')} onNavigate={handleNavigate} onChangeObjective={handleChangeObjective} />;
         return (
           <ExerciseScreen
             exercise={selectedExercise}
@@ -425,7 +474,7 @@ const App: React.FC<AppProps> = ({ initialUser }) => {
               difficulty: 'Medio',
               competence: 'riformulazione',
             };
-            handleSelectExercise(customExercise);
+            handleSelectExercise(customExercise, customModule);
           }}
           onBack={handleBack}
           onApiKeyError={handleApiKeyError}
@@ -435,7 +484,7 @@ const App: React.FC<AppProps> = ({ initialUser }) => {
       case 'profile_results':
         return <CommunicatorProfileScreen profile={communicatorProfile || progress?.checkupProfile} onContinue={() => handleNavigate('home')} />;
       case 'admin':
-        return user.isAdmin ? <AdminScreen /> : <HomeScreen user={user} progress={progress} entitlements={entitlements} onSelectModule={handleSelectModule} onStartCheckup={() => handleNavigate('checkup')} onNavigateToReport={() => handleNavigate('competence_report')} onStartDailyChallenge={() => handleNavigate('daily_challenge')} onNavigate={handleNavigate} onChangeObjective={handleChangeObjective} />;
+        return user.isAdmin ? <AdminScreen /> : <HomeScreen user={user} progress={progress} entitlements={entitlements} onSelectModule={handleSelectModule} onSelectPath={handleSelectPath} onStartCheckup={() => handleNavigate('checkup')} onNavigateToReport={() => handleNavigate('competence_report')} onStartDailyChallenge={() => handleNavigate('daily_challenge')} onNavigate={handleNavigate} onChangeObjective={handleChangeObjective} />;
       case 'paywall':
         return <PaywallScreen user={user} entitlements={entitlements!} onRestore={handleRestore} onBack={handleBack} />;
       case 'daily_challenge':
@@ -452,6 +501,8 @@ const App: React.FC<AppProps> = ({ initialUser }) => {
           userProgress={progress!} 
           onBack={handleBack}
           onSelectExercise={handleSelectExercise}
+          isPro={hasProAccess(entitlements)}
+          onNavigateToPaywall={() => handleNavigate('paywall')}
         />;
       case 'achievements':
         return <AchievementsScreen progress={progress!} />;
@@ -470,6 +521,7 @@ const App: React.FC<AppProps> = ({ initialUser }) => {
             progress={progress}
             entitlements={entitlements}
             onSelectModule={handleSelectModule}
+            onSelectPath={handleSelectPath}
             onStartCheckup={() => handleNavigate('checkup')}
             onNavigateToReport={() => handleNavigate('competence_report')}
             onStartDailyChallenge={() => handleNavigate('daily_challenge')}

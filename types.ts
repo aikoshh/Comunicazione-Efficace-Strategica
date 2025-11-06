@@ -67,6 +67,16 @@ export interface Module {
   isCustom?: boolean;
 }
 
+// NEW: Added Path interface for guided learning paths
+export interface Path {
+  id: string;
+  title: string;
+  description: string;
+  exerciseIds: string[];
+  isPro?: boolean;
+}
+
+
 // --- ANALYSIS & RESULTS ---
 
 export interface DetailedRubricScore {
@@ -124,7 +134,10 @@ export interface AnalysisHistoryItem {
     result: AnalysisResult | VoiceAnalysisResult;
     userResponse: string;
     type: 'written' | 'verbal';
+    competence: CompetenceKey; // NEW: Added competence to history
+    score: number; // NEW: Added score to history
 }
+
 
 // --- GAMIFICATION & PROGRESS ---
 
@@ -222,17 +235,21 @@ export interface StrategicResponse {
     }[];
 }
 
+// NEW: Added for Chat Trainer Role-Play
 export interface ContinuedStrategicResponse extends StrategicResponse {
     personaResponse: string;
 }
 
-
+// NEW: Added for Chat Trainer Role-Play
 export interface ChatMessage {
     id: string;
     role: 'user' | 'persona' | 'coach';
     content: string;
-    feedback?: string;
+    feedback?: string; // e.g., "Scelto dal coach"
+    analysis?: string; // For coach messages
+    suggestions?: StrategicResponse['suggestions']; // For coach messages
 }
+
 
 
 // --- PROGRESS OVERVIEW ---

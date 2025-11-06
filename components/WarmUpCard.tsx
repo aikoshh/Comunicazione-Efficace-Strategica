@@ -1,22 +1,30 @@
 // components/WarmUpCard.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { COLORS, WARMUP_QUESTIONS } from '../constants';
-import { LightbulbIcon } from './Icons';
+import { FlameIcon } from './Icons';
 import { soundService } from '../services/soundService';
 
 export const WarmUpCard: React.FC = () => {
     const [questionIndex, setQuestionIndex] = useState(() => Math.floor(Math.random() * WARMUP_QUESTIONS.length));
-    const [selectedAnswerIndex, setSelectedAnswerIndex] = useState<number | null>(null);
+    const [selectedShuffledIndex, setSelectedShuffledIndex] = useState<number | null>(null);
     const [isAnswered, setIsAnswered] = useState(false);
+    
     const currentQuestion = WARMUP_QUESTIONS[questionIndex];
 
-    const handleAnswerSelect = (index: number) => {
+    // Shuffle options only when the question changes
+    const shuffledOptions = useMemo(() => {
+        const optionsWithIndices = currentQuestion.options.map((text, originalIndex) => ({ text, originalIndex }));
+        return optionsWithIndices.sort(() => Math.random() - 0.5);
+    }, [currentQuestion]);
+
+    const handleAnswerSelect = (shuffledIndex: number) => {
         if (isAnswered) return;
         
         setIsAnswered(true);
-        setSelectedAnswerIndex(index);
+        setSelectedShuffledIndex(shuffledIndex);
         
-        if (index === currentQuestion.correctAnswerIndex) {
+        const selectedOption = shuffledOptions[shuffledIndex];
+        if (selectedOption.originalIndex === currentQuestion.correctAnswerIndex) {
             soundService.playSuccess();
         } else {
             soundService.playScoreSound(20); // Fail sound
@@ -26,20 +34,23 @@ export const WarmUpCard: React.FC = () => {
     const handleNextQuestion = () => {
         soundService.playClick();
         setIsAnswered(false);
-        setSelectedAnswerIndex(null);
+        setSelectedShuffledIndex(null);
         setQuestionIndex(prevIndex => (prevIndex + 1) % WARMUP_QUESTIONS.length);
     };
 
-    const getButtonStyle = (index: number): React.CSSProperties => {
+    const getButtonStyle = (shuffledIndex: number): React.CSSProperties => {
         const baseStyle = styles.optionButton;
         if (!isAnswered) {
             return baseStyle;
         }
         
-        if (index === currentQuestion.correctAnswerIndex) {
+        const selectedOption = shuffledOptions[shuffledIndex];
+        const isCorrect = selectedOption.originalIndex === currentQuestion.correctAnswerIndex;
+
+        if (isCorrect) {
             return { ...baseStyle, ...styles.correctAnswer };
         }
-        if (index === selectedAnswerIndex) {
+        if (shuffledIndex === selectedShuffledIndex) {
             return { ...baseStyle, ...styles.incorrectAnswer };
         }
         return { ...baseStyle, ...styles.disabledAnswer };
@@ -47,17 +58,17 @@ export const WarmUpCard: React.FC = () => {
 
     return (
         <div style={styles.container}>
-            <h3 style={styles.title}><LightbulbIcon /> Warm-Up da 1 Minuto</h3>
+            <h3 style={styles.title}><FlameIcon /> Warm-Up da 1 Minuto</h3>
             <p style={styles.questionText}>{currentQuestion.question}</p>
             <div style={styles.optionsContainer}>
-                {currentQuestion.options.map((option, index) => (
+                {shuffledOptions.map((option, index) => (
                     <button
                         key={index}
                         style={getButtonStyle(index)}
                         onClick={() => handleAnswerSelect(index)}
                         disabled={isAnswered}
                     >
-                        {option}
+                        {option.text}
                     </button>
                 ))}
             </div>
@@ -86,7 +97,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     title: {
         fontSize: '18px',
         fontWeight: 600,
-        color: COLORS.textPrimary,
+        color: COLORS.error,
         margin: '0 0 16px 0',
         display: 'flex',
         alignItems: 'center',
@@ -114,16 +125,17 @@ const styles: { [key: string]: React.CSSProperties } = {
         transition: 'all 0.2s ease',
         backgroundColor: COLORS.cardDark,
         color: COLORS.textPrimary,
+        minHeight: '80px',
+        display: 'flex',
+        alignItems: 'center',
     },
     correctAnswer: {
         backgroundColor: '#D9F7E6',
-        borderColor: COLORS.success,
         color: COLORS.success,
         fontWeight: 'bold',
     },
     incorrectAnswer: {
         backgroundColor: '#FDE2E2',
-        borderColor: COLORS.error,
         color: COLORS.error,
         fontWeight: 'bold',
     },
@@ -134,9 +146,9 @@ const styles: { [key: string]: React.CSSProperties } = {
     explanationContainer: {
         marginTop: '20px',
         padding: '16px',
-        backgroundColor: '#E3F2FD',
+        backgroundColor: '#FFF8E1',
         borderRadius: '8px',
-        border: `1px solid ${COLORS.secondary}`,
+        border: `1px solid ${COLORS.warning}`,
         animation: 'fadeIn 0.3s ease-out'
     },
     explanationText: {

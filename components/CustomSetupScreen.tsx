@@ -180,7 +180,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontWeight: 'bold',
     margin: 0
   },
-  description: { fontSize: '18px', color: COLORS.textSecondary, lineHeight: 1.6, maxWidth: '650px', margin: '0 auto' },
+  description: { fontSize: '16px', color: COLORS.textSecondary, lineHeight: 1.6, maxWidth: '650px', margin: '0 auto' },
   setupForm: { display: 'flex', flexDirection: 'column', gap: '24px', backgroundColor: COLORS.card, padding: '32px', borderRadius: '12px', border: `1px solid ${COLORS.divider}`, boxShadow: '0 4px 12px rgba(0,0,0,0.05)' },
   formTitle: {
     fontSize: '20px',

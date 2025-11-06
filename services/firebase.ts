@@ -3,7 +3,7 @@
 // --- CORE FIREBASE IMPORTS ---
 // FIX: Switched to Firebase v9+ modular API to match the project's dependencies.
 import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
-// FIX: Use namespace import for auth to fix module resolution issues.
+// FIX: The named imports from "firebase/auth" were causing errors. Using a namespace import to resolve module issues.
 import * as fbAuth from "firebase/auth";
 import { 
     getFirestore, 
@@ -32,7 +32,7 @@ import type { UserProfile, UserProgress, StorableEntitlements, ProblemReport, Re
 
 // --- SYNCHRONOUS INITIALIZATION ---
 let app: FirebaseApp;
-// FIX: Use namespace-prefixed type for Auth.
+// FIX: Use Auth type from the namespace import to resolve export error.
 let auth: fbAuth.Auth;
 let db: Firestore;
 let firebaseInitializationError: Error | null = null;
@@ -40,7 +40,7 @@ let firebaseInitializationError: Error | null = null;
 try {
     // FIX: Use v9+ initialization methods.
     app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
-    // FIX: Use namespace-prefixed function for getAuth.
+    // FIX: Use getAuth from the namespace import to resolve export error.
     auth = fbAuth.getAuth(app);
     db = getFirestore(app);
 } catch (error: any) {
@@ -82,7 +82,7 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
 }
 
 export function onAuthUserChanged(callback: (user: UserProfile | null) => void): () => void {
-  // FIX: Use v9 onAuthStateChanged with namespace.
+  // FIX: Use onAuthStateChanged from the namespace import to resolve export error.
   return fbAuth.onAuthStateChanged(auth, async (authUser) => {
     if (authUser) {
       const userProfile = await getUserProfile(authUser.uid);
@@ -102,9 +102,9 @@ export function onAuthUserChanged(callback: (user: UserProfile | null) => void):
   });
 }
 
-// FIX: Use namespace-prefixed type for User.
+// FIX: Use User type from the namespace import to resolve export error.
 export async function register(email: string, password: string, firstName: string, lastName: string): Promise<fbAuth.User> {
-  // FIX: Use v9 createUserWithEmailAndPassword with namespace.
+  // FIX: Use createUserWithEmailAndPassword from the namespace import to resolve export error.
   const userCredential = await fbAuth.createUserWithEmailAndPassword(auth, email, password);
   const { user } = userCredential;
   if (!user) {
@@ -125,9 +125,9 @@ export async function register(email: string, password: string, firstName: strin
   return user;
 }
 
-// FIX: Use namespace-prefixed type for User.
+// FIX: Use User type from the namespace import to resolve export error.
 export async function login(email: string, password: string): Promise<fbAuth.User> {
-  // FIX: Use v9 signInWithEmailAndPassword with namespace.
+  // FIX: Use signInWithEmailAndPassword from the namespace import to resolve export error.
   const userCredential = await fbAuth.signInWithEmailAndPassword(auth, email, password);
   if (!userCredential.user) {
       throw new Error("Login failed.");
@@ -136,7 +136,7 @@ export async function login(email: string, password: string): Promise<fbAuth.Use
 }
 
 export async function logout(): Promise<void> {
-  // FIX: Use v9 signOut with namespace.
+  // FIX: Use signOut from the namespace import to resolve export error.
   await fbAuth.signOut(auth);
 }
 
