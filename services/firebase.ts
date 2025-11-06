@@ -1,33 +1,52 @@
 // services/firebase.ts
 
-// --- SIDE-EFFECT IMPORTS FOR COMPONENT REGISTRATION ---
-// This is the most critical part for fixing "Component ... has not been registered yet"
-import 'firebase/auth';
-import 'firebase/firestore';
-
 // --- CORE FIREBASE IMPORTS ---
-import { initializeApp, getApps, type FirebaseApp } from "firebase/app";
-import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, type Auth, type User as FirebaseUser } from "firebase/auth";
-import { getFirestore, doc, getDoc, setDoc, collection, getDocs, onSnapshot, writeBatch, deleteDoc, updateDoc, Timestamp, addDoc, serverTimestamp, query, orderBy, where, type Firestore } from "firebase/firestore";
+// FIX: Switched to Firebase v9+ modular API to match the project's dependencies.
+import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
+// FIX: Use namespace import for auth to fix module resolution issues.
+import * as fbAuth from "firebase/auth";
+import { 
+    getFirestore, 
+    doc, 
+    getDoc, 
+    setDoc, 
+    onSnapshot,
+    collection,
+    addDoc,
+    query,
+    orderBy,
+    where,
+    updateDoc,
+    writeBatch,
+    deleteDoc,
+    serverTimestamp,
+    Timestamp,
+    getDocs,
+    Firestore
+} from "firebase/firestore";
+
 
 // --- LOCAL IMPORTS ---
 import { firebaseConfig } from '../firebaseConfig';
-import type { UserProfile, UserProgress, StorableEntitlements, ProblemReport, ReportStatus, Product } from "../types";
+import type { UserProfile, UserProgress, StorableEntitlements, ProblemReport, ReportStatus } from "../types";
 
 // --- SYNCHRONOUS INITIALIZATION ---
 let app: FirebaseApp;
-let auth: Auth;
+// FIX: Use namespace-prefixed type for Auth.
+let auth: fbAuth.Auth;
 let db: Firestore;
 let firebaseInitializationError: Error | null = null;
 
 try {
-    app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
-    auth = getAuth(app);
+    // FIX: Use v9+ initialization methods.
+    app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+    // FIX: Use namespace-prefixed function for getAuth.
+    auth = fbAuth.getAuth(app);
     db = getFirestore(app);
 } catch (error: any) {
     console.error("Firebase Initialization Failed:", error);
     // Capture the error to be handled by the application's entry point
-    firebaseInitializationError = new Error(`Component auth has not been registered yet\nCould not initialize Firebase services. Please check your configuration.`);
+    firebaseInitializationError = new Error(`Could not initialize Firebase services. Please check your configuration. Original error: ${error.message}`);
 }
 
 // --- EXPORTS ---
@@ -45,11 +64,13 @@ const REPORTS_COLLECTION = 'problemReports';
 // --- AUTH SERVICE LOGIC ---
 
 export async function getUserProfile(uid: string): Promise<UserProfile | null> {
+  // FIX: Use v9 Firestore syntax
   const userDocRef = doc(db, USERS_COLLECTION, uid);
   const userDocSnap = await getDoc(userDocRef);
 
   if (userDocSnap.exists()) {
-    const data = userDocSnap.data();
+    const data = userDocSnap.data()!;
+    // FIX: Handle v9 Timestamps
     const createdAt = (data.createdAt as Timestamp)?.toDate().toISOString() || new Date().toISOString();
     const expiryDate = (data.expiryDate as Timestamp)?.toDate().toISOString() || null;
     
@@ -61,7 +82,8 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
 }
 
 export function onAuthUserChanged(callback: (user: UserProfile | null) => void): () => void {
-  return onAuthStateChanged(auth, async (authUser) => {
+  // FIX: Use v9 onAuthStateChanged with namespace.
+  return fbAuth.onAuthStateChanged(auth, async (authUser) => {
     if (authUser) {
       const userProfile = await getUserProfile(authUser.uid);
       if(userProfile && userProfile.enabled) {
@@ -80,9 +102,15 @@ export function onAuthUserChanged(callback: (user: UserProfile | null) => void):
   });
 }
 
-export async function register(email: string, password: string, firstName: string, lastName: string): Promise<FirebaseUser> {
-  const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+// FIX: Use namespace-prefixed type for User.
+export async function register(email: string, password: string, firstName: string, lastName: string): Promise<fbAuth.User> {
+  // FIX: Use v9 createUserWithEmailAndPassword with namespace.
+  const userCredential = await fbAuth.createUserWithEmailAndPassword(auth, email, password);
   const { user } = userCredential;
+  if (!user) {
+      throw new Error("User creation failed.");
+  }
+  // FIX: Use v9 Firestore syntax
   const userDocRef = doc(db, USERS_COLLECTION, user.uid);
   const newUserProfileData = {
     email: user.email!,
@@ -90,41 +118,30 @@ export async function register(email: string, password: string, firstName: strin
     lastName,
     isAdmin: false,
     enabled: true,
-    createdAt: serverTimestamp(),
+    createdAt: serverTimestamp(), // v9 syntax
     expiryDate: null,
   };
   await setDoc(userDocRef, newUserProfileData);
   return user;
 }
 
-export async function login(email: string, password: string): Promise<FirebaseUser> {
-  const userCredential = await signInWithEmailAndPassword(auth, email, password);
+// FIX: Use namespace-prefixed type for User.
+export async function login(email: string, password: string): Promise<fbAuth.User> {
+  // FIX: Use v9 signInWithEmailAndPassword with namespace.
+  const userCredential = await fbAuth.signInWithEmailAndPassword(auth, email, password);
+  if (!userCredential.user) {
+      throw new Error("Login failed.");
+  }
   return userCredential.user;
 }
 
 export async function logout(): Promise<void> {
-  await signOut(auth);
-}
-
-// --- NEW AUTOMATION LOGIC ---
-export async function processAutomaticPurchase(userId: string, productId: string): Promise<void> {
-    console.log("Simulating backend processing for automatic purchase...");
-    // Simulate network delay and payment processing time (like a webhook would take)
-    await new Promise(resolve => setTimeout(resolve, 5000));
-
-    const entitlements = await databaseService.getUserEntitlements(userId) || { productIDs: [], teamSeats: 0, teamActive: false };
-    const newProductIDs = [...new Set([...entitlements.productIDs, productId])];
-    
-    const updatedEntitlements: StorableEntitlements = {
-        ...entitlements,
-        productIDs: newProductIDs
-    };
-
-    await databaseService.saveUserEntitlements(userId, updatedEntitlements);
-    console.log(`User ${userId} automatically upgraded with product ${productId}.`);
+  // FIX: Use v9 signOut with namespace.
+  await fbAuth.signOut(auth);
 }
 
 export function subscribeToEntitlements(userId: string, callback: (entitlements: StorableEntitlements | null) => void): () => void {
+    // FIX: Use v9 onSnapshot syntax
     const docRef = doc(db, ENTITLEMENTS_COLLECTION, userId);
     return onSnapshot(docRef, (docSnap) => {
         callback(docSnap.exists() ? docSnap.data() as StorableEntitlements : null);
@@ -136,6 +153,7 @@ export async function addProblemReport(userId: string, userEmail: string, userNa
     if (!db) {
         throw new Error("Firestore is not initialized.");
     }
+    // FIX: Use v9 Firestore syntax
     await addDoc(collection(db, REPORTS_COLLECTION), {
         userId,
         userEmail,
@@ -147,6 +165,7 @@ export async function addProblemReport(userId: string, userEmail: string, userNa
 }
 
 export function subscribeToProblemReports(callback: (reports: ProblemReport[]) => void): () => void {
+    // FIX: Use v9 query and onSnapshot syntax
     const q = query(collection(db, REPORTS_COLLECTION), orderBy("timestamp", "desc"));
     return onSnapshot(q, (snapshot) => {
         const reports = snapshot.docs.map(docSnap => ({
@@ -159,6 +178,7 @@ export function subscribeToProblemReports(callback: (reports: ProblemReport[]) =
 }
 
 export function subscribeToUnreadReportsCount(callback: (count: number) => void): () => void {
+    // FIX: Use v9 query and onSnapshot syntax
     const q = query(collection(db, REPORTS_COLLECTION), where("status", "==", "new"));
     return onSnapshot(q, (snapshot) => {
         callback(snapshot.size);
@@ -166,7 +186,9 @@ export function subscribeToUnreadReportsCount(callback: (count: number) => void)
 }
 
 export async function updateProblemReportStatus(reportId: string, status: ReportStatus): Promise<void> {
-    await updateDoc(doc(db, REPORTS_COLLECTION, reportId), { status });
+    // FIX: Use v9 Firestore syntax
+    const docRef = doc(db, REPORTS_COLLECTION, reportId);
+    await updateDoc(docRef, { status });
 }
 
 
@@ -174,26 +196,31 @@ export async function updateProblemReportStatus(reportId: string, status: Report
 
 class DatabaseService {
   async getUserProgress(uid: string): Promise<UserProgress | null> {
+    // FIX: Use v9 Firestore syntax
     const docRef = doc(db, PROGRESS_COLLECTION, uid);
     const docSnap = await getDoc(docRef);
     return docSnap.exists() ? docSnap.data() as UserProgress : null;
   }
 
   async saveUserProgress(uid: string, progress: UserProgress): Promise<void> {
+    // FIX: Use v9 Firestore syntax
     await setDoc(doc(db, PROGRESS_COLLECTION, uid), progress, { merge: true });
   }
   
   async getUserEntitlements(uid: string): Promise<StorableEntitlements | null> {
+    // FIX: Use v9 Firestore syntax
     const docRef = doc(db, ENTITLEMENTS_COLLECTION, uid);
     const docSnap = await getDoc(docRef);
     return docSnap.exists() ? docSnap.data() as StorableEntitlements : null;
   }
   
   async saveUserEntitlements(uid: string, entitlements: StorableEntitlements): Promise<void> {
+    // FIX: Use v9 Firestore syntax
     await setDoc(doc(db, ENTITLEMENTS_COLLECTION, uid), entitlements, { merge: true });
   }
 
   subscribeToUsers(callback: (users: UserProfile[]) => void): () => void {
+    // FIX: Use v9 query and onSnapshot syntax
     const q = query(collection(db, USERS_COLLECTION), orderBy("createdAt", "desc"));
     return onSnapshot(q, (querySnapshot) => {
       const users: UserProfile[] = querySnapshot.docs.map(docSnap => {
@@ -207,6 +234,7 @@ class DatabaseService {
   }
 
   async updateUserProfile(uid: string, data: Partial<UserProfile>): Promise<void> {
+    // FIX: Use v9 Firestore syntax
     const dataToUpdate: any = { ...data };
     if (data.expiryDate) {
         dataToUpdate.expiryDate = Timestamp.fromDate(new Date(data.expiryDate));
@@ -215,6 +243,7 @@ class DatabaseService {
   }
 
   async deleteUserProfile(uid: string): Promise<void> {
+    // FIX: Use v9 batch syntax
     const batch = writeBatch(db);
     batch.delete(doc(db, USERS_COLLECTION, uid));
     batch.delete(doc(db, PROGRESS_COLLECTION, uid));
@@ -223,6 +252,7 @@ class DatabaseService {
   }
 
   async addUserProfile(profileData: Omit<UserProfile, 'uid' | 'createdAt'>): Promise<string> {
+    // FIX: Use v9 Firestore syntax
     const docRef = await addDoc(collection(db, USERS_COLLECTION), {
         ...profileData,
         expiryDate: profileData.expiryDate ? Timestamp.fromDate(new Date(profileData.expiryDate)) : null,
@@ -235,6 +265,7 @@ class DatabaseService {
     const collectionsToExport = [USERS_COLLECTION, PROGRESS_COLLECTION, ENTITLEMENTS_COLLECTION, REPORTS_COLLECTION];
     const dbData: Record<string, any[]> = {};
     for (const collectionName of collectionsToExport) {
+        // FIX: Use v9 Firestore syntax
         const querySnapshot = await getDocs(collection(db, collectionName));
         dbData[collectionName] = querySnapshot.docs.map(d => {
             const data = d.data();
@@ -249,6 +280,7 @@ class DatabaseService {
   
   async importDatabase(jsonString: string): Promise<void> {
       const dbData = JSON.parse(jsonString);
+      // FIX: Use v9 batch syntax
       const batch = writeBatch(db);
       for (const collectionName in dbData) {
           if (Object.prototype.hasOwnProperty.call(dbData, collectionName)) {
@@ -256,6 +288,7 @@ class DatabaseService {
                   const { id, ...data } = docData;
                   if (!id) continue;
                   Object.keys(data).forEach(key => {
+                      // FIX: Handle v9 Timestamps
                       if (typeof data[key] === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(data[key])) {
                           data[key] = Timestamp.fromDate(new Date(data[key]));
                       }
