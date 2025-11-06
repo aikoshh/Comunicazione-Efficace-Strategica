@@ -7,7 +7,6 @@ import { soundService } from '../services/soundService';
 import { Spinner } from './Loader';
 import { risultatiProVideo, vantaggioRisultatiProVideo, feedbackParaverbaleVideo, librerieStrategicheVideo } from '../assets';
 import { mainLogoUrl } from '../assets';
-import { processAutomaticPurchase } from '../services/firebase';
 import { useToast } from '../hooks/useToast';
 
 interface PaywallScreenProps {
@@ -61,7 +60,7 @@ export const PaywallScreen: React.FC<PaywallScreenProps> = ({ user, entitlements
     const [isLoading, setIsLoading] = useState<string | null>(null);
     const { addToast } = useToast();
 
-    const handlePurchase = async (product: Product & { paymentLink?: string }) => {
+    const handlePurchase = (product: Product & { paymentLink?: string }) => {
         soundService.playClick();
     
         if (!product.paymentLink || product.paymentLink.includes('INSERISCI_QUI_IL_TUO_LINK_REALE')) {
@@ -72,19 +71,8 @@ export const PaywallScreen: React.FC<PaywallScreenProps> = ({ user, entitlements
         // Open Stripe checkout in a new tab
         window.open(product.paymentLink, '_blank');
 
-        setIsLoading(product.id);
-        addToast("Processando il tuo acquisto... L'app si aggiornerà automaticamente al completamento.", 'info');
-
-        try {
-            // Simulate the backend webhook process
-            await processAutomaticPurchase(user.uid, product.id);
-            // The real-time listener in App.tsx will handle the UI update.
-            addToast("Acquisto completato! Funzionalità PRO sbloccate.", 'success');
-        } catch (error) {
-            addToast("Si è verificato un errore durante l'attivazione. Riprova o contatta il supporto.", 'error');
-        } finally {
-            setIsLoading(null);
-        }
+        // Inform the user about the next steps, without simulating the purchase.
+        addToast("Finestra di pagamento aperta. Al termine dell'acquisto, il tuo account verrà aggiornato automaticamente.", 'info');
     };
     
     const handleRestore = async () => {
