@@ -66,28 +66,44 @@ export const VOICE_RUBRIC_CRITERIA: { id: VoiceAnalysisResult['scores'][0]['crit
 export const STRATEGIC_CHECKUP_EXERCISES: Exercise[] = [
   {
     id: 'checkup-1',
-    title: 'Dare un Feedback Correttivo',
-    scenario: 'Un tuo collaboratore, Marco, ha commesso per la terza volta un errore di distrazione in un report importante per un cliente. L\'errore è stato corretto in tempo, ma ha creato un piccolo ritardo.',
-    task: 'Come daresti un feedback a Marco per affrontare la situazione in modo costruttivo e prevenire che accada di nuovo?',
-    difficulty: 'Medio',
-    competence: 'riformulazione',
+    title: 'Chiarire le Aspettative con il Capo',
+    scenario: 'Il tuo capo ti ha assegnato un nuovo progetto con la direttiva "Voglio un risultato eccellente, sorprendimi". Le istruzioni sono molto vaghe e temi di non soddisfare le sue aspettative non dette.',
+    task: 'Quali domande fai al tuo capo per chiarire le aspettative e assicurarti di partire con il piede giusto, senza sembrare insicuro/a?',
+    difficulty: 'Facile',
+    competence: 'ascolto',
   },
   {
     id: 'checkup-2',
-    title: 'Gestire un Cliente Insoddisfatto',
-    scenario: 'Un cliente ti chiama lamentandosi che il servizio ricevuto non è all\'altezza delle sue aspettative e minaccia di interrompere il rapporto di collaborazione.',
-    task: 'Come rispondi al telefono per calmare il cliente e iniziare a gestire la situazione in modo strategico?',
-    difficulty: 'Difficile',
+    title: 'Gestire un Cliente in Fase di Vendita',
+    scenario: 'Durante una trattativa, un potenziale cliente afferma: "La vostra soluzione è interessante, ma un vostro competitor ci offre una cosa simile a un prezzo inferiore".',
+    task: 'Come rispondi per valorizzare la tua offerta senza svalutare il competitor, spostando il focus dal prezzo al valore?',
+    difficulty: 'Medio',
     competence: 'gestione_conflitto',
   },
   {
     id: 'checkup-3',
-    title: 'Chiarire le Aspettative',
-    scenario: 'Il tuo capo ti ha assegnato un nuovo progetto con la direttiva "Voglio un risultato eccellente, sorprendimi". Le istruzioni sono molto vaghe.',
-    task: 'Quali domande fai al tuo capo per chiarire le aspettative e assicurarti di partire con il piede giusto?',
-    difficulty: 'Facile',
-    competence: 'ascolto',
+    title: 'Affrontare una Critica in Famiglia',
+    scenario: 'Durante un pranzo di famiglia, un parente ti dice in tono critico: "Vedo che stai ancora facendo quel lavoro. Non pensi che sia ora di trovare qualcosa di più stabile?". La critica ti ferisce.',
+    task: 'Come rispondi per difendere le tue scelte in modo assertivo ma non aggressivo, preservando l\'armonia familiare?',
+    difficulty: 'Difficile',
+    competence: 'assertivita',
   },
+  {
+    id: 'checkup-4',
+    title: 'Un Problema con un Amico',
+    scenario: 'Un tuo caro amico annulla un appuntamento con te per l\'ennesima volta all\'ultimo minuto. Ti senti frustrato/a e poco considerato/a.',
+    task: 'Scrivi il messaggio che invieresti al tuo amico per esprimere il tuo disappunto in modo costruttivo, senza rovinare l\'amicizia.',
+    difficulty: 'Medio',
+    competence: 'riformulazione',
+  },
+  {
+    id: 'checkup-5',
+    title: 'Discussione di Coppia',
+    scenario: 'Il tuo partner è infastidito perché ultimamente passi molto tempo al telefono per lavoro anche la sera. Ti dice con tono seccato: "Sei sempre con quel telefono in mano!".',
+    task: 'Come rispondi per validare il suo sentimento e aprire un dialogo sulla questione, invece di metterti sulla difensiva?',
+    difficulty: 'Difficile',
+    competence: 'ascolto',
+  }
 ];
 
 export const MODULES: Module[] = [
