@@ -39,11 +39,11 @@ const PersonaMessage = React.forwardRef<HTMLDivElement, { message: ChatMessage }
 );
 
 
-const CoachMessage: React.FC<{ message: ChatMessage; onSelect: (suggestion: string) => void }> = ({ message, onSelect }) => {
+const CoachMessage: React.FC<{ message: ChatMessage; onSelect: (suggestion: string) => void; isLoading: boolean }> = ({ message, onSelect, isLoading }) => {
     const [customResponse, setCustomResponse] = useState('');
 
     const handleCustomSubmit = () => {
-        if (!customResponse.trim()) return;
+        if (!customResponse.trim() || isLoading) return;
         soundService.playClick();
         onSelect(customResponse);
     };
@@ -65,14 +65,15 @@ const CoachMessage: React.FC<{ message: ChatMessage; onSelect: (suggestion: stri
                     placeholder="Oppure, scrivi qui la tua risposta personalizzata..."
                     rows={3}
                     onKeyPress={(e) => { if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleCustomSubmit(); }}}
+                    disabled={isLoading}
                 />
                 <button
                     onClick={handleCustomSubmit}
-                    style={{...styles.customResponseButton, ...(!customResponse.trim() ? styles.sendButtonDisabled : {})}}
-                    disabled={!customResponse.trim()}
+                    style={{...styles.customResponseButton, ...((!customResponse.trim() || isLoading) ? styles.sendButtonDisabled : {})}}
+                    disabled={!customResponse.trim() || isLoading}
                     title="Invia risposta personalizzata"
                 >
-                    <SendIcon />
+                    {isLoading ? <Spinner size={24} color="white"/> : <SendIcon />}
                 </button>
             </div>
 
@@ -82,7 +83,7 @@ const CoachMessage: React.FC<{ message: ChatMessage; onSelect: (suggestion: stri
             
             <div style={styles.suggestionsContainer}>
                 {message.suggestions?.map((s, i) => (
-                    <button key={i} style={styles.suggestionButton} onClick={() => onSelect(s.response)}>
+                    <button key={i} style={styles.suggestionButton} onClick={() => onSelect(s.response)} disabled={isLoading}>
                         <span style={styles.suggestionType}>{s.type.charAt(0).toUpperCase() + s.type.slice(1)}</span>
                         <p style={styles.suggestionText}>"{s.response}"</p>
                     </button>
@@ -122,8 +123,8 @@ export const StrategicChatTrainerScreen: React.FC<StrategicChatTrainerScreenProp
   }, [chatHistory, isLoading]);
 
   const handleStartSimulation = async () => {
-    if (!userInput.trim()) {
-        addToast("Inserisci un messaggio da analizzare.", 'error');
+    if (!userInput.trim() || isLoading) {
+        if (!userInput.trim()) addToast("Inserisci un messaggio da analizzare.", 'error');
         return;
     }
     soundService.playClick();
@@ -160,7 +161,7 @@ export const StrategicChatTrainerScreen: React.FC<StrategicChatTrainerScreenProp
     soundService.playClick();
     
     const userChoiceMsg: ChatMessage = { id: `user-${Date.now()}`, role: 'user', content: suggestion };
-    setChatHistory(prev => [...prev, userChoiceMsg]);
+    setChatHistory(prev => [...prev.filter(m => m.role !== 'coach'), userChoiceMsg]);
     setIsLoading(true);
 
     try {
@@ -214,6 +215,7 @@ export const StrategicChatTrainerScreen: React.FC<StrategicChatTrainerScreenProp
                 onChange={(e) => setContext(e.target.value)}
                 placeholder="Contesto (opzionale): Es. Sto parlando con un cliente scontento..."
                 rows={2}
+                disabled={isLoading}
             />
             <textarea
                 style={{...styles.smallTextarea}}
@@ -221,6 +223,7 @@ export const StrategicChatTrainerScreen: React.FC<StrategicChatTrainerScreenProp
                 onChange={(e) => setObjective(e.target.value)}
                 placeholder="Obiettivo (opzionale): Es. Voglio calmarlo e fissare una chiamata..."
                 rows={2}
+                disabled={isLoading}
             />
         </div>
         <div style={styles.mainInputWrapper}>
@@ -231,14 +234,15 @@ export const StrategicChatTrainerScreen: React.FC<StrategicChatTrainerScreenProp
                 placeholder="Incolla o scrivi qui il messaggio per iniziare la simulazione..."
                 rows={3}
                 onKeyPress={(e) => { if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleStartSimulation(); }}}
+                disabled={isLoading}
             />
             <button 
                 onClick={handleStartSimulation} 
-                style={{...styles.sendButton, ...(!userInput.trim() ? styles.sendButtonDisabled : {})}}
-                disabled={!userInput.trim()}
+                style={{...styles.sendButton, ...((!userInput.trim() || isLoading) ? styles.sendButtonDisabled : {})}}
+                disabled={!userInput.trim() || isLoading}
                 title="Inizia Simulazione"
             >
-                <SendIcon/>
+                {isLoading ? <Spinner size={24} color="white"/> : <SendIcon/>}
             </button>
         </div>
     </div>
@@ -256,11 +260,11 @@ export const StrategicChatTrainerScreen: React.FC<StrategicChatTrainerScreenProp
             switch(msg.role) {
                 case 'user': return <UserMessage key={msg.id} message={msg} />;
                 case 'persona': return <PersonaMessage ref={isTargetPersonaMessage ? lastPersonaMessageRef : null} key={msg.id} message={msg} />;
-                case 'coach': return <CoachMessage key={msg.id} message={msg} onSelect={handleSelectSuggestion} />;
+                case 'coach': return <CoachMessage key={msg.id} message={msg} onSelect={handleSelectSuggestion} isLoading={isLoading} />;
                 default: return null;
             }
         })}
-        {isLoading && (
+        {isLoading && chatHistory[chatHistory.length - 1]?.role !== 'coach' && (
             <div style={styles.centeredMessage}>
                 <Spinner size={32} color={COLORS.primary} />
             </div>
@@ -286,7 +290,7 @@ export const StrategicChatTrainerScreen: React.FC<StrategicChatTrainerScreenProp
         
         {chatHistory.length > 0 && (
             <div style={styles.footerActions}>
-                <button onClick={handleReset} style={styles.resetButton}>
+                <button onClick={handleReset} style={styles.resetButton} disabled={isLoading}>
                     <RetryIcon />
                     Nuova Simulazione
                 </button>
@@ -395,7 +399,7 @@ const styles: { [key: string]: React.CSSProperties } = {
   
   // Input form styles
   inputArea: { display: 'flex', flexDirection: 'column', gap: '16px', flex: 1, justifyContent: 'flex-end' },
-  initialInputsContainer: { display: 'flex', gap: '12px', flexDirection: 'column' }, 
+  initialInputsContainer: { display: 'flex', gap: '12px', flexDirection: 'column' },
   smallTextarea: { width: '100%', resize: 'none', padding: '10px 12px', borderRadius: '8px', border: `1px solid ${COLORS.divider}`, fontSize: '14px', fontFamily: 'inherit', boxSizing: 'border-box' },
   mainInputWrapper: { display: 'flex', flexDirection: 'column', gap: '12px', alignItems: 'center', width: '100%', margin: '0 auto' },
   textarea: { width: '100%', boxSizing: 'border-box', resize: 'none', padding: '12px', borderRadius: '8px', border: `1px solid ${COLORS.divider}`, fontSize: '16px', fontFamily: 'inherit' },
