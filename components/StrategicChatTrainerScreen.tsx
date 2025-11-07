@@ -397,9 +397,9 @@ const styles: { [key: string]: React.CSSProperties } = {
   inputArea: { display: 'flex', flexDirection: 'column', gap: '16px', flex: 1, justifyContent: 'flex-end' },
   initialInputsContainer: { display: 'flex', gap: '12px', flexDirection: 'column' },
   smallTextarea: { width: '100%', resize: 'none', padding: '10px 12px', borderRadius: '8px', border: `1px solid ${COLORS.divider}`, fontSize: '14px', fontFamily: 'inherit', boxSizing: 'border-box' },
-  mainInputWrapper: { display: 'flex', gap: '12px', alignItems: 'flex-start', width: '95%', margin: '0 auto' },
-  textarea: { flex: 1, resize: 'none', padding: '12px', borderRadius: '8px', border: `1px solid ${COLORS.divider}`, fontSize: '16px', fontFamily: 'inherit' },
-  sendButton: { backgroundColor: COLORS.secondary, color: 'white', border: 'none', borderRadius: '8px', width: '48px', height: '48px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  mainInputWrapper: { display: 'flex', flexDirection: 'column', gap: '12px', alignItems: 'center', width: '100%', margin: '0 auto' },
+  textarea: { width: '100%', boxSizing: 'border-box', resize: 'none', padding: '12px', borderRadius: '8px', border: `1px solid ${COLORS.divider}`, fontSize: '16px', fontFamily: 'inherit' },
+  sendButton: { backgroundColor: COLORS.secondary, color: 'white', border: 'none', borderRadius: '50%', width: '48px', height: '48px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   sendButtonDisabled: { backgroundColor: '#ccc', cursor: 'not-allowed' },
   
   footerActions: {
