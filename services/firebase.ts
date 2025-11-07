@@ -2,16 +2,18 @@
 
 // --- CORE FIREBASE IMPORTS ---
 import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
-// FIX: Using named imports for Firebase Auth to resolve module loading issues.
+
+// FIX: Combined value and type imports for Firebase Auth into a single statement to resolve module loading issues.
 import {
     getAuth,
     onAuthStateChanged,
     createUserWithEmailAndPassword,
     signInWithEmailAndPassword,
     signOut,
-    type Auth,
-    type User
+    Auth,
+    User
 } from "firebase/auth";
+
 import { 
     getFirestore, 
     doc, 
