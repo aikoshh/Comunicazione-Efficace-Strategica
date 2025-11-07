@@ -3,7 +3,7 @@
 // --- CORE FIREBASE IMPORTS ---
 // FIX: Switched to Firebase v9+ modular API to match the project's dependencies.
 import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
-// FIX: Switched from a namespace import to named imports for firebase/auth to resolve module errors.
+// FIX: Using named imports for Firebase Auth v9+ modular API to resolve auth-related errors.
 import { 
     getAuth,
     onAuthStateChanged,
