@@ -115,9 +115,9 @@ export const MODULES: Module[] = [
     color: '#2E7D32',
     headerImage: dareFeedbackEfficaceHeaderVideo,
     exercises: [
-      { id: 'e1', title: 'Feedback Correttivo a un Collaboratore', scenario: 'Un tuo collaboratore continua a consegnare il lavoro in ritardo, impattando le scadenze del team.', task: 'Prepara e scrivi il discorso che faresti per affrontare il problema in modo costruttivo.', difficulty: 'Facile', competence: 'riformulazione' },
-      { id: 'e2', title: 'Feedback a un Manager', scenario: 'Il tuo manager tende a micro-gestire il tuo lavoro, limitando la tua autonomia e rallentandoti.', task: 'Come chiederesti un incontro e cosa diresti per dare un feedback assertivo ma rispettoso?', difficulty: 'Difficile', competence: 'assertivita' },
-      { id: 'e7', title: 'Rinforzare un Comportamento Positivo', scenario: 'Un membro del tuo team ha gestito in modo eccellente una situazione difficile con un cliente.', task: 'Scrivi un feedback di rinforzo specifico ed efficace che vada oltre un semplice "bravo!".', difficulty: 'Facile', competence: 'riformulazione' },
+      { id: 'e1', title: 'Feedback Correttivo (Lavoro)', scenario: 'Un tuo collaboratore continua a consegnare il lavoro in ritardo, impattando le scadenze del team.', task: 'Prepara e scrivi il discorso che faresti per affrontare il problema in modo costruttivo, focalizzandoti sul comportamento e non sulla persona.', difficulty: 'Medio', competence: 'riformulazione' },
+      { id: 'e2', title: 'Feedback su un\'Abitudine (Partner)', scenario: 'Il tuo partner ha un\'abitudine (es. lasciare disordine) che a te crea stress. Vuoi affrontare la questione senza che sembri un attacco personale.', task: 'Formula la frase di apertura che useresti per dare un feedback costruttivo, basato sui fatti e sul tuo stato d\'animo (es. "Quando vedo X, mi sento Y...").', difficulty: 'Medio', competence: 'assertivita' },
+      { id: 'e7', title: 'Richiesta di Feedback (Vendita)', scenario: 'Hai perso un\'importante trattativa. Vuoi chiamare il potenziale cliente per avere un feedback onesto, con l\'obiettivo di imparare e mantenere una buona relazione.', task: 'Scrivi l\'email che invieresti per chiedere questo feedback in modo professionale e non insistente.', difficulty: 'Difficile', competence: 'ascolto' },
     ]
   },
   {
@@ -128,9 +128,30 @@ export const MODULES: Module[] = [
     color: '#C62828',
     headerImage: cardImage2,
     exercises: [
-      { id: 'e3', title: 'Rispondere a un\'Obiezione Forte', scenario: 'Durante una presentazione, un cliente afferma: "La vostra soluzione costa il doppio rispetto al vostro competitor principale".', task: 'Formula una risposta che riconosca il punto del cliente ma sposti il focus sul valore.', difficulty: 'Medio', competence: 'gestione_conflitto' },
-      { id: 'e4', title: 'Comunicare una Decisione Impopolare', scenario: 'Devi comunicare al tuo team che il bonus annuale è stato ridotto a causa dei risultati aziendali.', task: 'Scrivi il messaggio chiave che useresti per comunicare la notizia con empatia e trasparenza.', difficulty: 'Difficile', competence: 'assertivita' },
-      { id: 'e8', title: 'Dire di No a una Richiesta', scenario: 'Un collega ti chiede di farti carico di una parte significativa del suo lavoro perché è in difficoltà con le scadenze, ma tu sei già al limite.', task: 'Come rifiuti la richiesta in modo assertivo, preservando la relazione con il collega?', difficulty: 'Medio', competence: 'assertivita' },
+      { 
+        id: 'e4', 
+        title: 'Comunicare una Decisione Impopolare (Lavoro)',
+        scenario: 'Devi comunicare al tuo team che il bonus annuale è stato ridotto a causa dei risultati aziendali.', 
+        task: 'Scrivi il messaggio chiave che useresti per comunicare la notizia con empatia e trasparenza.', 
+        difficulty: 'Difficile', 
+        competence: 'gestione_conflitto' 
+      },
+      { 
+        id: 'e8', 
+        title: 'Gestire un Malinteso di Coppia (Partner)',
+        scenario: 'Il tuo partner è deluso perché hai dimenticato una data importante. Ti dice con tono freddo: "Evidentemente per te non era così importante."', 
+        task: 'Come rispondi per riconoscere il suo sentimento e aprire un dialogo per recuperare la situazione, senza cadere in giustificazioni?', 
+        difficulty: 'Medio', 
+        competence: 'gestione_conflitto'
+      },
+      { 
+        id: 'e3', 
+        title: 'Rispondere a un\'Obiezione (Vendita)',
+        scenario: 'Durante una trattativa, un potenziale cliente afferma: "La vostra soluzione costa il doppio rispetto al vostro competitor principale".', 
+        task: 'Formula una risposta che riconosca il punto del cliente ma sposti il focus dal prezzo al valore.', 
+        difficulty: 'Medio', 
+        competence: 'gestione_conflitto' 
+      },
     ],
     isPro: true,
   },
@@ -142,9 +163,9 @@ export const MODULES: Module[] = [
     color: '#FFC107',
     headerImage: cardImage3,
     exercises: [
-      { id: 'e5', title: 'Da Lamentela a Richiesta', scenario: 'Un membro del team si lamenta: "C\'è troppa burocrazia, non riusciamo a lavorare velocemente".', task: 'Quale domanda faresti per trasformare la lamentela in una proposta costruttiva?', difficulty: 'Facile', competence: 'riformulazione' },
-      { id: 'e6', title: 'Scoprire il "Perché" Nascosto', scenario: 'Un cliente insiste per avere una funzionalità che tecnicamente è molto complessa e poco utile per la maggior parte degli utenti.', task: 'Quali domande faresti per capire il bisogno reale che si nasconde dietro la sua richiesta specifica?', difficulty: 'Medio', competence: 'ascolto' },
-      { id: 'e9', title: 'Domanda per Sbloccare un Impasse', scenario: 'Durante un brainstorming, il team è bloccato e non emergono nuove idee.', task: 'Formula una domanda "ipotetica" o "magica" per riattivare la creatività del gruppo.', difficulty: 'Medio', competence: 'ascolto' },
+      { id: 'e5', title: 'Da Lamentela a Proposta (Lavoro)', scenario: 'Un membro del team si lamenta: "C\'è troppa burocrazia, non riusciamo a lavorare velocemente".', task: 'Quale domanda faresti per trasformare la lamentela in una proposta costruttiva, responsabilizzandolo?', difficulty: 'Facile', competence: 'riformulazione' },
+      { id: 'e6', title: 'Scoprire il Bisogno Reale (Vendita)', scenario: 'Un cliente insiste per avere una funzionalità X. Sospetti che il suo vero problema sia Y, che la funzionalità X non risolverebbe.', task: 'Quale domanda strategica faresti per spostare il focus dalla soluzione (X) al problema reale (Y), senza sminuire la sua richiesta?', difficulty: 'Difficile', competence: 'ascolto' },
+      { id: 'e9', title: 'Aprire un Dialogo (Partner)', scenario: 'Senti che c\'è una certa tensione con il tuo partner riguardo a un argomento delicato (es. finanze). Vuoi aprire un dialogo senza mettere pressione.', task: 'Quale domanda strategica useresti per "testare il terreno" e invitare a una conversazione aperta e sicura?', difficulty: 'Medio', competence: 'ascolto' },
     ],
   },
   {
@@ -155,9 +176,9 @@ export const MODULES: Module[] = [
     color: '#1C3E5E',
     headerImage: cardImage5,
     exercises: [
-        { id: 'e10', title: 'Riformulazione a Specchio', scenario: 'Un collega ti dice, con tono preoccupato: "Sono sommerso di lavoro, non so da dove iniziare e temo di non farcela per la scadenza."', task: 'Riformula la sua frase per dimostrargli che hai capito sia il contenuto che l\'emozione.', difficulty: 'Facile', competence: 'ascolto' },
-        { id: 'e11', title: 'Sintesi Strategica', scenario: 'Dopo 15 minuti di conversazione, un cliente ti ha spiegato una serie di problemi complessi e intrecciati tra loro.', task: 'Come sintetizzeresti i punti chiave per assicurarti di aver capito bene e definire il prossimo passo?', difficulty: 'Medio', competence: 'ascolto' },
-        { id: 'e12', title: 'Ascoltare per l\'"Non Detto"', scenario: 'Un membro del tuo team dice "Sì, sì, ho capito tutto" ma il suo linguaggio del corpo (sguardo basso, braccia conserte) comunica insicurezza.', task: 'Cosa diresti per verificare la sua reale comprensione in modo non inquisitorio?', difficulty: 'Difficile', competence: 'ascolto' },
+        { id: 'e10', title: 'Riformulazione Empatica (Lavoro)', scenario: 'Un collega ti dice, preoccupato: "Sono sommerso di lavoro, non so da dove iniziare e temo di non farcela per la scadenza".', task: 'Riformula la sua frase per dimostrargli che hai capito sia il contenuto (il carico) sia l\'emozione (l\'ansia), e per aprire la strada a una soluzione.', difficulty: 'Facile', competence: 'ascolto' },
+        { id: 'e11', title: 'Ascoltare il "Non Detto" (Partner)', scenario: 'Il tuo partner torna a casa teso e silenzioso. Alla tua domanda "Tutto bene?", risponde "Sì", ma il suo corpo comunica il contrario.', task: 'Come riformuli la tua osservazione per aprire un canale di comunicazione, dimostrando di aver "ascoltato" il suo non-verbale?', difficulty: 'Medio', competence: 'ascolto' },
+        { id: 'e12', title: 'Parafrasi Validante (Vendita)', scenario: 'Un potenziale cliente dice: "Bello, ma non credo che il mio team lo userebbe mai, sono troppo abituati ai vecchi sistemi".', task: 'Riformula la sua preoccupazione (la resistenza al cambiamento) per validarla e allo stesso tempo esplorare più a fondo la sua obiezione.', difficulty: 'Medio', competence: 'ascolto' },
     ]
   },
   {
@@ -169,9 +190,9 @@ export const MODULES: Module[] = [
     headerImage: voceStrategicaHeaderVideo,
     isPro: true,
     exercises: [
-        { id: 'v1', title: 'Comunicare Urgenza e Calma', scenario: 'C\'è un problema critico sulla produzione. Devi comunicarlo al team tecnico.', task: 'Registra un messaggio vocale che comunichi l\'urgenza del problema ma infonda calma e fiducia nella capacità del team di risolverlo.', difficulty: 'Facile', competence: 'riformulazione', exerciseType: ExerciseType.VERBAL },
-        { id: 'v2', title: 'Proiettare Sicurezza', scenario: 'Stai per presentare la tua idea a un gruppo di investitori.', task: 'Registra la frase di apertura della tua presentazione. Usa un tono di voce, un ritmo e un volume che comunichino sicurezza e competenza.', difficulty: 'Medio', competence: 'riformulazione', exerciseType: ExerciseType.VERBAL },
-        { id: 'v3', title: 'Usare le Pause Efficaci', scenario: 'Devi comunicare un punto molto importante durante una riunione.', task: 'Registra la frase: "La nostra priorità assoluta per il prossimo trimestre è una sola: la soddisfazione del cliente." Usa le pause per dare massimo impatto alle parole chiave.', difficulty: 'Difficile', competence: 'riformulazione', exerciseType: ExerciseType.VERBAL },
+        { id: 'v4', title: 'Tono Motivazionale (Lavoro)', scenario: 'Il tuo team è demotivato dopo un periodo intenso. Devi comunicare l\'inizio di una nuova fase del progetto.', task: 'Registra un messaggio vocale che usi un tono energico e positivo per ricaricare il team e infondere fiducia per la prossima sfida.', difficulty: 'Medio', competence: 'riformulazione', exerciseType: ExerciseType.VERBAL },
+        { id: 'v5', title: 'Esprimere Vicinanza (Partner)', scenario: 'Il tuo partner ha avuto una giornata molto difficile. Vuoi lasciargli un messaggio vocale per mostrare il tuo supporto.', task: 'Registra un messaggio che usi un tono di voce caldo, calmo e rassicurante per comunicare empatia e vicinanza.', difficulty: 'Facile', competence: 'riformulazione', exerciseType: ExerciseType.VERBAL },
+        { id: 'v6', title: 'Presentare il Prezzo (Vendita)', scenario: 'Sei al telefono con un cliente e, dopo aver presentato il valore del tuo prodotto, è arrivato il momento di comunicare il prezzo.', task: 'Registra la frase con cui comunichi il prezzo. Usa un tono di voce fermo, sicuro e senza esitazioni per proiettare il valore dell\'investimento.', difficulty: 'Difficile', competence: 'riformulazione', exerciseType: ExerciseType.VERBAL },
     ]
   },
   {

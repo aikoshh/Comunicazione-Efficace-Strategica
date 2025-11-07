@@ -45,7 +45,9 @@ export const CoachingUpsellCard: React.FC<CoachingUpsellCardProps> = ({ product 
             <div style={styles.content}>
                 <h2 style={styles.title}>Sessione di Coaching Strategico Individuale</h2>
                 <p style={styles.description}>
-                    Porta il tuo allenamento al livello successivo! Una sessione live di 30 minuti direttamente con il <strong>Prof. Ivano Cincinnato</strong>, per risolvere la tua sfida comunicativa più grande.
+                    Porta il tuo allenamento al livello successivo!
+                    <br />
+                    Una sessione live di <strong>30 minuti</strong> direttamente con il <strong>Prof. Ivano Cincinnato</strong>, per risolvere la tua sfida comunicativa più grande.
                 </p>
                 <div style={styles.priceContainer}>
                     <span style={styles.currentPrice}>{product.price}</span>

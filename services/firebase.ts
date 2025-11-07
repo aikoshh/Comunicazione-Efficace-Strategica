@@ -1,30 +1,39 @@
 // services/firebase.ts
 
-// --- CORE FIREBASE IMPORTS ---
-import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
-
-// FIX: Using namespace import for firebase/auth to resolve module loading issues.
-import * as FirebaseAuth from "firebase/auth";
-
+// --- CORE FIREBASE IMPORTS (MODULAR V9+) ---
+// FIX: The errors suggest an older, pre-release version of the Firebase v9 SDK might be in use.
+// These versions used scoped packages (e.g., `@firebase/auth`).
+// Updating the import paths to use the scoped packages.
+import { initializeApp, getApps, getApp, FirebaseApp } from "@firebase/app";
+import { 
+    getAuth, 
+    onAuthStateChanged, 
+    createUserWithEmailAndPassword, 
+    signInWithEmailAndPassword, 
+    signOut, 
+    Auth,
+    User
+} from "@firebase/auth";
 import { 
     getFirestore, 
+    collection, 
     doc, 
     getDoc, 
     setDoc, 
-    onSnapshot,
-    collection,
+    serverTimestamp, 
+    onSnapshot, 
+    query, 
+    where, 
+    orderBy, 
+    updateDoc, 
+    deleteDoc, 
+    writeBatch, 
+    getDocs, 
     addDoc,
-    query,
-    orderBy,
-    where,
-    updateDoc,
-    writeBatch,
-    deleteDoc,
-    serverTimestamp,
     Timestamp,
-    getDocs,
-    Firestore
-} from "firebase/firestore";
+    Firestore,
+    Unsubscribe
+} from "@firebase/firestore";
 
 
 // --- LOCAL IMPORTS ---
@@ -33,15 +42,17 @@ import type { UserProfile, UserProgress, StorableEntitlements, ProblemReport, Re
 
 // --- SYNCHRONOUS INITIALIZATION ---
 let app: FirebaseApp;
-// FIX: Using FirebaseAuth.Auth type.
-let auth: FirebaseAuth.Auth;
+let auth: Auth;
 let db: Firestore;
 let firebaseInitializationError: Error | null = null;
 
 try {
-    app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
-    // FIX: Using FirebaseAuth.getAuth.
-    auth = FirebaseAuth.getAuth(app);
+    if (!getApps().length) {
+        app = initializeApp(firebaseConfig);
+    } else {
+        app = getApp(); // if already initialized, use that one
+    }
+    auth = getAuth(app);
     db = getFirestore(app);
 } catch (error: any) {
     console.error("Firebase Initialization Failed:", error);
@@ -68,7 +79,7 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
   const userDocSnap = await getDoc(userDocRef);
 
   if (userDocSnap.exists()) {
-    const data = userDocSnap.data()!;
+    const data = userDocSnap.data();
     const createdAt = (data.createdAt as Timestamp)?.toDate().toISOString() || new Date().toISOString();
     const expiryDate = (data.expiryDate as Timestamp)?.toDate().toISOString() || null;
     
@@ -79,9 +90,8 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
   }
 }
 
-export function onAuthUserChanged(callback: (user: UserProfile | null) => void): () => void {
-  // FIX: Using FirebaseAuth.onAuthStateChanged.
-  return FirebaseAuth.onAuthStateChanged(auth, async (authUser) => {
+export function onAuthUserChanged(callback: (user: UserProfile | null) => void): Unsubscribe {
+  return onAuthStateChanged(auth, async (authUser) => {
     if (authUser) {
       const userProfile = await getUserProfile(authUser.uid);
       if(userProfile && userProfile.enabled) {
@@ -100,10 +110,8 @@ export function onAuthUserChanged(callback: (user: UserProfile | null) => void):
   });
 }
 
-// FIX: Using FirebaseAuth.User type.
-export async function register(email: string, password: string, firstName: string, lastName: string): Promise<FirebaseAuth.User> {
-  // FIX: Using FirebaseAuth.createUserWithEmailAndPassword.
-  const userCredential = await FirebaseAuth.createUserWithEmailAndPassword(auth, email, password);
+export async function register(email: string, password: string, firstName: string, lastName: string): Promise<User> {
+  const userCredential = await createUserWithEmailAndPassword(auth, email, password);
   const { user } = userCredential;
   if (!user) {
       throw new Error("User creation failed.");
@@ -122,10 +130,8 @@ export async function register(email: string, password: string, firstName: strin
   return user;
 }
 
-// FIX: Using FirebaseAuth.User type.
-export async function login(email: string, password: string): Promise<FirebaseAuth.User> {
-  // FIX: Using FirebaseAuth.signInWithEmailAndPassword.
-  const userCredential = await FirebaseAuth.signInWithEmailAndPassword(auth, email, password);
+export async function login(email: string, password: string): Promise<User> {
+  const userCredential = await signInWithEmailAndPassword(auth, email, password);
   if (!userCredential.user) {
       throw new Error("Login failed.");
   }
@@ -133,11 +139,10 @@ export async function login(email: string, password: string): Promise<FirebaseAu
 }
 
 export async function logout(): Promise<void> {
-  // FIX: Using FirebaseAuth.signOut.
-  await FirebaseAuth.signOut(auth);
+  await signOut(auth);
 }
 
-export function subscribeToEntitlements(userId: string, callback: (entitlements: StorableEntitlements | null) => void): () => void {
+export function subscribeToEntitlements(userId: string, callback: (entitlements: StorableEntitlements | null) => void): Unsubscribe {
     const docRef = doc(db, ENTITLEMENTS_COLLECTION, userId);
     return onSnapshot(docRef, (docSnap) => {
         callback(docSnap.exists() ? docSnap.data() as StorableEntitlements : null);
@@ -159,7 +164,7 @@ export async function addProblemReport(userId: string, userEmail: string, userNa
     });
 }
 
-export function subscribeToProblemReports(callback: (reports: ProblemReport[]) => void): () => void {
+export function subscribeToProblemReports(callback: (reports: ProblemReport[]) => void): Unsubscribe {
     const q = query(collection(db, REPORTS_COLLECTION), orderBy("timestamp", "desc"));
     return onSnapshot(q, (snapshot) => {
         const reports = snapshot.docs.map(docSnap => ({
@@ -171,7 +176,7 @@ export function subscribeToProblemReports(callback: (reports: ProblemReport[]) =
     });
 }
 
-export function subscribeToUnreadReportsCount(callback: (count: number) => void): () => void {
+export function subscribeToUnreadReportsCount(callback: (count: number) => void): Unsubscribe {
     const q = query(collection(db, REPORTS_COLLECTION), where("status", "==", "new"));
     return onSnapshot(q, (snapshot) => {
         callback(snapshot.size);
@@ -207,7 +212,7 @@ class DatabaseService {
     await setDoc(doc(db, ENTITLEMENTS_COLLECTION, uid), entitlements, { merge: true });
   }
 
-  subscribeToUsers(callback: (users: UserProfile[]) => void): () => void {
+  subscribeToUsers(callback: (users: UserProfile[]) => void): Unsubscribe {
     const q = query(collection(db, USERS_COLLECTION), orderBy("createdAt", "desc"));
     return onSnapshot(q, (querySnapshot) => {
       const users: UserProfile[] = querySnapshot.docs.map(docSnap => {
@@ -224,6 +229,8 @@ class DatabaseService {
     const dataToUpdate: any = { ...data };
     if (data.expiryDate) {
         dataToUpdate.expiryDate = Timestamp.fromDate(new Date(data.expiryDate));
+    } else if (data.expiryDate === null) {
+        dataToUpdate.expiryDate = null;
     }
     await updateDoc(doc(db, USERS_COLLECTION, uid), dataToUpdate);
   }

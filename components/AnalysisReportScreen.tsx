@@ -62,7 +62,7 @@ const ScoreCircle: React.FC<{ score: number }> = ({ score }) => {
 
 const DetailedRubric: React.FC<{ rubric: DetailedRubricScore[] }> = ({ rubric }) => (
     <div style={styles.rubricContainer}>
-        {rubric.map((item, index) => (
+        {(rubric || []).map((item, index) => (
             <React.Fragment key={index}>
                 <div style={styles.rubricCriterion}>{item.criterion}</div>
                 <div style={styles.rubricScoreContainer}>
@@ -119,14 +119,14 @@ export const AnalysisReportScreen: React.FC<AnalysisReportScreenProps> = ({
         <div style={styles.section}>
             <h2 style={styles.sectionTitle}><CheckCircleIcon style={{color: COLORS.success}}/> Punti di Forza</h2>
             <ul style={styles.list}>
-              {result.strengths.map((s, i) => <li key={i} style={styles.listItem}>{s}</li>)}
+              {(result.strengths || []).map((s, i) => <li key={i} style={styles.listItem}>{s}</li>)}
             </ul>
         </div>
         
         <div style={styles.section}>
           <h2 style={styles.sectionTitle}><XCircleIcon style={{color: COLORS.error}}/> Aree di Miglioramento</h2>
           <div style={styles.improvementsGrid}>
-            {result.areasForImprovement.map((area, index) => (
+            {(result.areasForImprovement || []).map((area, index) => (
               <div key={index} style={styles.improvementCard}>
                 <div style={styles.improvementQuote}>
                   <span style={styles.improvementLabel}>La Tua Frase:</span>
