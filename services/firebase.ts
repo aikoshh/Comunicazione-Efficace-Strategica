@@ -3,16 +3,8 @@
 // --- CORE FIREBASE IMPORTS ---
 import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
 
-// FIX: Combined value and type imports for Firebase Auth to resolve potential module loading issues.
-import {
-    getAuth,
-    onAuthStateChanged,
-    createUserWithEmailAndPassword,
-    signInWithEmailAndPassword,
-    signOut,
-    Auth,
-    User
-} from "firebase/auth";
+// FIX: Using namespace import for firebase/auth to resolve module loading issues.
+import * as FirebaseAuth from "firebase/auth";
 
 import { 
     getFirestore, 
@@ -41,13 +33,15 @@ import type { UserProfile, UserProgress, StorableEntitlements, ProblemReport, Re
 
 // --- SYNCHRONOUS INITIALIZATION ---
 let app: FirebaseApp;
-let auth: Auth;
+// FIX: Using FirebaseAuth.Auth type.
+let auth: FirebaseAuth.Auth;
 let db: Firestore;
 let firebaseInitializationError: Error | null = null;
 
 try {
     app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
-    auth = getAuth(app);
+    // FIX: Using FirebaseAuth.getAuth.
+    auth = FirebaseAuth.getAuth(app);
     db = getFirestore(app);
 } catch (error: any) {
     console.error("Firebase Initialization Failed:", error);
@@ -86,7 +80,8 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
 }
 
 export function onAuthUserChanged(callback: (user: UserProfile | null) => void): () => void {
-  return onAuthStateChanged(auth, async (authUser) => {
+  // FIX: Using FirebaseAuth.onAuthStateChanged.
+  return FirebaseAuth.onAuthStateChanged(auth, async (authUser) => {
     if (authUser) {
       const userProfile = await getUserProfile(authUser.uid);
       if(userProfile && userProfile.enabled) {
@@ -105,8 +100,10 @@ export function onAuthUserChanged(callback: (user: UserProfile | null) => void):
   });
 }
 
-export async function register(email: string, password: string, firstName: string, lastName: string): Promise<User> {
-  const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+// FIX: Using FirebaseAuth.User type.
+export async function register(email: string, password: string, firstName: string, lastName: string): Promise<FirebaseAuth.User> {
+  // FIX: Using FirebaseAuth.createUserWithEmailAndPassword.
+  const userCredential = await FirebaseAuth.createUserWithEmailAndPassword(auth, email, password);
   const { user } = userCredential;
   if (!user) {
       throw new Error("User creation failed.");
@@ -125,8 +122,10 @@ export async function register(email: string, password: string, firstName: strin
   return user;
 }
 
-export async function login(email: string, password: string): Promise<User> {
-  const userCredential = await signInWithEmailAndPassword(auth, email, password);
+// FIX: Using FirebaseAuth.User type.
+export async function login(email: string, password: string): Promise<FirebaseAuth.User> {
+  // FIX: Using FirebaseAuth.signInWithEmailAndPassword.
+  const userCredential = await FirebaseAuth.signInWithEmailAndPassword(auth, email, password);
   if (!userCredential.user) {
       throw new Error("Login failed.");
   }
@@ -134,7 +133,8 @@ export async function login(email: string, password: string): Promise<User> {
 }
 
 export async function logout(): Promise<void> {
-  await signOut(auth);
+  // FIX: Using FirebaseAuth.signOut.
+  await FirebaseAuth.signOut(auth);
 }
 
 export function subscribeToEntitlements(userId: string, callback: (entitlements: StorableEntitlements | null) => void): () => void {
