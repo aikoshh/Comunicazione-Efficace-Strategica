@@ -12,10 +12,11 @@ import {
   ContinuedStrategicResponse,
   ChatMessage,
 } from '../types';
+import { FALLBACK_API_KEY } from "../config";
 
 // The app will handle errors if the key is missing.
 const getGenAI = () => {
-    const apiKey = process.env.API_KEY;
+    const apiKey = process.env.API_KEY || FALLBACK_API_KEY;
     if (!apiKey) {
         // This provides a clearer error message if the API key is not set in the environment.
         throw new Error("API key non trovata. Assicurati che sia configurata correttamente.");

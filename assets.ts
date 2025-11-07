@@ -25,6 +25,7 @@ export const loginBackground = optimize('https://images.unsplash.com/photo-15906
 export const dailyChallengeMedia = 'https://www.centroclinicaformazionestrategica.it/CES-APP/images/sfida-del-giorno.MP4';
 export const dailyChallengeHeaderImage = optimize('https://www.centroclinicaformazionestrategica.it/CES-APP/images/sfida-del-giorno.png');
 export const checkupMedia = 'https://www.centroclinicaformazionestrategica.it/CES-APP/images/valuta-livello-iniziale.MP4';
+export const historyMedia = 'https://www.centroclinicaformazionestrategica.it/CES-APP/images/risultati-pro.MP4';
 export const checkupHeaderImage = optimize('https://www.centroclinicaformazionestrategica.it/CES-APP/images/dialogo%20strategico.png');
 export const riformulazioneSinteticaHeaderImg = optimize('https://www.centroclinicaformazionestrategica.it/CES-APP/images/Riformulazione%20sintetica.png');
 export const customExerciseHeaderImage = optimize('https://www.centroclinicaformazionestrategica.it/CES-APP/images/allenamento-personalizzato.png');
@@ -60,6 +61,7 @@ export const ALL_RESOURCES_TO_PRELOAD = [
   homeScreenHeaderVideo,
   dailyChallengeMedia,
   checkupMedia,
+  historyMedia,
   gestireConversazioniDifficiliHeaderVideo, dareFeedbackEfficaceHeaderVideo, domandeStrategicheHeaderVideo,
   ascoltoStrategicoHeaderVideo, allenamentoPersonalizzatoVideo, risultatiProVideo, vantaggioRisultatiProVideo,
   voceStrategicaHeaderVideo, librerieStrategicheVideo, feedbackParaverbaleVideo, chatTrainerHeaderVideo

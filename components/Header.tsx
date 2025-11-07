@@ -1,13 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { UserProfile, Module, Entitlements } from '../types';
 import { COLORS } from '../constants';
-import { LogOutIcon, AdminIcon, TargetIcon, BarChartIcon, CheckCircleIcon, SettingsIcon, CrownIcon, BackIcon, HomeIcon, WarningIcon } from './Icons';
+import { LogOutIcon, AdminIcon, TargetIcon, BarChartIcon, CheckCircleIcon, SettingsIcon, CrownIcon, BackIcon, HomeIcon, WarningIcon, HistoryIcon } from './Icons';
 import { Logo } from './Logo';
 import { soundService } from '../services/soundService';
 import { subscribeToUnreadReportsCount } from '../services/firebase';
 import { hasProAccess } from '../services/monetizationService';
 
-type Screen = 'home' | 'paywall' | 'admin' | 'achievements' | 'competence_report' | 'levels';
+type Screen = 'home' | 'paywall' | 'admin' | 'achievements' | 'competence_report' | 'levels' | 'history';
 
 interface HeaderProps {
     user: UserProfile;
@@ -121,6 +121,7 @@ export const Header: React.FC<HeaderProps> = ({ user, onLogout, onNavigate, show
                                 <div style={styles.userEmail}>{user.email}</div>
                             </div>
                             <div style={styles.dropdownDivider} />
+                            <a onClick={() => handleNavigation('history')} style={styles.dropdownItem}><HistoryIcon /> Storico Analisi</a>
                             <a onClick={() => handleNavigation('achievements')} style={styles.dropdownItem}><TargetIcon /> Traguardi</a>
                             <a onClick={() => handleNavigation('competence_report')} style={styles.dropdownItem}><BarChartIcon /> Report Competenze</a>
                             <a onClick={() => handleNavigation('levels')} style={styles.dropdownItem}><CheckCircleIcon /> Livelli</a>

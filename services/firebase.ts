@@ -3,8 +3,16 @@
 // --- CORE FIREBASE IMPORTS ---
 // FIX: Switched to Firebase v9+ modular API to match the project's dependencies.
 import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
-// FIX: The named imports from "firebase/auth" were causing errors. Using a namespace import to resolve module issues.
-import * as fbAuth from "firebase/auth";
+// FIX: Switched from a namespace import to named imports for firebase/auth to resolve module errors.
+import { 
+    getAuth,
+    onAuthStateChanged,
+    createUserWithEmailAndPassword,
+    signInWithEmailAndPassword,
+    signOut,
+    type Auth,
+    type User
+} from "firebase/auth";
 import { 
     getFirestore, 
     doc, 
@@ -32,16 +40,16 @@ import type { UserProfile, UserProgress, StorableEntitlements, ProblemReport, Re
 
 // --- SYNCHRONOUS INITIALIZATION ---
 let app: FirebaseApp;
-// FIX: Use Auth type from the namespace import to resolve export error.
-let auth: fbAuth.Auth;
+// FIX: Use Auth type from named import.
+let auth: Auth;
 let db: Firestore;
 let firebaseInitializationError: Error | null = null;
 
 try {
     // FIX: Use v9+ initialization methods.
     app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
-    // FIX: Use getAuth from the namespace import to resolve export error.
-    auth = fbAuth.getAuth(app);
+    // FIX: Use getAuth from named import.
+    auth = getAuth(app);
     db = getFirestore(app);
 } catch (error: any) {
     console.error("Firebase Initialization Failed:", error);
@@ -82,8 +90,8 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
 }
 
 export function onAuthUserChanged(callback: (user: UserProfile | null) => void): () => void {
-  // FIX: Use onAuthStateChanged from the namespace import to resolve export error.
-  return fbAuth.onAuthStateChanged(auth, async (authUser) => {
+  // FIX: Use onAuthStateChanged from named import.
+  return onAuthStateChanged(auth, async (authUser) => {
     if (authUser) {
       const userProfile = await getUserProfile(authUser.uid);
       if(userProfile && userProfile.enabled) {
@@ -102,10 +110,10 @@ export function onAuthUserChanged(callback: (user: UserProfile | null) => void):
   });
 }
 
-// FIX: Use User type from the namespace import to resolve export error.
-export async function register(email: string, password: string, firstName: string, lastName: string): Promise<fbAuth.User> {
-  // FIX: Use createUserWithEmailAndPassword from the namespace import to resolve export error.
-  const userCredential = await fbAuth.createUserWithEmailAndPassword(auth, email, password);
+// FIX: Use User type from named import.
+export async function register(email: string, password: string, firstName: string, lastName: string): Promise<User> {
+  // FIX: Use createUserWithEmailAndPassword from named import.
+  const userCredential = await createUserWithEmailAndPassword(auth, email, password);
   const { user } = userCredential;
   if (!user) {
       throw new Error("User creation failed.");
@@ -125,10 +133,10 @@ export async function register(email: string, password: string, firstName: strin
   return user;
 }
 
-// FIX: Use User type from the namespace import to resolve export error.
-export async function login(email: string, password: string): Promise<fbAuth.User> {
-  // FIX: Use signInWithEmailAndPassword from the namespace import to resolve export error.
-  const userCredential = await fbAuth.signInWithEmailAndPassword(auth, email, password);
+// FIX: Use User type from named import.
+export async function login(email: string, password: string): Promise<User> {
+  // FIX: Use signInWithEmailAndPassword from named import.
+  const userCredential = await signInWithEmailAndPassword(auth, email, password);
   if (!userCredential.user) {
       throw new Error("Login failed.");
   }
@@ -136,8 +144,8 @@ export async function login(email: string, password: string): Promise<fbAuth.Use
 }
 
 export async function logout(): Promise<void> {
-  // FIX: Use signOut from the namespace import to resolve export error.
-  await fbAuth.signOut(auth);
+  // FIX: Use signOut from named import.
+  await signOut(auth);
 }
 
 export function subscribeToEntitlements(userId: string, callback: (entitlements: StorableEntitlements | null) => void): () => void {

@@ -32,6 +32,7 @@ import { AchievementsScreen } from './components/AchievementsScreen';
 import { LevelsScreen } from './components/LevelsScreen';
 import { StrategicChatTrainerScreen } from './components/StrategicChatTrainerScreen';
 import { PathScreen } from './components/PathScreen';
+import { HistoryScreen } from './components/HistoryScreen';
 
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
@@ -79,7 +80,7 @@ const App: React.FC<AppProps> = ({ initialUser }) => {
   useEffect(() => {
     if (user) {
       // Whitelist of screens that are safe to persist and return to.
-      const safeScreens = ['home', 'module', 'admin', 'paywall', 'competence_report', 'achievements', 'levels', 'daily_challenge', 'chat_trainer', 'path_screen'];
+      const safeScreens = ['home', 'module', 'admin', 'paywall', 'competence_report', 'achievements', 'levels', 'daily_challenge', 'chat_trainer', 'path_screen', 'history'];
       if (safeScreens.includes(currentScreen)) {
         const stateToSave = {
           userId: user.uid,
@@ -135,7 +136,7 @@ const App: React.FC<AppProps> = ({ initialUser }) => {
                     setCurrentScreen('module');
                   }
                 } else {
-                  const safeScreens = ['home', 'admin', 'paywall', 'competence_report', 'achievements', 'levels', 'daily_challenge', 'chat_trainer', 'path_screen'];
+                  const safeScreens = ['home', 'admin', 'paywall', 'competence_report', 'achievements', 'levels', 'daily_challenge', 'chat_trainer', 'path_screen', 'history'];
                   if (safeScreens.includes(savedState.currentScreen)) {
                     setCurrentScreen(savedState.currentScreen);
                   }
@@ -176,7 +177,7 @@ const App: React.FC<AppProps> = ({ initialUser }) => {
         setLastAnalysis(null);
     }
     
-    if (['module', 'paywall', 'competence_report', 'achievements', 'levels', 'daily_challenge', 'chat_trainer', 'admin', 'path_screen'].includes(currentScreen)) {
+    if (['module', 'paywall', 'competence_report', 'achievements', 'levels', 'daily_challenge', 'chat_trainer', 'admin', 'path_screen', 'history'].includes(currentScreen)) {
         setCurrentScreen('home');
     } else if (currentScreen === 'exercise') {
         setCurrentScreen(selectedModule?.isCustom ? 'home' : (selectedPath ? 'path_screen' : 'module'));
@@ -503,6 +504,11 @@ const App: React.FC<AppProps> = ({ initialUser }) => {
           onSelectExercise={handleSelectExercise}
           isPro={hasProAccess(entitlements)}
           onNavigateToPaywall={() => handleNavigate('paywall')}
+        />;
+       case 'history':
+        return <HistoryScreen 
+            userProgress={progress!}
+            onReviewExercise={handleReviewExercise}
         />;
       case 'achievements':
         return <AchievementsScreen progress={progress!} />;

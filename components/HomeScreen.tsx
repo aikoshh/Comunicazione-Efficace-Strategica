@@ -13,8 +13,8 @@ import { ProgressOverview } from './ProgressOverview';
 import { ProgressAnalytics } from './ProgressAnalytics';
 import { WarmUpCard } from './WarmUpCard';
 import { soundService } from '../services/soundService';
-import { LockIcon, CrownIcon, EditIcon, TargetIcon } from './Icons';
-import { homeScreenHeaderVideo, checkupMedia, dailyChallengeMedia } from '../assets';
+import { LockIcon, CrownIcon, EditIcon, TargetIcon, HistoryIcon } from './Icons';
+import { homeScreenHeaderVideo, checkupMedia, dailyChallengeMedia, historyMedia } from '../assets';
 import { CoachingUpsellCard } from './CoachingUpsellCard';
 import { COACHING_PRODUCT } from '../products';
 
@@ -137,6 +137,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   onStartCheckup,
   onNavigateToReport,
   onStartDailyChallenge,
+  onNavigate,
   onChangeObjective
 }) => {
     const isPro = hasProAccess(entitlements);
@@ -221,6 +222,14 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                  <div style={styles.specialCardContent}>
                     <h2 style={styles.specialCardTitle}>Sfida del Giorno</h2>
                     <p style={styles.specialCardText}>Allenati con uno scenario nuovo ogni giorno e mantieni le tue abilità affinate.</p>
+                 </div>
+            </div>
+            <div style={styles.specialCard} onClick={() => { soundService.playClick(); onNavigate('history'); }}>
+                 <video src={historyMedia} style={styles.specialCardMedia} autoPlay muted loop playsInline />
+                 <div style={{...styles.specialCardOverlay, background: 'linear-gradient(135deg, rgba(46, 125, 50, 0.8) 0%, rgba(88, 166, 166, 0.7) 100%)'}} />
+                 <div style={styles.specialCardContent}>
+                    <h2 style={styles.specialCardTitle}>Storico Analisi</h2>
+                    <p style={styles.specialCardText}>Rivedi tutte le tue analisi passate, i punteggi e i feedback ricevuti.</p>
                  </div>
             </div>
         </section>
