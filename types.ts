@@ -210,8 +210,10 @@ export interface PersonalizationData {
 }
 
 export interface StrategicQuestion {
-    question: string;
-    description: string;
+    question: string; // The scenario/question
+    options: string[];
+    correctAnswerIndex: number;
+    explanation: string;
 }
 
 export interface StrategicQuestionCategory {

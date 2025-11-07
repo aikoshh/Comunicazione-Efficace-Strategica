@@ -328,9 +328,9 @@ export const WARMUP_QUESTIONS = [
   {
     question: 'Quale di queste 3 frasi è più efficace per calmare un collega arrabbiato?',
     options: [
-      'Non hai motivo di essere arrabbiato.',
+      'Non hai motivo di essere arrabbiato, non è così grave.',
       'Capisco che tu sia frustrato, cerchiamo di capire insieme.',
-      'Calmati, non è la fine del mondo.'
+      'Cerca di calmarti, non è successo nulla di irreparabile.'
     ],
     correctAnswerIndex: 1,
     explanation: 'La seconda opzione valida l\'emozione dell\'altro ("Capisco che tu sia frustrato") e propone una soluzione collaborativa, che è la strategia più efficace per de-escalare.'
@@ -338,9 +338,9 @@ export const WARMUP_QUESTIONS = [
   {
     question: 'Come riformuleresti la lamentela "Questo processo è troppo lento e complicato!" in una richiesta costruttiva?',
     options: [
-      'Potete semplificare questo processo?',
-      'Il processo attuale ci rallenta. Possiamo esplorare modi per renderlo più agile?',
-      'Chi ha inventato questo processo assurdo?'
+      'Questo processo è da semplificare, non credete anche voi?',
+      'Il processo attuale ci rallenta; possiamo vedere come renderlo più agile?',
+      'Non è possibile continuare con questo processo, è troppo complicato.'
     ],
     correctAnswerIndex: 1,
     explanation: 'La seconda opzione contestualizza il problema ("ci rallenta") e propone un\'azione positiva e collaborativa ("Possiamo esplorare modi..."), trasformando la critica in un\'opportunità.'
@@ -348,9 +348,9 @@ export const WARMUP_QUESTIONS = [
   {
     question: 'Qual è il modo migliore per dire "no" a una richiesta senza rovinare la relazione?',
     options: [
-      'No, non posso assolutamente.',
-      'In questo momento non riesco a darti una mano perché sono focalizzato su [tua priorità], ma potrei aiutarti in [alternativa].',
-      'Forse, vediamo più tardi.'
+      'Mi dispiace, ma la mia risposta in questo momento deve essere no.',
+      'Ora non riesco perché ho una priorità, ma possiamo parlarne più tardi?',
+      'Non sono sicuro di poterti aiutare, ti faccio sapere appena posso.'
     ],
     correctAnswerIndex: 1,
     explanation: 'La seconda opzione usa la tecnica "No, perché, alternativa". Spiega la ragione del rifiuto in modo oggettivo e offre una soluzione alternativa, dimostrando collaborazione.'
