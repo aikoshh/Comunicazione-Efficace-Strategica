@@ -168,6 +168,11 @@ const App: React.FC<AppProps> = ({ initialUser }) => {
   
   const handleNavigate = (screen: string) => {
     setLastAnalysis(null);
+    // FIX: Clear module/path selection when navigating to a top-level screen
+    if (['checkup', 'competence_report', 'daily_challenge', 'achievements', 'levels', 'history', 'admin', 'paywall'].includes(screen)) {
+        setSelectedModule(null);
+        setSelectedPath(null);
+    }
     setCurrentScreen(screen);
     window.scrollTo(0, 0);
   };
@@ -177,7 +182,8 @@ const App: React.FC<AppProps> = ({ initialUser }) => {
         setLastAnalysis(null);
     }
     
-    if (['module', 'paywall', 'competence_report', 'achievements', 'levels', 'daily_challenge', 'chat_trainer', 'admin', 'path_screen', 'history'].includes(currentScreen)) {
+    // FIX: Added 'checkup' to ensure it navigates back to home.
+    if (['module', 'paywall', 'competence_report', 'achievements', 'levels', 'daily_challenge', 'chat_trainer', 'admin', 'path_screen', 'history', 'checkup'].includes(currentScreen)) {
         setCurrentScreen('home');
     } else if (currentScreen === 'exercise') {
         setCurrentScreen(selectedModule?.isCustom ? 'home' : (selectedPath ? 'path_screen' : 'module'));
