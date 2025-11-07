@@ -395,7 +395,7 @@ const styles: { [key: string]: React.CSSProperties } = {
   
   // Input form styles
   inputArea: { display: 'flex', flexDirection: 'column', gap: '16px', flex: 1, justifyContent: 'flex-end' },
-  initialInputsContainer: { display: 'flex', gap: '12px', flexDirection: 'column' },
+  initialInputsContainer: { display: 'flex', gap: '12px', flexDirection: 'column' }, 
   smallTextarea: { width: '100%', resize: 'none', padding: '10px 12px', borderRadius: '8px', border: `1px solid ${COLORS.divider}`, fontSize: '14px', fontFamily: 'inherit', boxSizing: 'border-box' },
   mainInputWrapper: { display: 'flex', flexDirection: 'column', gap: '12px', alignItems: 'center', width: '100%', margin: '0 auto' },
   textarea: { width: '100%', boxSizing: 'border-box', resize: 'none', padding: '12px', borderRadius: '8px', border: `1px solid ${COLORS.divider}`, fontSize: '16px', fontFamily: 'inherit' },
