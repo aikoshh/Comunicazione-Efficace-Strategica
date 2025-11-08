@@ -2,10 +2,14 @@
 import React, { useEffect, useState } from 'react';
 import { VoiceAnalysisResult, Exercise, Entitlements } from '../types';
 import { COLORS, VOICE_RUBRIC_CRITERIA } from '../constants';
-import { useSpeech } from '../hooks/useSpeech';
-import { CheckCircleIcon, XCircleIcon, RetryIcon, HomeIcon, LightbulbIcon, TargetIcon, SpeakerIcon, SpeakerOffIcon, NextIcon } from './Icons';
-import { soundService } from '../services/soundService';
+import { RetryIcon, NextIcon, LightbulbIcon, TargetIcon, DownloadIcon, HomeIcon, SpeakerIcon, PlayIcon } from './Icons';
 import { hasProAccess } from '../services/monetizationService';
+import { soundService } from '../services/soundService';
+import { UpsellBanner } from './UpsellBanner';
+import { PRODUCTS } from '../products';
+import { printService } from '../services/printService';
+import { PrintPreviewModal } from './PrintPreviewModal';
+import { useSpeech } from '../hooks/useSpeech';
 import { mainLogoUrl } from '../assets';
 
 interface VoiceAnalysisReportScreenProps {
@@ -16,403 +20,183 @@ interface VoiceAnalysisReportScreenProps {
   nextExerciseLabel: string;
   entitlements: Entitlements | null;
   onNavigateToPaywall: () => void;
-  userResponse?: string;
+  userResponse: string;
   isReview?: boolean;
 }
 
-const KEYWORDS = [
-    'efficace', 'chiaro', 'empatico', 'tono', 'ritmo', 'pause', 'volume', 'assertività', 'costruttivo', 
-    'soluzione', 'obiettivo', 'strategico', 'ottimo', 'eccellente', 'ben', 'buon', 'correttamente', 
-    'giusto', 'prova a', 'cerca di', 'evita di', 'potresti', 'considera', 'concentrati su', 
-    'ricorda di', 'lavora su', 'registra', 'ascolta', 'leggi', 'parla', 'esercitati', 
-    'identifica', 'scrivi', 'comunica', 'gestisci', 'usa', 'mantieni', 'assicurati'
-];
-
-const HighlightText: React.FC<{ text: string }> = ({ text }) => {
-    if (!text) return null;
-    const regex = new RegExp(`\\b(${KEYWORDS.join('|')})\\b`, 'gi');
-    const parts = text.split(regex);
-
-    return (
-        <>
-            {parts.map((part, index) => 
-                KEYWORDS.some(keyword => new RegExp(`^${keyword}$`, 'i').test(part)) ? (
-                    <strong key={index} style={{ color: COLORS.primary, fontWeight: '700' }}>{part}</strong>
-                ) : (
-                    part
-                )
-            )}
-        </>
-    );
-};
-
-const ScoreCircle: React.FC<{ score: number }> = ({ score }) => {
-  const [displayScore, setDisplayScore] = useState(0);
-  const circumference = 2 * Math.PI * 52; // 2 * pi * radius
-  
-  let strokeColor = COLORS.success;
-  if (score < 70) strokeColor = COLORS.warning;
-  if (score < 40) strokeColor = COLORS.error;
-
-  useEffect(() => {
-    const animation = requestAnimationFrame(() => {
-        setDisplayScore(score);
-    });
-    return () => cancelAnimationFrame(animation);
-  }, [score]);
-
-  return (
-    <div style={styles.scoreContainer}>
-      <svg width="120" height="120" viewBox="0 0 120 120" style={{ transform: 'rotate(-90deg)' }}>
-        <circle cx="60" cy="60" r="52" fill="none" stroke={COLORS.divider} strokeWidth="8" />
-        <circle
-          cx="60"
-          cy="60"
-          r="52"
-          fill="none"
-          stroke={strokeColor}
-          strokeWidth="8"
-          strokeDasharray={circumference}
-          strokeDashoffset={circumference - (displayScore / 100) * circumference}
-          strokeLinecap="round"
-          style={{ transition: 'stroke-dashoffset 1s cubic-bezier(0.25, 1, 0.5, 1)' }}
-        />
-      </svg>
-      <div style={{...styles.scoreText, color: strokeColor, animation: 'popIn 0.5s 0.8s ease-out both'}}>{score}<span style={{fontSize: '20px'}}>%</span></div>
-    </div>
-  );
-};
-
-const getScoreColor = (score: number): string => {
-  if (score < 6) return COLORS.error;
-  if (score >= 6 && score <= 7) return COLORS.warning;
-  return COLORS.success;
-};
-
-const ScoreMeter: React.FC<{ label: string; score: number }> = ({ label, score }) => {
-  const color = getScoreColor(score);
-  return (
-    <div style={styles.meterContainer}>
-        <div style={styles.meterLabel}>{label}</div>
-        <div style={styles.meterBar}>
-            <div style={{...styles.meterFill, width: `${score * 10}%`, backgroundColor: color}} />
-        </div>
-        <span style={{...styles.meterScore, color: color, borderColor: color }}>{score}</span>
-    </div>
-  );
-};
-
-const AnnotatedText: React.FC<{ text: string }> = ({ text }) => {
-    const parts = text.split(/(☐|△)/g).filter(part => part.length > 0);
-    return (
-        <p style={styles.annotatedResponseText}>
-            "
-            {parts.map((part, i) => {
-                if (part === '☐') {
-                    return <span key={i} style={styles.pauseSymbol} title="Pausa"></span>;
-                }
-                if (part === '△') {
-                    return <strong key={i} style={styles.emphasisSymbol} title="Enfasi"></strong>;
-                }
-                return <span key={i}>{part}</span>;
-            })}
-            "
-        </p>
-    );
-};
-
-export const VoiceAnalysisReportScreen: React.FC<VoiceAnalysisReportScreenProps> = ({ result, exercise, onRetry, onNextExercise, nextExerciseLabel, entitlements, onNavigateToPaywall, userResponse, isReview }) => {
-  const { speak, isSpeaking, stopSpeaking } = useSpeech();
-  
-  const averageScore = result.scores.length > 0
-    ? Math.round(result.scores.reduce((acc, s) => acc + s.score, 0) / result.scores.length * 10)
-    : 0;
-
+export const VoiceAnalysisReportScreen: React.FC<VoiceAnalysisReportScreenProps> = ({
+  result, exercise, onRetry, onNextExercise, nextExerciseLabel, entitlements, onNavigateToPaywall, userResponse, isReview
+}) => {
   const isPro = hasProAccess(entitlements);
+  const [printHtml, setPrintHtml] = useState<string | null>(null);
+  const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
+  
+  const { speak, isSpeaking, cancelSpeaking } = useSpeech();
 
+  const overallScore = Math.round(result.scores.reduce((acc, s) => acc + s.score, 0) / result.scores.length * 10);
+  
   useEffect(() => {
     if(!isReview) {
-        soundService.playScoreSound(averageScore);
+        soundService.playScoreSound(overallScore);
     }
     window.scrollTo(0, 0);
-    
-    return () => {
-        stopSpeaking(); // Cleanup speech synthesis on component unmount
-    }
-  }, [averageScore, stopSpeaking, isReview]);
+    // Cleanup speech synthesis on unmount
+    return () => cancelSpeaking();
+    // FIX: Add cancelSpeaking to dependency array to avoid stale closure.
+  }, [overallScore, isReview, cancelSpeaking]);
   
-  const handleRetry = () => {
-    soundService.playClick();
-    onRetry();
-  };
-  
-  const handleNext = () => {
-    soundService.playClick();
-    onNextExercise();
-  };
-  
-  const handleStrategicReplay = () => {
+  const handlePrint = async () => {
     soundService.playClick();
     if (!isPro) {
         onNavigateToPaywall();
         return;
     }
-
-    if (isSpeaking) {
-        stopSpeaking();
-    } else {
-        speak(result.suggested_delivery.ideal_script);
-    }
+    const html = printService.getReportHTML('print-area-voice', `Report Vocale: ${exercise.title}`);
+    setPrintHtml(html);
+    setIsPrintModalOpen(true);
+  };
+  
+  const handlePlayIdeal = () => {
+      soundService.playClick();
+      if(isSpeaking) {
+          cancelSpeaking();
+      } else {
+          speak(result.suggested_delivery.ideal_script);
+      }
   };
 
-  const hoverStyle = `
-    .primary-button:hover, .secondary-button:hover, .replay-button:hover:not(:disabled) {
-      transform: translateY(-2px);
-      filter: brightness(1.1);
-    }
-     .primary-button:active, .secondary-button:active, .replay-button:active:not(:disabled) {
-      transform: translateY(0) scale(0.98);
-      filter: brightness(0.95);
-    }
-  `;
-    
   return (
-    <div style={styles.container}>
-      <style>{hoverStyle}</style>
-      <div style={styles.card}>
-        <h1 style={styles.title}>Report Voce & Paraverbale</h1>
+    <div style={styles.container} className="report-screen-mobile-padding">
+      <div id="print-area-voice" style={styles.card}>
+        <div style={styles.header}>
+            <h1 style={styles.title}>Report Analisi Vocale</h1>
+            {isPro && <button onClick={handlePrint} style={styles.printButton} className="no-print"><DownloadIcon/> Esporta PDF</button>}
+        </div>
 
-        {isReview && userResponse && (
-            <div style={styles.userResponseContainer}>
-                <h2 style={{...styles.sectionTitle, color: COLORS.textAccent}}>La Tua Risposta Precedente</h2>
-                <p style={styles.userResponseText}>"{userResponse}"</p>
+        <div style={styles.userResponseContainer}>
+            <h2 style={{...styles.sectionTitle, color: COLORS.textAccent}}>La Tua Risposta (Trascrizione)</h2>
+            <p style={styles.userResponseText}>"{userResponse}"</p>
+        </div>
+
+        {result.realTimeMetricsSummary && (
+             <div style={{...styles.section, backgroundColor: COLORS.cardDark, padding: '20px', borderRadius: '12px'}}>
+                <h2 style={{...styles.sectionTitle, borderBottom: 'none'}}>Riepilogo Performance Live</h2>
+                <div style={styles.metricsGrid}>
+                    <div><strong>Ritmo Medio:</strong> {result.realTimeMetricsSummary.avgWpm} parole/minuto</div>
+                    <div><strong>Parole Riempitive:</strong> {result.realTimeMetricsSummary.totalFillers}</div>
+                    <div><strong>Gamma Dinamica:</strong> {result.realTimeMetricsSummary.avgDynamicRange.toFixed(0)} / 100</div>
+                </div>
             </div>
         )}
-        
-        <ScoreCircle score={averageScore} />
-        
-        <div style={{...styles.scoresGrid, animation: 'fadeInUp 0.5s 0.2s ease-out both'}}>
-            {VOICE_RUBRIC_CRITERIA.map(criterion => {
-                const scoreData = result.scores.find(s => s.criterion_id === criterion.id);
+
+        <div style={styles.rubricContainer}>
+            <h2 style={{...styles.sectionTitle, borderBottom: 'none'}}><TargetIcon style={{color: COLORS.primary}}/> Analisi Paraverbale (AI)</h2>
+            {(result.scores || []).map((item) => {
+                const criterion = VOICE_RUBRIC_CRITERIA.find(c => c.id === item.criterion_id);
                 return (
-                    <ScoreMeter 
-                        key={criterion.id}
-                        label={criterion.label}
-                        score={scoreData?.score ?? 0}
-                    />
-                );
+                    <div key={item.criterion_id} style={styles.rubricItem}>
+                        <div style={styles.rubricLabel}>{criterion?.label || item.criterion_id}</div>
+                        <div style={styles.rubricMeterContainer}>
+                            <div style={{...styles.rubricMeter, width: `${item.score * 10}%`}} />
+                            <span>{item.score}/10</span>
+                        </div>
+                        <div style={styles.rubricJustification}>{item.justification}</div>
+                    </div>
+                )
             })}
         </div>
-        
-        <div style={styles.feedbackGrid}>
-            <div style={{...styles.feedbackCard, animation: 'fadeInUp 0.5s 0.4s ease-out both'}}>
-                <h2 style={styles.sectionTitle}><CheckCircleIcon style={{color: COLORS.success}}/> Punti di Forza</h2>
-                <ul style={styles.list}>
-                    {(result.strengths || []).map((item, index) => 
-                        <li key={index} style={styles.listItem}>
-                            <CheckCircleIcon style={{...styles.listItemIcon, color: COLORS.success}}/>
-                            <span style={styles.listItemText}><HighlightText text={item}/></span>
-                        </li>
-                    )}
-                </ul>
-            </div>
 
-            <div style={{...styles.feedbackCard, animation: 'fadeInUp 0.5s 0.5s ease-out both'}}>
-                <h2 style={styles.sectionTitle}><XCircleIcon style={{color: COLORS.error}}/> Aree di Miglioramento</h2>
-                <ul style={styles.list}>
-                  {(result.improvements || []).map((item, index) => 
-                    <li key={index} style={styles.listItem}>
-                        <LightbulbIcon style={{...styles.listItemIcon, color: COLORS.warning}}/>
-                        <span style={styles.listItemText}><HighlightText text={item}/></span>
-                    </li>
-                  )}
-                </ul>
+        <div style={styles.section}>
+            <h2 style={styles.sectionTitle}><LightbulbIcon style={{color: COLORS.secondary}}/> Feedback del Coach</h2>
+            <div style={styles.feedbackGrid}>
+                <div style={styles.feedbackCard}>
+                    <h3>Punti di Forza</h3>
+                    <ul>{(result.strengths || []).map((s, i) => <li key={i}>{s}</li>)}</ul>
+                </div>
+                <div style={styles.feedbackCard}>
+                    <h3>Aree di Miglioramento</h3>
+                    <ul>{(result.improvements || []).map((s, i) => <li key={i}>{s}</li>)}</ul>
+                </div>
             </div>
         </div>
-        
-        <div style={{...styles.actionsContainer, animation: 'fadeInUp 0.5s 0.6s ease-out both'}}>
-            <h2 style={styles.sectionTitle}><TargetIcon style={{color: COLORS.secondary}}/> Azioni Pratiche</h2>
-            <ul style={styles.list}>
-                {(result.actions || []).map((item, index) => 
-                    <li key={index} style={{...styles.listItem, ...styles.actionItem}}>
-                        <TargetIcon style={{...styles.listItemIcon, color: COLORS.secondary}}/>
-                        <span style={styles.listItemText}><HighlightText text={item}/></span>
-                    </li>
-                )}
-            </ul>
-        </div>
 
-        <div style={{...styles.microDrillContainer, animation: 'fadeInUp 0.5s 0.7s ease-out both'}}>
-            <h2 style={styles.sectionTitle}><LightbulbIcon style={{color: COLORS.warning}}/> Micro-Drill (60s)</h2>
-            <p style={styles.microDrillText}><HighlightText text={result.micro_drill_60s}/></p>
-        </div>
-        
-        <div style={{...styles.suggestedDeliveryContainer, animation: 'fadeInUp 0.5s 0.8s ease-out both'}}>
-          <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px'}}>
-              <h2 style={styles.sectionTitle}>Risposta Consigliata</h2>
-              <button onClick={handleStrategicReplay} style={!isPro ? styles.replayButtonLocked : styles.replayButton} className="replay-button">
-                  {isSpeaking ? <SpeakerOffIcon/> : <SpeakerIcon/>}
-                  {isSpeaking ? 'Ferma Ascolto' : (isPro ? 'Ascolta Versione Ideale' : 'Sblocca PRO')}
-              </button>
+        {isPro ? (
+          <div style={styles.section}>
+              <h2 style={styles.sectionTitle}>Consegna Ideale (PRO)</h2>
+              <div style={styles.idealDeliveryContainer}>
+                  <p><strong>Istruzioni:</strong> {result.suggested_delivery.instructions}</p>
+                  <p><strong>Testo annotato:</strong> {result.suggested_delivery.annotated_text}</p>
+                  <button onClick={handlePlayIdeal} style={styles.playButton} disabled={!result.suggested_delivery.ideal_script}>
+                      <PlayIcon /> {isSpeaking ? 'Ferma' : 'Ascolta Versione Ideale'}
+                  </button>
+              </div>
           </div>
-          <p style={styles.deliveryInstructions}><HighlightText text={result.suggested_delivery.instructions}/></p>
-          <AnnotatedText text={result.suggested_delivery.annotated_text} />
-        </div>
+        ) : (
+             <UpsellBanner product={PRODUCTS[0]} score={overallScore} onDetails={onNavigateToPaywall}/>
+        )}
+      </div>
 
-        <div style={styles.buttonContainer}>
+      <div style={styles.buttonContainer}>
           {isReview ? (
              <>
-                <button onClick={handleRetry} style={styles.secondaryButton} className="secondary-button">
-                    <RetryIcon /> Riprova Esercizio
-                </button>
-                <button onClick={handleNext} style={styles.primaryButton} className="primary-button">
-                    <HomeIcon /> {nextExerciseLabel}
-                </button>
+                <button onClick={onRetry} style={styles.secondaryButton}><RetryIcon /> Riprova Esercizio</button>
+                <button onClick={onNextExercise} style={styles.primaryButton}><HomeIcon /> {nextExerciseLabel}</button>
             </>
           ) : (
             <>
-                <button onClick={handleRetry} style={styles.secondaryButton} className="secondary-button">
-                    <RetryIcon /> Riprova Esercizio
-                </button>
-                <button onClick={handleNext} style={styles.primaryButton} className="primary-button">
-                    {nextExerciseLabel} <NextIcon />
-                </button>
+                <button onClick={onRetry} style={styles.secondaryButton}><RetryIcon /> Riprova</button>
+                <button onClick={onNextExercise} style={styles.primaryButton}>{nextExerciseLabel} <NextIcon /></button>
             </>
           )}
-        </div>
       </div>
-      <div style={styles.logoContainer}>
+       <div style={styles.logoContainer}>
         <img src={mainLogoUrl} alt="CES Coach Logo" style={styles.footerLogo} />
       </div>
+      <PrintPreviewModal isOpen={isPrintModalOpen} onClose={() => setIsPrintModalOpen(false)} htmlContent={printHtml} onPrint={() => printService.triggerPrint(printHtml!)} />
     </div>
   );
 };
 
 const styles: { [key: string]: React.CSSProperties } = {
-    container: {
-        backgroundColor: COLORS.base,
-        minHeight: 'calc(100vh - 64px)',
-        padding: '40px 20px 0',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        gap: '40px',
-    },
-    card: {
-        backgroundColor: COLORS.card,
-        borderRadius: '12px',
-        border: `1px solid ${COLORS.divider}`,
-        padding: '32px',
-        maxWidth: '900px',
-        width: '100%',
-        boxShadow: '0 8px 30px rgba(0,0,0,0.08)',
-    },
-    title: {
-        fontSize: '28px',
-        fontWeight: 'bold',
-        color: COLORS.textPrimary,
-        marginBottom: '24px',
-        textAlign: 'center',
-    },
-    userResponseContainer: {
-        backgroundColor: COLORS.cardDark,
-        padding: '20px',
-        borderRadius: '12px',
-        marginBottom: '24px',
-        borderLeft: `5px solid ${COLORS.accentBeige}`,
-    },
-    userResponseText: {
-        fontSize: '16px',
-        fontStyle: 'italic',
-        color: COLORS.textSecondary,
-        lineHeight: 1.7,
-        margin: 0,
-    },
-    scoreContainer: {
-        position: 'relative',
-        width: '120px',
-        height: '120px',
-        margin: '16px auto 32px',
-    },
-    scoreText: {
-        position: 'absolute',
-        top: '50%',
-        left: '50%',
-        transform: 'translate(-50%, -50%)',
-        fontSize: '32px',
-        fontWeight: 'bold',
-        color: COLORS.textPrimary,
-        display: 'flex',
-        alignItems: 'baseline',
-        justifyContent: 'center',
-    },
-    scoresGrid: {
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-        gap: '16px',
-        marginBottom: '32px',
-        paddingBottom: '32px',
-        borderBottom: `1px solid ${COLORS.divider}`,
-    },
-    meterContainer: { display: 'flex', alignItems: 'center', gap: '12px' },
-    meterLabel: { flex: 1, fontSize: '14px', color: COLORS.textSecondary, fontWeight: 500 },
-    meterBar: { height: '8px', width: '100px', backgroundColor: COLORS.divider, borderRadius: '4px', overflow: 'hidden' },
-    meterFill: { height: '100%', borderRadius: '4px', transition: 'width 0.8s cubic-bezier(0.25, 1, 0.5, 1)' },
-    meterScore: { fontSize: '14px', fontWeight: 'bold', padding: '2px 6px', borderRadius: '6px', border: '1px solid', minWidth: '20px', textAlign: 'center' },
-    feedbackGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px', marginBottom: '32px' },
-    feedbackCard: { backgroundColor: COLORS.cardDark, padding: '20px', borderRadius: '12px' },
-    sectionTitle: { fontSize: '20px', color: COLORS.textPrimary, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '12px', fontWeight: 600, margin: 0 },
-    list: { listStyle: 'none', paddingLeft: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '12px' },
-    listItem: { fontSize: '16px', color: COLORS.textSecondary, lineHeight: 1.6, display: 'flex', alignItems: 'flex-start', gap: '12px' },
-    listItemIcon: { flexShrink: 0, width: '20px', height: '20px', marginTop: '3px' },
-    listItemText: { flex: 1 },
-    actionsContainer: { marginBottom: '32px' },
-    actionItem: { padding: '12px', backgroundColor: 'rgba(88, 166, 166, 0.1)', borderRadius: '8px', borderLeft: `3px solid ${COLORS.secondary}`, color: COLORS.textPrimary },
-    microDrillContainer: { backgroundColor: 'rgba(255, 193, 7, 0.15)', padding: '20px', borderRadius: '12px', marginBottom: '32px', borderLeft: `3px solid ${COLORS.warning}` },
-    microDrillText: { fontSize: '16px', color: COLORS.textPrimary, lineHeight: 1.6, margin: 0 },
-    suggestedDeliveryContainer: { textAlign: 'left' },
-    replayButton: {
-        padding: '10px 18px',
-        fontSize: '15px',
-        border: `1px solid ${COLORS.primary}`,
-        backgroundColor: 'transparent',
-        color: COLORS.primary,
-        borderRadius: '8px',
-        cursor: 'pointer',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        fontWeight: 600,
-        transition: 'all 0.2s ease',
-    },
-    replayButtonLocked: {
-        padding: '10px 18px',
-        fontSize: '15px',
-        border: `1px solid ${COLORS.warning}`,
-        backgroundColor: 'rgba(255, 193, 7, 0.15)',
-        color: COLORS.textAccent,
-        borderRadius: '8px',
-        cursor: 'pointer',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        fontWeight: 600,
-        transition: 'all 0.2s ease',
-    },
-    deliveryInstructions: { fontSize: '16px', color: COLORS.textSecondary, lineHeight: 1.6, marginBottom: '12px', marginTop: '16px' },
-    annotatedResponseText: { fontSize: '16px', fontStyle: 'italic', color: COLORS.textSecondary, lineHeight: 1.7, margin: 0, padding: '20px', backgroundColor: COLORS.cardDark, borderRadius: '12px' },
-    pauseSymbol: { display: 'inline-block', width: '12px', height: '12px', backgroundColor: COLORS.secondary, borderRadius: '3px', margin: '0 4px', verticalAlign: 'middle' },
-    emphasisSymbol: { display: 'inline-block', width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderBottom: `10px solid ${COLORS.warning}`, margin: '0 4px', verticalAlign: 'middle' },
-    buttonContainer: { display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '16px', marginTop: '32px', borderTop: `1px solid ${COLORS.divider}`, paddingTop: '32px' },
-    secondaryButton: { padding: '12px 24px', fontSize: '16px', border: `1px solid ${COLORS.secondary}`, backgroundColor: 'transparent', color: COLORS.secondary, borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 500, transition: 'all 0.2s ease' },
-    primaryButton: { padding: '12px 24px', fontSize: '16px', fontWeight: 'bold', border: 'none', backgroundColor: COLORS.secondary, color: 'white', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.2s ease' },
-    logoContainer: {
-        textAlign: 'center',
-        paddingBottom: '40px'
-    },
-    footerLogo: {
-        width: '150px',
-        height: 'auto',
-        opacity: 0.7
-    }
+  container: { backgroundColor: COLORS.base, padding: '40px 20px' },
+  card: { backgroundColor: COLORS.card, borderRadius: '12px', padding: '32px', maxWidth: '900px', margin: '0 auto', boxShadow: '0 8px 30px rgba(0,0,0,0.08)', border: `1px solid ${COLORS.divider}` },
+  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: `1px solid ${COLORS.divider}`, paddingBottom: '16px', marginBottom: '24px' },
+  title: { fontSize: '28px', fontWeight: 'bold', color: COLORS.textPrimary, margin: 0 },
+  printButton: { display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', border: `1px solid ${COLORS.secondary}`, backgroundColor: 'transparent', color: COLORS.secondary, borderRadius: '8px', cursor: 'pointer' },
+  userResponseContainer: { backgroundColor: COLORS.cardDark, padding: '20px', borderRadius: '12px', marginBottom: '24px' },
+  userResponseText: { fontSize: '16px', fontStyle: 'italic', color: COLORS.textSecondary, lineHeight: 1.7, margin: 0 },
+  section: { marginBottom: '32px' },
+  sectionTitle: { fontSize: '20px', color: COLORS.textPrimary, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '12px', borderBottom: `2px solid ${COLORS.secondary}`, paddingBottom: '8px' },
+  metricsGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+    gap: '12px',
+    fontSize: '15px'
+  },
+  rubricContainer: { marginBottom: '32px' },
+  rubricItem: { borderBottom: `1px solid ${COLORS.divider}`, padding: '16px 0' },
+  rubricLabel: { fontWeight: 600, fontSize: '16px', marginBottom: '8px' },
+  rubricMeterContainer: { display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' },
+  rubricMeter: { height: '10px', backgroundColor: COLORS.secondary, borderRadius: '5px' },
+  rubricJustification: { fontSize: '14px', color: COLORS.textSecondary, fontStyle: 'italic' },
+  
+  feedbackGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' },
+  feedbackCard: { backgroundColor: COLORS.cardDark, padding: '16px', borderRadius: '8px' },
+  
+  idealDeliveryContainer: {
+    backgroundColor: 'rgba(88, 166, 166, 0.1)',
+    padding: '20px',
+    borderRadius: '8px',
+  },
+  playButton: {
+      marginTop: '16px', display: 'flex', alignItems: 'center', gap: '8px',
+      padding: '10px 16px', border: 'none', backgroundColor: COLORS.secondary,
+      color: 'white', borderRadius: '8px', cursor: 'pointer'
+  },
+  
+  buttonContainer: { display: 'flex', justifyContent: 'center', gap: '16px', marginTop: '32px' },
+  secondaryButton: { padding: '12px 24px', fontSize: '16px', border: `1px solid ${COLORS.secondary}`, backgroundColor: 'transparent', color: COLORS.secondary, borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' },
+  primaryButton: { padding: '12px 24px', fontSize: '16px', fontWeight: 'bold', border: 'none', backgroundColor: COLORS.secondary, color: 'white', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' },
+  logoContainer: { textAlign: 'center', paddingTop: '40px', paddingBottom: '40px' },
+  footerLogo: { width: '150px', height: 'auto', opacity: 0.7 }
 };

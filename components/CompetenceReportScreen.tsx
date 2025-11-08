@@ -1,7 +1,7 @@
 // components/CompetenceReportScreen.tsx
 import React from 'react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
-import type { UserProgress, CompetenceKey, Exercise, AnalysisResult, VoiceAnalysisResult } from '../types';
+import type { UserProgress, CompetenceKey, Exercise, AnalysisResult, VoiceAnalysisResult, AnalysisHistoryItem } from '../types';
 import { COLORS, MODULES } from '../constants';
 import { EXERCISE_TO_COMPETENCE_MAP } from '../services/competenceService';
 import { BackIcon, CheckCircleIcon, TargetIcon, LightbulbIcon, LockIcon } from './Icons';
@@ -27,7 +27,8 @@ const getAllExercises = () => MODULES.flatMap(m => m.exercises);
 const processHistoryForChart = (history: UserProgress['analysisHistory']) => {
     if (!history || Object.keys(history).length < 2) return [];
 
-    const dataPoints = Object.values(history)
+    // FIX: Explicitly cast to AnalysisHistoryItem[] to resolve typing errors.
+    const dataPoints = (Object.values(history) as AnalysisHistoryItem[])
         .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
         .map(item => ({
             date: new Date(item.timestamp).toLocaleDateString('it-IT', { day: '2-digit', month: 'short' }),

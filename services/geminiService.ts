@@ -11,6 +11,7 @@ import {
   StrategicResponse,
   ContinuedStrategicResponse,
   ChatMessage,
+  RealTimeMetricsSummary,
 } from '../types';
 import { FALLBACK_API_KEY } from "../config";
 
@@ -113,7 +114,7 @@ export const analyzeWrittenResponse = async (exercise: Exercise, userResponse: s
     return parseJson<AnalysisResult>(response.text, 'AnalysisResult');
 };
 
-export const analyzeVerbalResponse = async (exercise: Exercise, transcript: string): Promise<VoiceAnalysisResult> => {
+export const analyzeVerbalResponse = async (exercise: Exercise, transcript: string, metricsSummary?: RealTimeMetricsSummary): Promise<VoiceAnalysisResult> => {
     const ai = getGenAI();
     const responseSchema = {
         type: Type.OBJECT,
@@ -144,14 +145,23 @@ export const analyzeVerbalResponse = async (exercise: Exercise, transcript: stri
         }
     };
     
+    const metricsPrompt = metricsSummary ? `
+      Inoltre, considera queste metriche di delivery registrate in tempo reale:
+      - Ritmo Medio: ${metricsSummary.avgWpm} parole al minuto.
+      - Parole Riempitive ("ehm", "cioè", etc.): ${metricsSummary.totalFillers} totali.
+      - Gamma Dinamica (variazione volume): ${metricsSummary.avgDynamicRange.toFixed(0)}/100.
+      Integra queste informazioni nel tuo feedback su tono, ritmo e chiarezza.
+    ` : '';
+    
     const prompt = `
         Sei un coach vocale esperto. Analizza la trascrizione di una risposta vocale a un esercizio. Valuta gli aspetti paraverbali basandoti sul testo.
         Scenario: "${exercise.scenario}"
         Compito: "${exercise.task}"
         Trascrizione della risposta: "${transcript}"
+        ${metricsPrompt}
         
         Fornisci un'analisi dettagliata in JSON. Valuta i 5 criteri: ritmo, tono, volume, pause e chiarezza.
-        Simula una valutazione basata sul contenuto del testo (es. frasi brevi e dirette = ritmo deciso; parole gentili = tono empatico).
+        Simula una valutazione basata sul contenuto del testo (es. frasi brevi e dirette = ritmo deciso; parole gentili = tono empatico) e arricchiscila con i dati delle metriche in tempo reale, se disponibili.
         Tutto il testo deve essere in italiano.
     `;
 
@@ -163,8 +173,9 @@ export const analyzeVerbalResponse = async (exercise: Exercise, transcript: stri
             responseSchema: responseSchema,
         },
     });
-
-    return parseJson<VoiceAnalysisResult>(response.text, 'VoiceAnalysisResult');
+    
+    const result = parseJson<Omit<VoiceAnalysisResult, 'realTimeMetricsSummary'>>(response.text, 'VoiceAnalysisResult');
+    return { ...result, realTimeMetricsSummary: metricsSummary };
 };
 
 export const generateSuggestedResponse = async (exercise: Exercise): Promise<string> => {

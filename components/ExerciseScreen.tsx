@@ -1,18 +1,17 @@
 // components/ExerciseScreen.tsx
-// FIX: Populating the full content of the missing ExerciseScreen.tsx file.
-import React, { useState } from 'react';
-import { Exercise, AnalysisResult, VoiceAnalysisResult, Entitlements, AnalysisHistoryItem, ExerciseType } from '../types';
-import { COLORS, EXERCISE_TYPE_ICONS } from '../constants';
-import { analyzeWrittenResponse, analyzeVerbalResponse, generateSuggestedResponse } from '../services/geminiService';
+import React, { useState, useEffect } from 'react';
+import { Exercise, AnalysisResult, VoiceAnalysisResult, Entitlements, AnalysisHistoryItem, ExerciseType, RealTimeMetricsSummary } from '../types';
+import { COLORS } from '../constants';
+import { MicIcon, SendIcon, SpeakerIcon, LightbulbIcon } from './Icons';
+import { FullScreenLoader } from './Loader';
 import { useToast } from '../hooks/useToast';
-import { FullScreenLoader, Spinner } from './Loader';
-import { SendIcon, MicIcon, LightbulbIcon } from './Icons';
-import { hasProAccess } from '../services/monetizationService';
 import { useSpeech } from '../hooks/useSpeech';
+import { analyzeWrittenResponse, analyzeVerbalResponse } from '../services/geminiService';
+import { soundService } from '../services/soundService';
+import { hasProAccess } from '../services/monetizationService';
 import { QuestionLibraryModal } from './QuestionLibraryModal';
 import { PreparationChecklistModal } from './PreparationChecklistModal';
-import { soundService } from '../services/soundService';
-import { mainLogoUrl } from '../assets';
+import RealTimeVoiceAnalysis from './RealTimeVoiceAnalysis';
 
 interface ExerciseScreenProps {
   exercise: Exercise;
@@ -28,93 +27,99 @@ interface ExerciseScreenProps {
   onApiKeyError: (error: string) => void;
 }
 
-export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({
-  exercise,
-  moduleColor,
-  onComplete,
-  entitlements,
-  onApiKeyError,
-}) => {
+export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({ exercise, moduleColor, onComplete, entitlements, onApiKeyError }) => {
   const [userResponse, setUserResponse] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [isSuggesting, setIsSuggesting] = useState(false);
+  const [isLibraryOpen, setIsLibraryOpen] = useState(false);
+  const [isChecklistOpen, setIsChecklistOpen] = useState(false);
   const { addToast } = useToast();
-  const { isListening, transcript, startListening, stopListening, isSupported } = useSpeech();
-  
-  const isPro = hasProAccess(entitlements);
-  const exerciseType = exercise.exerciseType || ExerciseType.WRITTEN;
-  const ExerciseIcon = EXERCISE_TYPE_ICONS[exerciseType];
-  
-  const [isQuestionModalOpen, setIsQuestionModalOpen] = useState(false);
-  const [isChecklistModalOpen, setIsChecklistModalOpen] = useState(false);
 
-  const handleComplete = async () => {
-    soundService.playClick();
-    const responseToAnalyze = exerciseType === ExerciseType.VERBAL ? transcript : userResponse;
-    if (!responseToAnalyze.trim()) {
+  const isPro = hasProAccess(entitlements);
+  const isVerbal = exercise.exerciseType === ExerciseType.VERBAL;
+
+  const { 
+    isListening, 
+    startListening, 
+    stopListening, 
+    liveMetrics, 
+    highlightedTranscript, 
+    speak, 
+    isSpeaking, 
+    cancelSpeaking,
+  } = useSpeech();
+  
+  const handleStopAndSubmit = async () => {
+    if (!isListening) return;
+
+    const { finalTranscript, finalSummary } = stopListening();
+
+    if (!finalTranscript || !finalSummary) {
+      addToast('Nessuna registrazione da analizzare.', 'error');
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+        const result = await analyzeVerbalResponse(exercise, finalTranscript, finalSummary);
+        onComplete(result, finalTranscript, exercise, 'verbal');
+    } catch (error: any) {
+        console.error(error);
+        if (error.message.includes('API key')) {
+            onApiKeyError(error.message);
+        } else {
+            addToast(error.message || "Si è verificato un errore sconosciuto.", 'error');
+        }
+    } finally {
+        setIsLoading(false);
+    }
+  };
+
+
+  const handleWrittenSubmit = async () => {
+    if (!userResponse.trim()) {
       addToast('La risposta non può essere vuota.', 'error');
       return;
     }
-    
+    soundService.playClick();
     setIsLoading(true);
+
     try {
-      let result;
-      if (exerciseType === ExerciseType.VERBAL) {
-        result = await analyzeVerbalResponse(exercise, responseToAnalyze);
-      } else {
-        result = await analyzeWrittenResponse(exercise, responseToAnalyze, isPro);
-      }
-      onComplete(result, responseToAnalyze, exercise, exerciseType);
+      const result = await analyzeWrittenResponse(exercise, userResponse, isPro);
+      onComplete(result, userResponse, exercise, 'written');
     } catch (error: any) {
-      console.error("Analysis failed:", error);
-      if (error.message && (error.message.includes('API key') || error.message.includes('API_KEY'))) {
+      console.error(error);
+      if (error.message.includes('API key')) {
         onApiKeyError(error.message);
       } else {
-        addToast(error.message || "Si è verificato un errore durante l'analisi.", 'error');
+        addToast(error.message || "Si è verificato un errore sconosciuto.", 'error');
       }
       setIsLoading(false);
     }
   };
-
-  const handleSuggestResponse = async () => {
-    soundService.playClick();
-    setIsSuggesting(true);
-    try {
-        const suggestion = await generateSuggestedResponse(exercise);
-        setUserResponse(suggestion);
-    } catch (error: any) {
-        console.error("Suggestion failed:", error);
-        if (error.message && (error.message.includes('API key') || error.message.includes('API_KEY'))) {
-            onApiKeyError(error.message);
-        } else {
-            addToast(error.message || "Impossibile generare il suggerimento.", 'error');
-        }
-    } finally {
-        setIsSuggesting(false);
-    }
-  };
   
-  const handleToggleListening = () => {
-    if (isListening) {
-      soundService.playStopRecording();
-      stopListening();
-    } else {
-      soundService.playStartRecording();
-      startListening();
-    }
-  };
+  const handleSpeakScenario = () => {
+      soundService.playClick();
+      if (isSpeaking) {
+          cancelSpeaking();
+      } else {
+          const textToSpeak = `Scenario: ${exercise.scenario}. Compito: ${exercise.task}`;
+          speak(textToSpeak);
+      }
+  }
 
   if (isLoading) {
-    return <FullScreenLoader estimatedTime={exerciseType === ExerciseType.VERBAL ? 25 : 15} />;
+    return <FullScreenLoader estimatedTime={isVerbal ? 15 : 20} />;
   }
 
   return (
     <div style={styles.container}>
       <div style={styles.content}>
         <div style={styles.titleContainer}>
-          <ExerciseIcon style={{...styles.icon, color: moduleColor}} />
           <h1 style={styles.title}>{exercise.title}</h1>
+          <span style={{ ...styles.difficultyBadge, backgroundColor: moduleColor }}>{exercise.difficulty}</span>
         </div>
+
         <div style={styles.section}>
           <h2 style={styles.sectionTitle}>Scenario</h2>
           <p style={styles.sectionText}>{exercise.scenario}</p>
@@ -123,154 +128,114 @@ export const ExerciseScreen: React.FC<ExerciseScreenProps> = ({
           <h2 style={styles.sectionTitle}>Il tuo Compito</h2>
           <p style={styles.sectionText}>{exercise.task}</p>
         </div>
+        <button onClick={handleSpeakScenario} style={styles.speakButton}><SpeakerIcon /> {isSpeaking ? 'Interrompi audio' : 'Ascolta lo scenario'}</button>
         
         {isPro && (
             <div style={styles.proToolsContainer}>
-                <button style={styles.proToolButton} onClick={() => setIsQuestionModalOpen(true)}>Libreria Domande PRO</button>
-                <button style={styles.proToolButton} onClick={() => setIsChecklistModalOpen(true)}>Checklist Preparazione PRO</button>
+                <button onClick={() => setIsLibraryOpen(true)} style={styles.proToolButton}>
+                    <LightbulbIcon/> Libreria Domande PRO
+                </button>
+                <button onClick={() => setIsChecklistOpen(true)} style={styles.proToolButton}>
+                    <LightbulbIcon/> Checklist Preparazione PRO
+                </button>
             </div>
         )}
-        
+
         <div style={styles.responseArea}>
-          {exerciseType === ExerciseType.VERBAL ? (
-            <>
-              {!isSupported && <p style={styles.notSupported}>Il riconoscimento vocale non è supportato da questo browser.</p>}
-              <textarea
-                style={{ ...styles.textarea, minHeight: '120px' }}
-                value={transcript}
-                readOnly
-                placeholder="La trascrizione della tua risposta apparirà qui..."
-              />
-            </>
-          ) : (
-            <textarea
-              style={styles.textarea}
-              value={userResponse}
-              onChange={(e) => setUserResponse(e.target.value)}
-              placeholder="Scrivi qui la tua risposta..."
-              rows={8}
+          {isVerbal ? (
+            <RealTimeVoiceAnalysis
+              isListening={isListening}
+              onStart={startListening}
+              onStopAndSubmit={handleStopAndSubmit}
+              metrics={liveMetrics}
+              transcript={highlightedTranscript}
             />
+          ) : (
+            <>
+              <textarea
+                style={styles.textarea}
+                value={userResponse}
+                onChange={(e) => setUserResponse(e.target.value)}
+                placeholder="Scrivi qui la tua risposta..."
+                rows={8}
+              />
+              <div style={styles.writtenSubmitContainer}>
+                <button onClick={handleWrittenSubmit} style={styles.primaryButton} disabled={!userResponse.trim()}>
+                    Invia Analisi <SendIcon/>
+                </button>
+              </div>
+            </>
           )}
         </div>
-        <footer style={styles.footer}>
-          {exerciseType === ExerciseType.VERBAL ? (
-            <>
-              <button onClick={handleToggleListening} style={isListening ? styles.stopButton : styles.recordButton} disabled={!isSupported}>
-                <MicIcon />
-                <span>{isListening ? 'Ferma Registrazione' : 'Avvia Registrazione'}</span>
-              </button>
-              <button onClick={handleComplete} style={styles.primaryButton} disabled={isListening || !transcript.trim()}>
-                Analizza Risposta <SendIcon />
-              </button>
-            </>
-          ) : (
-            <>
-              <button onClick={handleSuggestResponse} style={styles.secondaryButton} disabled={isLoading || isSuggesting}>
-                  {isSuggesting ? <Spinner size={20} /> : <LightbulbIcon />}
-                  <span>{isSuggesting ? 'Genero...' : 'Suggerisci Risposta'}</span>
-              </button>
-              <button onClick={handleComplete} style={styles.primaryButton} disabled={!userResponse.trim() || isLoading || isSuggesting}>
-                Invia per Analisi <SendIcon />
-              </button>
-            </>
-          )}
-        </footer>
-      </div>
-
-      <div style={styles.logoContainer}>
-        <img src={mainLogoUrl} alt="CES Coach Logo" style={styles.footerLogo} />
       </div>
       
-      {isPro && <QuestionLibraryModal isOpen={isQuestionModalOpen} onClose={() => setIsQuestionModalOpen(false)} />}
-      {isPro && <PreparationChecklistModal isOpen={isChecklistModalOpen} onClose={() => setIsChecklistModalOpen(false)} />}
+      {isLibraryOpen && <QuestionLibraryModal isOpen={isLibraryOpen} onClose={() => setIsLibraryOpen(false)} />}
+      {isChecklistOpen && <PreparationChecklistModal isOpen={isChecklistOpen} onClose={() => setIsChecklistOpen(false)} />}
     </div>
   );
 };
 
+// Styles for ExerciseScreen component
 const styles: { [key: string]: React.CSSProperties } = {
-  container: {
-    maxWidth: '800px',
-    margin: '0 auto',
-    padding: '40px 20px',
-  },
+  container: { maxWidth: '800px', margin: '0 auto', padding: '40px 20px' },
   content: {
-    backgroundColor: COLORS.card,
-    padding: '32px',
-    borderRadius: '12px',
-    boxShadow: '0 4px 15px rgba(0,0,0,0.05)',
+    backgroundColor: COLORS.card, padding: '24px', borderRadius: '12px',
+    position: 'relative', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', border: `1px solid ${COLORS.divider}`
+  },
+  titleContainer: {
+    backgroundColor: COLORS.card, padding: '20px', borderRadius: '12px', textAlign: 'center', marginBottom: '24px',
     border: `1px solid ${COLORS.divider}`
   },
-  titleContainer: { display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px' },
-  icon: { width: '32px', height: '32px' },
-  title: { fontSize: '24px', fontWeight: 'bold', color: COLORS.textPrimary, margin: 0 },
+  title: { fontSize: '24px', fontWeight: 'bold', color: COLORS.primary, margin: '0 0 12px 0' },
+  difficultyBadge: { padding: '4px 12px', borderRadius: '6px', color: 'white', fontSize: '14px', fontWeight: 500 },
   section: { marginBottom: '24px' },
   sectionTitle: {
     fontSize: '18px', fontWeight: 600, color: COLORS.textPrimary, paddingBottom: '8px',
     borderBottom: `2px solid ${COLORS.secondary}`, marginBottom: '12px'
   },
-  sectionText: { fontSize: '16px', color: COLORS.textSecondary, lineHeight: 1.6, whiteSpace: 'pre-wrap' },
+  sectionText: { fontSize: '16px', color: COLORS.textSecondary, lineHeight: 1.6 },
+  speakButton: {
+      display: 'flex', alignItems: 'center', gap: '8px',
+      background: 'transparent', border: `1px solid ${COLORS.divider}`, padding: '8px 12px',
+      borderRadius: '8px', cursor: 'pointer', color: COLORS.textSecondary, marginBottom: '24px'
+  },
+  proToolsContainer: {
+      display: 'flex', gap: '12px', marginBottom: '24px', flexWrap: 'wrap'
+  },
+  proToolButton: {
+      display: 'flex', alignItems: 'center', gap: '8px',
+      background: '#FFFBEA', border: `1px solid ${COLORS.warning}`, padding: '10px 16px',
+      borderRadius: '8px', cursor: 'pointer', color: COLORS.textPrimary, fontWeight: 500,
+  },
   responseArea: { marginTop: '24px' },
   textarea: {
     width: '100%', padding: '12px 16px', fontSize: '16px', borderRadius: '8px',
-    border: `1px solid ${COLORS.divider}`, resize: 'vertical', fontFamily: 'inherit',
-    backgroundColor: 'white', boxSizing: 'border-box'
+    border: `1px solid ${COLORS.divider}`, resize: 'vertical', fontFamily: 'inherit', backgroundColor: 'white',
+    boxSizing: 'border-box'
   },
-  footer: {
-    marginTop: '32px',
-    padding: '16px 32px',
-    margin: '32px -32px -32px -32px',
-    borderTop: `1px solid ${COLORS.divider}`,
+  writtenSubmitContainer: {
     display: 'flex',
     justifyContent: 'flex-end',
-    alignItems: 'center',
-    gap: '16px',
-    backgroundColor: COLORS.card,
-    borderRadius: '0 0 12px 12px',
+    marginTop: '16px',
+  },
+  verbalContainer: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' },
+  micButton: {
+    width: '80px', height: '80px', borderRadius: '50%', border: 'none',
+    backgroundColor: COLORS.secondary, color: 'white', display: 'flex',
+    justifyContent: 'center', alignItems: 'center', cursor: 'pointer',
+    transition: 'background-color 0.2s, transform 0.2s',
+  },
+  micButtonActive: {
+      backgroundColor: COLORS.error, transform: 'scale(1.1)'
+  },
+  transcriptPreview: {
+      fontStyle: 'italic', color: COLORS.textSecondary, textAlign: 'center',
+      minHeight: '40px', padding: '8px', backgroundColor: COLORS.cardDark,
+      borderRadius: '8px', width: '100%'
   },
   primaryButton: {
     display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 20px', fontSize: '16px',
     fontWeight: 'bold', border: 'none', backgroundColor: COLORS.secondary, color: 'white',
     borderRadius: '8px', cursor: 'pointer'
   },
-  secondaryButton: {
-    display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 20px', fontSize: '16px',
-    fontWeight: 'bold', border: `1px solid ${COLORS.secondary}`, backgroundColor: 'transparent', color: COLORS.secondary,
-    borderRadius: '8px', cursor: 'pointer'
-  },
-  recordButton: {
-    display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 20px', fontSize: '16px',
-    fontWeight: 'bold', border: 'none', backgroundColor: COLORS.success, color: 'white',
-    borderRadius: '8px', cursor: 'pointer'
-  },
-  stopButton: {
-    display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 20px', fontSize: '16px',
-    fontWeight: 'bold', border: 'none', backgroundColor: COLORS.error, color: 'white',
-    borderRadius: '8px', cursor: 'pointer'
-  },
-  notSupported: { color: COLORS.error, fontWeight: 'bold' },
-  proToolsContainer: {
-    display: 'flex',
-    gap: '12px',
-    margin: '24px 0',
-    paddingTop: '16px',
-    borderTop: `1px dashed ${COLORS.divider}`
-  },
-  proToolButton: {
-    padding: '8px 16px',
-    fontSize: '14px',
-    border: `1px solid ${COLORS.warning}`,
-    backgroundColor: '#FFFBEA',
-    color: COLORS.textAccent,
-    borderRadius: '8px',
-    cursor: 'pointer'
-  },
-  logoContainer: {
-    textAlign: 'center',
-    paddingTop: '40px',
-  },
-  footerLogo: {
-    width: '150px',
-    height: 'auto',
-    opacity: 0.7
-  }
 };
