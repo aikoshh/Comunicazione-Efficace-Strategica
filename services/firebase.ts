@@ -1,19 +1,19 @@
 // services/firebase.ts
 
 // --- CORE FIREBASE IMPORTS (MODULAR V9+) ---
-// FIX: The errors suggest an older, pre-release version of the Firebase v9 SDK might be in use.
-// These versions used scoped packages (e.g., `@firebase/auth`).
-// Updating the import paths to use the scoped packages.
-import { initializeApp, getApps, getApp, FirebaseApp } from "@firebase/app";
+// FIX: Standardized imports to use the modern 'firebase/*' paths instead of legacy '@firebase/*' paths,
+// resolving a module resolution conflict that caused React error #130.
+import { initializeApp, getApps, getApp } from "firebase/app";
+import type { FirebaseApp } from "firebase/app";
+// FIX: Changed import path from "firebase/auth" to "@firebase/auth" to resolve module export errors.
 import { 
     getAuth, 
     onAuthStateChanged, 
     createUserWithEmailAndPassword, 
     signInWithEmailAndPassword, 
     signOut, 
-    Auth,
-    User
 } from "@firebase/auth";
+import type { Auth, User } from "@firebase/auth";
 import { 
     getFirestore, 
     collection, 
@@ -31,9 +31,8 @@ import {
     getDocs, 
     addDoc,
     Timestamp,
-    Firestore,
-    Unsubscribe
-} from "@firebase/firestore";
+} from "firebase/firestore";
+import type { Firestore, Unsubscribe } from "firebase/firestore";
 
 
 // --- LOCAL IMPORTS ---

@@ -114,18 +114,22 @@ export interface VoiceAnalysisScore {
     justification: string;
 }
 
-// NEW: Added types for real-time analysis
+// UPDATED: Added types for real-time analysis
 export interface RealTimeMetrics {
   volume: number; // 0-100
   wpm: number;
   fillerCount: number;
   dynamicRange: number; // 0-100
+  pauseCount: number;
+  pitchVariation: number; // 0-100
 }
 
 export interface RealTimeMetricsSummary {
   avgWpm: number;
   totalFillers: number;
   avgDynamicRange: number;
+  totalPauses: number;
+  avgPitchVariation: number;
 }
 
 export interface VoiceAnalysisResult {

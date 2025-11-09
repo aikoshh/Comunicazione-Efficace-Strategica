@@ -2,71 +2,43 @@
 import React from 'react';
 import { RealTimeMetrics } from '../types';
 import { COLORS } from '../constants';
-import { MicIcon, SendIcon } from './Icons';
-import { Spinner } from './Loader';
 
 interface RealTimeVoiceAnalysisProps {
-  isListening: boolean;
-  onStart: () => void;
-  onStopAndSubmit: () => void;
   metrics: RealTimeMetrics;
-  transcript: React.ReactNode;
 }
 
-const MetricDisplay: React.FC<{ label: string; value: string | number; unit?: string }> = ({ label, value, unit }) => (
-    <div style={styles.metricBox}>
-        <div style={styles.metricValue}>{value}</div>
-        <div style={styles.metricLabel}>{label} {unit && `(${unit})`}</div>
+const MetricDisplay: React.FC<{ label: string; value: string | number; color?: string; unit?: string }> = ({ label, value, color, unit }) => (
+    <div style={styles.metric}>
+        <span style={styles.metricLabel}>{label}</span>
+        <span style={{...styles.metricValue, color: color || COLORS.textPrimary}}>{value}{unit && <span style={styles.metricUnit}> {unit}</span>}</span>
     </div>
 );
 
-const RealTimeVoiceAnalysis: React.FC<RealTimeVoiceAnalysisProps> = ({ 
-  isListening, 
-  onStart, 
-  onStopAndSubmit, 
-  metrics, 
-  transcript,
-}) => {
+const Gauge: React.FC<{ label: string; value: number; color: string; }> = ({ label, value, color }) => {
+    const safeValue = Math.max(0, Math.min(100, value));
+    return (
+        <div style={styles.gaugeContainer}>
+            <div style={styles.gauge}>
+                <div style={{...styles.gaugeFill, width: `${safeValue}%`, backgroundColor: color}} />
+            </div>
+            <span style={styles.gaugeLabel}>{label}</span>
+        </div>
+    )
+};
 
-  const handleMainButtonClick = () => {
-    if (isListening) {
-      onStopAndSubmit();
-    } else {
-      onStart();
-    }
-  };
 
+export const RealTimeVoiceAnalysis: React.FC<RealTimeVoiceAnalysisProps> = ({ metrics }) => {
   return (
     <div style={styles.container}>
-      <div style={styles.metricsGrid}>
-        <div style={styles.vuMeterBox}>
-            <div style={styles.metricLabel}>Volume</div>
-            <div style={styles.vuMeter}>
-                <div style={{...styles.vuMeterFill, height: `${metrics.volume}%`}} />
-            </div>
+        <div style={styles.grid}>
+            <Gauge label="Volume" value={metrics.volume} color={COLORS.success} />
+            <Gauge label="Variazione Tono" value={metrics.pitchVariation} color={COLORS.secondary} />
+            <Gauge label="Gamma Dinamica" value={metrics.dynamicRange} color={COLORS.primary} />
+            
+            <MetricDisplay label="Ritmo" value={metrics.wpm} unit="parole/min" />
+            <MetricDisplay label="Pause" value={metrics.pauseCount} />
+            <MetricDisplay label="Parole Riempitive" value={metrics.fillerCount} color={metrics.fillerCount > 3 ? COLORS.error : COLORS.textPrimary} />
         </div>
-        
-        <MetricDisplay label="Ritmo" value={metrics.wpm} unit="parole/min" />
-        <MetricDisplay label="Parole Riempitive" value={metrics.fillerCount} />
-        <MetricDisplay label="Gamma Dinamica" value={metrics.dynamicRange.toFixed(0)} />
-      </div>
-
-      <div style={styles.transcriptContainer}>
-        {transcript || (isListening ? 'In ascolto...' : 'Premi il microfono per iniziare a registrare...')}
-      </div>
-
-      <div style={styles.controls}>
-        <button 
-          onClick={handleMainButtonClick} 
-          style={{...styles.micButton, ...(isListening ? styles.micButtonActive : {})}}
-          aria-label={isListening ? 'Ferma e analizza' : 'Inizia registrazione'}
-        >
-          <MicIcon />
-        </button>
-        <p style={styles.micLabel}>
-            {isListening ? 'Premi per fermare e analizzare' : 'Premi per registrare'}
-        </p>
-      </div>
     </div>
   );
 };
@@ -75,114 +47,61 @@ const styles: { [key: string]: React.CSSProperties } = {
   container: {
     backgroundColor: COLORS.cardDark,
     borderRadius: '12px',
-    padding: '24px',
+    padding: '16px',
     border: `1px solid ${COLORS.divider}`,
+    animation: 'fadeIn 0.3s ease-out'
+  },
+  grid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+    gap: '16px',
+  },
+  metric: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '24px'
-  },
-  metricsGrid: {
-    display: 'grid',
-    gridTemplateColumns: '1fr',
-    gap: '16px',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '12px',
+    borderRadius: '8px',
+    backgroundColor: COLORS.card,
     textAlign: 'center',
   },
-  metricBox: {
-    backgroundColor: COLORS.card,
-    padding: '16px',
-    borderRadius: '8px',
+  metricLabel: {
+    fontSize: '13px',
+    color: COLORS.textSecondary,
+    marginBottom: '4px',
+    fontWeight: 500
   },
   metricValue: {
-    fontSize: '24px',
+    fontSize: '22px',
     fontWeight: 'bold',
-    color: COLORS.primary,
   },
-  metricLabel: {
-    fontSize: '12px',
-    color: COLORS.textSecondary,
-    marginTop: '4px',
+  metricUnit: {
+    fontSize: '14px',
+    fontWeight: 'normal',
+    color: COLORS.textSecondary
   },
-  vuMeterBox: {
-    backgroundColor: COLORS.card,
-    padding: '16px',
-    borderRadius: '8px',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
+  gaugeContainer: {
+    gridColumn: '1 / -1', // Make gauges span full width on small screens
   },
-  vuMeter: {
-    width: '20px',
-    height: '60px',
+  gauge: {
+    height: '10px',
+    width: '100%',
     backgroundColor: COLORS.divider,
-    borderRadius: '4px',
-    position: 'relative',
+    borderRadius: '5px',
     overflow: 'hidden',
-    marginTop: '8px',
-    display: 'flex',
-    alignItems: 'flex-end',
   },
-  vuMeterFill: {
-    width: '100%',
-    backgroundColor: COLORS.secondary,
-    transition: 'height 0.1s ease-out',
+  gaugeFill: {
+    height: '100%',
+    borderRadius: '5px',
+    transition: 'width 0.2s linear',
   },
-  transcriptContainer: {
-    minHeight: '100px',
-    width: '100%',
-    backgroundColor: 'white',
-    padding: '16px',
-    borderRadius: '8px',
-    border: `1px solid ${COLORS.divider}`,
-    fontSize: '16px',
-    lineHeight: 1.6,
-    color: COLORS.textPrimary,
-    boxSizing: 'border-box'
-  },
-  controls: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: '12px'
-  },
-  micButton: {
-    width: '72px',
-    height: '72px',
-    borderRadius: '50%',
-    border: 'none',
-    backgroundColor: COLORS.secondary,
-    color: 'white',
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    cursor: 'pointer',
-    transition: 'all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
-    boxShadow: '0 4px 15px rgba(0,0,0,0.1)',
-  },
-  micButtonActive: {
-    backgroundColor: COLORS.error,
-    transform: 'scale(1.1)',
-    boxShadow: `0 0 20px ${COLORS.error}80`,
-  },
-  micLabel: {
-      fontSize: '14px',
-      fontWeight: 500,
+  gaugeLabel: {
+      fontSize: '13px',
       color: COLORS.textSecondary,
-      margin: 0
+      marginTop: '6px',
+      fontWeight: 500,
+      textAlign: 'center',
+      display: 'block'
   },
-  submitButton: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '12px',
-    padding: '16px 24px',
-    fontSize: '18px',
-    fontWeight: 'bold',
-    border: 'none',
-    backgroundColor: COLORS.secondary,
-    color: 'white',
-    borderRadius: '12px',
-    cursor: 'pointer',
-    transition: 'transform 0.2s',
-  }
 };
-
-export default RealTimeVoiceAnalysis;
