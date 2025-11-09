@@ -148,8 +148,6 @@ export const VoiceAnalysisReportScreen: React.FC<VoiceAnalysisReportScreenProps>
                 <div style={styles.metricsGrid}>
                     <div><strong>Ritmo Medio:</strong> {result.realTimeMetricsSummary.avgWpm} parole/minuto</div>
                     <div><strong>Parole Riempitive:</strong> {result.realTimeMetricsSummary.totalFillers}</div>
-                    <div><strong>Conteggio Pause:</strong> {result.realTimeMetricsSummary.totalPauses}</div>
-                    <div><strong>Variazione Tono:</strong> {result.realTimeMetricsSummary.avgPitchVariation.toFixed(0)} / 100</div>
                     <div><strong>Gamma Dinamica:</strong> {result.realTimeMetricsSummary.avgDynamicRange.toFixed(0)} / 100</div>
                 </div>
             </div>

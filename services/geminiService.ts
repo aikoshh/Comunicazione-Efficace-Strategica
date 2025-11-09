@@ -151,9 +151,7 @@ export const analyzeVerbalResponse = async (exercise: Exercise, transcript: stri
       - Ritmo Medio: ${metricsSummary.avgWpm} parole al minuto.
       - Parole Riempitive ("ehm", "cioè", etc.): ${metricsSummary.totalFillers} totali.
       - Gamma Dinamica (variazione volume): ${metricsSummary.avgDynamicRange.toFixed(0)}/100.
-      - Conteggio Pause: ${metricsSummary.totalPauses} totali.
-      - Variazione Tono Media: ${metricsSummary.avgPitchVariation.toFixed(0)}/100.
-      Integra queste informazioni nel tuo feedback su tono, ritmo, pause e chiarezza. Un alto numero di pause può indicare esitazione. Una bassa variazione di tono indica monotonia.
+      Integra queste informazioni nel tuo feedback su tono, ritmo e chiarezza.
     ` : '';
     
     const prompt = `
