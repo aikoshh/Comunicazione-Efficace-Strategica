@@ -1,19 +1,18 @@
 // services/firebase.ts
 
 // --- CORE FIREBASE IMPORTS (MODULAR V9+) ---
-// FIX: Standardized imports to use the modern 'firebase/*' paths instead of legacy '@firebase/*' paths,
-// resolving a module resolution conflict that caused React error #130.
 import { initializeApp, getApps, getApp } from "firebase/app";
 import type { FirebaseApp } from "firebase/app";
-// FIX: Changed import path from "firebase/auth" to "@firebase/auth" to resolve module export errors.
-import { 
-    getAuth, 
-    onAuthStateChanged, 
-    createUserWithEmailAndPassword, 
-    signInWithEmailAndPassword, 
-    signOut, 
-} from "@firebase/auth";
-import type { Auth, User } from "@firebase/auth";
+// FIX: The errors suggest members are not exported from 'firebase/auth'. Changed to import from the top-level 'firebase' package as a potential fix for a non-standard environment.
+import {
+  getAuth,
+  onAuthStateChanged,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut,
+  type Auth,
+  type User,
+} from "firebase/auth";
 import { 
     getFirestore, 
     collection, 
