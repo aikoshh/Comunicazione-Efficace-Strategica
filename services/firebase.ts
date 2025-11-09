@@ -1,66 +1,42 @@
 // services/firebase.ts
 
-// --- CORE FIREBASE IMPORTS (MODULAR V9+) ---
-import { initializeApp, getApps, getApp } from "firebase/app";
-import type { FirebaseApp } from "firebase/app";
-// FIX: The errors suggest members are not exported from 'firebase/auth'. Changed to import from the top-level 'firebase' package as a potential fix for a non-standard environment.
-import {
-  getAuth,
-  onAuthStateChanged,
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  signOut,
-  type Auth,
-  type User,
-} from "firebase/auth";
-import { 
-    getFirestore, 
-    collection, 
-    doc, 
-    getDoc, 
-    setDoc, 
-    serverTimestamp, 
-    onSnapshot, 
-    query, 
-    where, 
-    orderBy, 
-    updateDoc, 
-    deleteDoc, 
-    writeBatch, 
-    getDocs, 
-    addDoc,
-    Timestamp,
-} from "firebase/firestore";
-import type { Firestore, Unsubscribe } from "firebase/firestore";
-
+// --- CORE FIREBASE IMPORTS (V8 COMPATIBILITY SYNTAX) ---
+// Import the firebase namespace and the side-effects for the services we need.
+import firebase from 'firebase/compat/app';
+import 'firebase/compat/auth';
+import 'firebase/compat/firestore';
 
 // --- LOCAL IMPORTS ---
 import { firebaseConfig } from '../firebaseConfig';
 import type { UserProfile, UserProgress, StorableEntitlements, ProblemReport, ReportStatus } from "../types";
 
 // --- SYNCHRONOUS INITIALIZATION ---
-let app: FirebaseApp;
-let auth: Auth;
-let db: Firestore;
+let app: firebase.app.App;
+let auth: firebase.auth.Auth;
+let db: firebase.firestore.Firestore;
 let firebaseInitializationError: Error | null = null;
 
 try {
-    if (!getApps().length) {
-        app = initializeApp(firebaseConfig);
+    if (!firebase.apps.length) {
+        app = firebase.initializeApp(firebaseConfig);
     } else {
-        app = getApp(); // if already initialized, use that one
+        app = firebase.app(); // if already initialized, use that one
     }
-    auth = getAuth(app);
-    db = getFirestore(app);
+    auth = firebase.auth();
+    db = firebase.firestore();
 } catch (error: any) {
     console.error("Firebase Initialization Failed:", error);
-    // Capture the error to be handled by the application's entry point
     firebaseInitializationError = new Error(`Could not initialize Firebase services. Please check your configuration. Original error: ${error.message}`);
 }
 
 // --- EXPORTS ---
-// Export the initialized services and the potential error
 export { app, auth, db, firebaseInitializationError };
+
+// --- TYPE ALIASES for easier conversion ---
+type Unsubscribe = () => void;
+type User = firebase.User;
+const serverTimestamp = firebase.firestore.FieldValue.serverTimestamp;
+const Timestamp = firebase.firestore.Timestamp;
 
 
 // --- CONSTANTS ---
@@ -71,15 +47,14 @@ const REPORTS_COLLECTION = 'problemReports';
 
 
 // --- AUTH SERVICE LOGIC ---
-
 export async function getUserProfile(uid: string): Promise<UserProfile | null> {
-  const userDocRef = doc(db, USERS_COLLECTION, uid);
-  const userDocSnap = await getDoc(userDocRef);
+  const userDocRef = db.collection(USERS_COLLECTION).doc(uid);
+  const userDocSnap = await userDocRef.get();
 
-  if (userDocSnap.exists()) {
-    const data = userDocSnap.data();
-    const createdAt = (data.createdAt as Timestamp)?.toDate().toISOString() || new Date().toISOString();
-    const expiryDate = (data.expiryDate as Timestamp)?.toDate().toISOString() || null;
+  if (userDocSnap.exists) {
+    const data = userDocSnap.data()!;
+    const createdAt = (data.createdAt as firebase.firestore.Timestamp)?.toDate().toISOString() || new Date().toISOString();
+    const expiryDate = (data.expiryDate as firebase.firestore.Timestamp)?.toDate().toISOString() || null;
     
     return { ...data, uid, createdAt, expiryDate } as UserProfile;
   } else {
@@ -89,7 +64,7 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
 }
 
 export function onAuthUserChanged(callback: (user: UserProfile | null) => void): Unsubscribe {
-  return onAuthStateChanged(auth, async (authUser) => {
+  return auth.onAuthStateChanged(async (authUser) => {
     if (authUser) {
       const userProfile = await getUserProfile(authUser.uid);
       if(userProfile && userProfile.enabled) {
@@ -109,12 +84,12 @@ export function onAuthUserChanged(callback: (user: UserProfile | null) => void):
 }
 
 export async function register(email: string, password: string, firstName: string, lastName: string): Promise<User> {
-  const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+  const userCredential = await auth.createUserWithEmailAndPassword(email, password);
   const { user } = userCredential;
   if (!user) {
       throw new Error("User creation failed.");
   }
-  const userDocRef = doc(db, USERS_COLLECTION, user.uid);
+  const userDocRef = db.collection(USERS_COLLECTION).doc(user.uid);
   const newUserProfileData = {
     email: user.email!,
     firstName,
@@ -124,12 +99,12 @@ export async function register(email: string, password: string, firstName: strin
     createdAt: serverTimestamp(),
     expiryDate: null,
   };
-  await setDoc(userDocRef, newUserProfileData);
+  await userDocRef.set(newUserProfileData);
   return user;
 }
 
 export async function login(email: string, password: string): Promise<User> {
-  const userCredential = await signInWithEmailAndPassword(auth, email, password);
+  const userCredential = await auth.signInWithEmailAndPassword(email, password);
   if (!userCredential.user) {
       throw new Error("Login failed.");
   }
@@ -137,13 +112,13 @@ export async function login(email: string, password: string): Promise<User> {
 }
 
 export async function logout(): Promise<void> {
-  await signOut(auth);
+  await auth.signOut();
 }
 
 export function subscribeToEntitlements(userId: string, callback: (entitlements: StorableEntitlements | null) => void): Unsubscribe {
-    const docRef = doc(db, ENTITLEMENTS_COLLECTION, userId);
-    return onSnapshot(docRef, (docSnap) => {
-        callback(docSnap.exists() ? docSnap.data() as StorableEntitlements : null);
+    const docRef = db.collection(ENTITLEMENTS_COLLECTION).doc(userId);
+    return docRef.onSnapshot((docSnap) => {
+        callback(docSnap.exists ? docSnap.data() as StorableEntitlements : null);
     });
 }
 
@@ -152,7 +127,7 @@ export async function addProblemReport(userId: string, userEmail: string, userNa
     if (!db) {
         throw new Error("Firestore is not initialized.");
     }
-    await addDoc(collection(db, REPORTS_COLLECTION), {
+    await db.collection(REPORTS_COLLECTION).add({
         userId,
         userEmail,
         userName,
@@ -163,60 +138,59 @@ export async function addProblemReport(userId: string, userEmail: string, userNa
 }
 
 export function subscribeToProblemReports(callback: (reports: ProblemReport[]) => void): Unsubscribe {
-    const q = query(collection(db, REPORTS_COLLECTION), orderBy("timestamp", "desc"));
-    return onSnapshot(q, (snapshot) => {
+    const q = db.collection(REPORTS_COLLECTION).orderBy("timestamp", "desc");
+    return q.onSnapshot((snapshot) => {
         const reports = snapshot.docs.map(docSnap => ({
             id: docSnap.id,
             ...docSnap.data(),
-            timestamp: (docSnap.data().timestamp as Timestamp)?.toDate().toISOString() || new Date().toISOString(),
+            timestamp: (docSnap.data().timestamp as firebase.firestore.Timestamp)?.toDate().toISOString() || new Date().toISOString(),
         } as ProblemReport));
         callback(reports);
     });
 }
 
 export function subscribeToUnreadReportsCount(callback: (count: number) => void): Unsubscribe {
-    const q = query(collection(db, REPORTS_COLLECTION), where("status", "==", "new"));
-    return onSnapshot(q, (snapshot) => {
+    const q = db.collection(REPORTS_COLLECTION).where("status", "==", "new");
+    return q.onSnapshot((snapshot) => {
         callback(snapshot.size);
     });
 }
 
 export async function updateProblemReportStatus(reportId: string, status: ReportStatus): Promise<void> {
-    const docRef = doc(db, REPORTS_COLLECTION, reportId);
-    await updateDoc(docRef, { status });
+    const docRef = db.collection(REPORTS_COLLECTION).doc(reportId);
+    await docRef.update({ status });
 }
 
 
 // --- DATABASE SERVICE LOGIC ---
-
 class DatabaseService {
   async getUserProgress(uid: string): Promise<UserProgress | null> {
-    const docRef = doc(db, PROGRESS_COLLECTION, uid);
-    const docSnap = await getDoc(docRef);
-    return docSnap.exists() ? docSnap.data() as UserProgress : null;
+    const docRef = db.collection(PROGRESS_COLLECTION).doc(uid);
+    const docSnap = await docRef.get();
+    return docSnap.exists ? docSnap.data() as UserProgress : null;
   }
 
   async saveUserProgress(uid: string, progress: UserProgress): Promise<void> {
-    await setDoc(doc(db, PROGRESS_COLLECTION, uid), progress, { merge: true });
+    await db.collection(PROGRESS_COLLECTION).doc(uid).set(progress, { merge: true });
   }
   
   async getUserEntitlements(uid: string): Promise<StorableEntitlements | null> {
-    const docRef = doc(db, ENTITLEMENTS_COLLECTION, uid);
-    const docSnap = await getDoc(docRef);
-    return docSnap.exists() ? docSnap.data() as StorableEntitlements : null;
+    const docRef = db.collection(ENTITLEMENTS_COLLECTION).doc(uid);
+    const docSnap = await docRef.get();
+    return docSnap.exists ? docSnap.data() as StorableEntitlements : null;
   }
   
   async saveUserEntitlements(uid: string, entitlements: StorableEntitlements): Promise<void> {
-    await setDoc(doc(db, ENTITLEMENTS_COLLECTION, uid), entitlements, { merge: true });
+    await db.collection(ENTITLEMENTS_COLLECTION).doc(uid).set(entitlements, { merge: true });
   }
 
   subscribeToUsers(callback: (users: UserProfile[]) => void): Unsubscribe {
-    const q = query(collection(db, USERS_COLLECTION), orderBy("createdAt", "desc"));
-    return onSnapshot(q, (querySnapshot) => {
+    const q = db.collection(USERS_COLLECTION).orderBy("createdAt", "desc");
+    return q.onSnapshot((querySnapshot) => {
       const users: UserProfile[] = querySnapshot.docs.map(docSnap => {
         const data = docSnap.data();
-        const createdAt = (data.createdAt as Timestamp)?.toDate().toISOString() || new Date().toISOString();
-        const expiryDate = (data.expiryDate as Timestamp)?.toDate().toISOString() || null;
+        const createdAt = (data.createdAt as firebase.firestore.Timestamp)?.toDate().toISOString() || new Date().toISOString();
+        const expiryDate = (data.expiryDate as firebase.firestore.Timestamp)?.toDate().toISOString() || null;
         return { uid: docSnap.id, ...data, createdAt, expiryDate } as UserProfile;
       });
       callback(users);
@@ -230,19 +204,19 @@ class DatabaseService {
     } else if (data.expiryDate === null) {
         dataToUpdate.expiryDate = null;
     }
-    await updateDoc(doc(db, USERS_COLLECTION, uid), dataToUpdate);
+    await db.collection(USERS_COLLECTION).doc(uid).update(dataToUpdate);
   }
 
   async deleteUserProfile(uid: string): Promise<void> {
-    const batch = writeBatch(db);
-    batch.delete(doc(db, USERS_COLLECTION, uid));
-    batch.delete(doc(db, PROGRESS_COLLECTION, uid));
-    batch.delete(doc(db, ENTITLEMENTS_COLLECTION, uid));
+    const batch = db.batch();
+    batch.delete(db.collection(USERS_COLLECTION).doc(uid));
+    batch.delete(db.collection(PROGRESS_COLLECTION).doc(uid));
+    batch.delete(db.collection(ENTITLEMENTS_COLLECTION).doc(uid));
     await batch.commit();
   }
 
   async addUserProfile(profileData: Omit<UserProfile, 'uid' | 'createdAt'>): Promise<string> {
-    const docRef = await addDoc(collection(db, USERS_COLLECTION), {
+    const docRef = await db.collection(USERS_COLLECTION).add({
         ...profileData,
         expiryDate: profileData.expiryDate ? Timestamp.fromDate(new Date(profileData.expiryDate)) : null,
         createdAt: serverTimestamp()
@@ -254,7 +228,7 @@ class DatabaseService {
     const collectionsToExport = [USERS_COLLECTION, PROGRESS_COLLECTION, ENTITLEMENTS_COLLECTION, REPORTS_COLLECTION];
     const dbData: Record<string, any[]> = {};
     for (const collectionName of collectionsToExport) {
-        const querySnapshot = await getDocs(collection(db, collectionName));
+        const querySnapshot = await db.collection(collectionName).get();
         dbData[collectionName] = querySnapshot.docs.map(d => {
             const data = d.data();
             Object.keys(data).forEach(key => {
@@ -268,7 +242,7 @@ class DatabaseService {
   
   async importDatabase(jsonString: string): Promise<void> {
       const dbData = JSON.parse(jsonString);
-      const batch = writeBatch(db);
+      const batch = db.batch();
       for (const collectionName in dbData) {
           if (Object.prototype.hasOwnProperty.call(dbData, collectionName)) {
               for (const docData of dbData[collectionName]) {
@@ -279,7 +253,7 @@ class DatabaseService {
                           data[key] = Timestamp.fromDate(new Date(data[key]));
                       }
                   });
-                  batch.set(doc(db, collectionName, id), data);
+                  batch.set(db.collection(collectionName).doc(id), data);
               }
           }
       }
