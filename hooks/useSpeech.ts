@@ -19,6 +19,7 @@ export const useSpeech = () => {
     volume: 0, wpm: 0, fillerCount: 0, dynamicRange: 0
   });
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
 
   const recognitionRef = useRef<any | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -29,6 +30,22 @@ export const useSpeech = () => {
   
   const metricsHistoryRef = useRef<{ volume: number[], wpm: number[] }>({ volume: [], wpm: [] });
   const startTimeRef = useRef<number>(0);
+
+  // --- NEW: Load available voices ---
+  useEffect(() => {
+    const loadVoices = () => {
+      const availableVoices = window.speechSynthesis.getVoices();
+      setVoices(availableVoices);
+    };
+
+    // Voices are loaded asynchronously
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+    loadVoices(); // Initial load attempt
+
+    return () => {
+      window.speechSynthesis.onvoiceschanged = null;
+    };
+  }, []);
 
   const processTranscript = useCallback((text: string) => {
     const words = text.split(/\s+/);
@@ -117,6 +134,22 @@ export const useSpeech = () => {
 
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'it-IT';
+    
+    // --- NEW: Voice Selection Logic ---
+    const italianVoices = voices.filter(v => v.lang === 'it-IT');
+    const preferredVoiceNames = ['Federica', 'Alice', 'Paola', 'Google italiano'];
+    let selectedVoice = italianVoices.find(v => preferredVoiceNames.some(name => v.name.includes(name)));
+
+    // Fallback to the first available Italian voice if no preferred one is found
+    if (!selectedVoice && italianVoices.length > 0) {
+      selectedVoice = italianVoices[0];
+    }
+    
+    if (selectedVoice) {
+      utterance.voice = selectedVoice;
+    }
+    // --- END: Voice Selection Logic ---
+
     utterance.onstart = () => setIsSpeaking(true);
     const onEnd = () => {
       setIsSpeaking(false);
@@ -130,7 +163,7 @@ export const useSpeech = () => {
     
     utteranceRef.current = utterance;
     window.speechSynthesis.speak(utterance);
-  }, [cancelSpeaking]);
+  }, [cancelSpeaking, voices]);
 
   useEffect(() => {
     if (!SpeechRecognition) {
