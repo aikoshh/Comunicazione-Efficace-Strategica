@@ -1,5 +1,5 @@
 // components/VoiceAnalysisReportScreen.tsx
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { VoiceAnalysisResult, Exercise, Entitlements } from '../types';
 import { COLORS, VOICE_RUBRIC_CRITERIA } from '../constants';
 import { RetryIcon, NextIcon, LightbulbIcon, TargetIcon, DownloadIcon, HomeIcon, SpeakerIcon, PlayIcon } from './Icons';
@@ -9,8 +9,11 @@ import { UpsellBanner } from './UpsellBanner';
 import { PRODUCTS } from '../products';
 import { printService } from '../services/printService';
 import { PrintPreviewModal } from './PrintPreviewModal';
-import { useSpeech } from '../hooks/useSpeech';
+import { useToast } from '../hooks/useToast';
+import { synthesizeSpeech } from '../services/textToSpeechService';
+import { Spinner } from './Loader';
 import { mainLogoUrl } from '../assets';
+import { useSpeech } from '../hooks/useSpeech';
 
 interface VoiceAnalysisReportScreenProps {
   result: VoiceAnalysisResult;
@@ -31,19 +34,31 @@ export const VoiceAnalysisReportScreen: React.FC<VoiceAnalysisReportScreenProps>
   const [printHtml, setPrintHtml] = useState<string | null>(null);
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   
-  const { speak, isSpeaking, cancelSpeaking } = useSpeech();
+  const [isSynthesizing, setIsSynthesizing] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const { addToast } = useToast();
+  
+  // Get local TTS functions as a fallback
+  const { speak: localSpeak, isSpeaking: isLocalSpeaking, cancelSpeaking: cancelLocalSpeaking } = useSpeech();
 
-  const overallScore = Math.round(result.scores.reduce((acc, s) => acc + s.score, 0) / result.scores.length * 10);
+  const overallScore = Math.round((result.scores || []).reduce((acc, s) => acc + s.score, 0) / (result.scores?.length || 1) * 10);
   
   useEffect(() => {
     if(!isReview) {
         soundService.playScoreSound(overallScore);
     }
     window.scrollTo(0, 0);
-    // Cleanup speech synthesis on unmount
-    return () => cancelSpeaking();
-    // FIX: Add cancelSpeaking to dependency array to avoid stale closure.
-  }, [overallScore, isReview, cancelSpeaking]);
+    // Cleanup audio on unmount
+    return () => {
+        if (audioRef.current) {
+            audioRef.current.pause();
+            URL.revokeObjectURL(audioRef.current.src);
+        }
+        // Also cancel local speech
+        cancelLocalSpeaking();
+    };
+  }, [overallScore, isReview, cancelLocalSpeaking]);
   
   const handlePrint = async () => {
     soundService.playClick();
@@ -56,13 +71,62 @@ export const VoiceAnalysisReportScreen: React.FC<VoiceAnalysisReportScreenProps>
     setIsPrintModalOpen(true);
   };
   
-  const handlePlayIdeal = () => {
+  const handlePlayIdeal = async () => {
       soundService.playClick();
-      if(isSpeaking) {
-          cancelSpeaking();
-      } else {
-          speak(result.suggested_delivery.ideal_script);
+
+      // If cloud audio is playing, stop it
+      if (isPlaying && audioRef.current) {
+          audioRef.current.pause();
+          audioRef.current.currentTime = 0;
+          setIsPlaying(false);
+          return;
       }
+      
+      // If local audio is playing, stop it
+      if (isLocalSpeaking) {
+          cancelLocalSpeaking();
+          return;
+      }
+
+      setIsSynthesizing(true);
+      try {
+          const audio = await synthesizeSpeech(result.suggested_delivery.ideal_script);
+          
+          if (audio) { // Success with cloud TTS
+              audioRef.current = audio;
+
+              const onEnded = () => {
+                  setIsPlaying(false);
+                  if (audioRef.current) URL.revokeObjectURL(audioRef.current.src);
+                  audioRef.current = null;
+              };
+
+              audio.addEventListener('play', () => setIsPlaying(true));
+              audio.addEventListener('pause', () => setIsPlaying(false));
+              audio.addEventListener('ended', onEnded);
+              
+              await audio.play();
+          } else { // Fallback to local TTS
+              addToast("Voce PRO non disponibile, si userà la voce di sistema.", 'info');
+              localSpeak(result.suggested_delivery.ideal_script);
+          }
+
+      } catch (error: any) {
+          addToast(error.message || "Errore durante la sintesi vocale. Si userà la voce di sistema.", 'error');
+          localSpeak(result.suggested_delivery.ideal_script);
+      } finally {
+          setIsSynthesizing(false);
+      }
+  };
+
+  const renderPlayButtonContent = () => {
+      if (isSynthesizing) {
+          return <Spinner size={22} color="white" />;
+      }
+      if (isPlaying || isLocalSpeaking) {
+          return <>Ferma</>;
+      }
+      return <><PlayIcon /> Ascolta Versione Ideale</>;
   };
 
   return (
@@ -126,8 +190,8 @@ export const VoiceAnalysisReportScreen: React.FC<VoiceAnalysisReportScreenProps>
               <div style={styles.idealDeliveryContainer}>
                   <p><strong>Istruzioni:</strong> {result.suggested_delivery.instructions}</p>
                   <p><strong>Testo annotato:</strong> {result.suggested_delivery.annotated_text}</p>
-                  <button onClick={handlePlayIdeal} style={styles.playButton} disabled={!result.suggested_delivery.ideal_script}>
-                      <PlayIcon /> {isSpeaking ? 'Ferma' : 'Ascolta Versione Ideale'}
+                  <button onClick={handlePlayIdeal} style={styles.playButton} disabled={isSynthesizing}>
+                      {renderPlayButtonContent()}
                   </button>
               </div>
           </div>
@@ -189,9 +253,9 @@ const styles: { [key: string]: React.CSSProperties } = {
     borderRadius: '8px',
   },
   playButton: {
-      marginTop: '16px', display: 'flex', alignItems: 'center', gap: '8px',
+      marginTop: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
       padding: '10px 16px', border: 'none', backgroundColor: COLORS.secondary,
-      color: 'white', borderRadius: '8px', cursor: 'pointer'
+      color: 'white', borderRadius: '8px', cursor: 'pointer', minWidth: '220px', minHeight: '41px'
   },
   
   buttonContainer: { display: 'flex', justifyContent: 'center', gap: '16px', marginTop: '32px' },
